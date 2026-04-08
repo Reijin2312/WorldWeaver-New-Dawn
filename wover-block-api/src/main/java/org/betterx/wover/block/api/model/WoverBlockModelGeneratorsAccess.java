@@ -3,14 +3,11 @@ package org.betterx.wover.block.api.model;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelOutput;
 import net.minecraft.client.data.models.MultiVariant;
-import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
 import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
-import net.minecraft.client.data.models.blockstates.PropertyDispatch;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
 import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.data.models.model.TexturedModel;
-import net.minecraft.client.renderer.block.model.VariantMutator;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -25,18 +22,20 @@ import java.util.function.Consumer;
 public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
     private final Set<Item> skippedAutoModels;
 
+    @SuppressWarnings("rawtypes")
     public WoverBlockModelGeneratorsAccess(
-            Consumer<BlockModelDefinitionGenerator> blockStateOutput,
+            Consumer<Object> blockStateOutput,
             ItemModelOutput itemModelOutput,
             BiConsumer<Identifier, net.minecraft.client.data.models.model.ModelInstance> modelOutput,
             Set<Item> skippedAutoModels
     ) {
-        super(blockStateOutput, itemModelOutput, modelOutput);
+        super((Consumer) blockStateOutput, itemModelOutput, modelOutput);
         this.skippedAutoModels = skippedAutoModels;
     }
 
-    public Consumer<BlockModelDefinitionGenerator> blockStateOutput() {
-        return this.blockStateOutput;
+    @SuppressWarnings("unchecked")
+    public Consumer<Object> blockStateOutput() {
+        return (Consumer<Object>) (Consumer<?>) this.blockStateOutput;
     }
 
     public BiConsumer<Identifier, net.minecraft.client.data.models.model.ModelInstance> modelOutput() {
@@ -99,18 +98,15 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
 
     public void createNonTemplateHorizontalBlock(Block block) {
         MultiVariant variant = BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(block));
-        this.blockStateOutput.accept(
-                MultiVariantGenerator
-                        .dispatch(block, variant)
-                        .with(createHorizontalFacingDispatch())
-        );
+        Object dispatch = DatagenModelDispatch.multiVariantDispatch(block, variant);
+        this.blockStateOutput().accept(DatagenModelDispatch.withDispatch(dispatch, createHorizontalFacingDispatch()));
     }
 
-    public PropertyDispatch<VariantMutator> createColumnWithFacing() {
+    public Object createColumnWithFacing() {
         return BlockModelGenerators.ROTATIONS_COLUMN_WITH_FACING;
     }
 
-    public static PropertyDispatch<VariantMutator> createHorizontalFacingDispatch() {
+    public static Object createHorizontalFacingDispatch() {
         return BlockModelGenerators.ROTATION_HORIZONTAL_FACING;
     }
 
@@ -118,7 +114,7 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
         return BlockModelGenerators.createSimpleBlock(block, BlockModelGenerators.plainVariant(modelLocation));
     }
 
-    public static BlockModelDefinitionGenerator createButton(Block block, Identifier button, Identifier pressed) {
+    public static Object createButton(Block block, Identifier button, Identifier pressed) {
         return BlockModelGenerators.createButton(
                 block,
                 BlockModelGenerators.plainVariant(button),
@@ -126,7 +122,7 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
         );
     }
 
-    public static BlockModelDefinitionGenerator createCustomFence(
+    public static Object createCustomFence(
             Block block,
             Identifier post,
             Identifier sideNorth,
@@ -144,7 +140,7 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
         );
     }
 
-    public static BlockModelDefinitionGenerator createFence(Block block, Identifier post, Identifier side) {
+    public static Object createFence(Block block, Identifier post, Identifier side) {
         return BlockModelGenerators.createFence(
                 block,
                 BlockModelGenerators.plainVariant(post),
@@ -152,7 +148,7 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
         );
     }
 
-    public static BlockModelDefinitionGenerator createWall(
+    public static Object createWall(
             Block block,
             Identifier post,
             Identifier sideLow,
@@ -166,7 +162,7 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
         );
     }
 
-    public static BlockModelDefinitionGenerator createFenceGate(
+    public static Object createFenceGate(
             Block block,
             Identifier open,
             Identifier closed,
@@ -184,7 +180,7 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
         );
     }
 
-    public static BlockModelDefinitionGenerator createStairs(
+    public static Object createStairs(
             Block block,
             Identifier inner,
             Identifier straight,
@@ -198,11 +194,11 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
         );
     }
 
-    public static BlockModelDefinitionGenerator createAxisAlignedPillarBlock(Block block, Identifier modelLocation) {
+    public static Object createAxisAlignedPillarBlock(Block block, Identifier modelLocation) {
         return BlockModelGenerators.createAxisAlignedPillarBlock(block, BlockModelGenerators.plainVariant(modelLocation));
     }
 
-    public static BlockModelDefinitionGenerator createPressurePlate(
+    public static Object createPressurePlate(
             Block block,
             Identifier up,
             Identifier down
@@ -214,7 +210,7 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
         );
     }
 
-    public static BlockModelDefinitionGenerator createSlab(
+    public static Object createSlab(
             Block block,
             Identifier bottom,
             Identifier top,

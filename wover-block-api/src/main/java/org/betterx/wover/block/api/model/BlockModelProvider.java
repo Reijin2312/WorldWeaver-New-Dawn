@@ -1,6 +1,9 @@
 package org.betterx.wover.block.api.model;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 public interface BlockModelProvider {
-    void provideBlockModels(WoverBlockModelGenerators generator);
+    @OnlyIn(Dist.CLIENT)
+    void provideBlockModels(Object generator);
 }

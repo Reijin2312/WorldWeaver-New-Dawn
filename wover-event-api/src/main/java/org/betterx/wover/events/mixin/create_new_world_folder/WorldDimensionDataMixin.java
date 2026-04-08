@@ -5,8 +5,8 @@ import org.betterx.wover.events.impl.WorldLifecycleImpl;
 import org.betterx.wover.state.api.WorldState;
 
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
@@ -39,8 +39,12 @@ public class WorldDimensionDataMixin {
 
     //this is called when a new world is first created on the server
     @Inject(method = "create", at = @At("RETURN"))
-    void wover_onCreateWorld(RegistryAccess registryAccess, CallbackInfoReturnable<WorldDimensions> cir) {
-        Holder<WorldPreset> holder = wover_getWorldPreset(registryAccess);
+    void wover_onCreateWorld(HolderLookup.Provider registries, CallbackInfoReturnable<WorldDimensions> cir) {
+        if (!(registries instanceof RegistryAccess registryAccess)) {
+            return;
+        }
+
+        Holder<WorldPreset> holder = wover_getWorldPreset(registries);
         WorldDimensions dimensions = cir.getReturnValue();
 
         WorldLifecycleImpl.CREATED_NEW_WORLD_FOLDER.emit(c -> c.init(
@@ -54,8 +58,8 @@ public class WorldDimensionDataMixin {
     }
 
     @NotNull
-    private Holder<WorldPreset> wover_getWorldPreset(RegistryAccess registryAccess) {
-        Registry<WorldPreset> worldPresetRegistry = registryAccess.lookupOrThrow(Registries.WORLD_PRESET);
+    private Holder<WorldPreset> wover_getWorldPreset(HolderLookup.Provider registries) {
+        HolderLookup.RegistryLookup<WorldPreset> worldPresetRegistry = registries.lookupOrThrow(Registries.WORLD_PRESET);
         Holder.Reference<WorldPreset> reference = worldPresetRegistry.get(WorldPresets.NORMAL)
                                                                      .or(() -> worldPresetRegistry.listElements().findAny())
                                                                      .orElseThrow();

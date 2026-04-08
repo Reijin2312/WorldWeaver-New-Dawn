@@ -72,11 +72,11 @@ public class VersionChecker implements Runnable {
                             "    \"mc\":\"1.21-rc.1\",\n" +
                             "    \"loader\":\"neoforge\",\n" +
                             "    \"mods\":[\n" +
-                            "      {\"n\":\"bclib\", \"v\":\"21.0.0\"},\n" +
-                            "      {\"n\":\"wover\", \"v\":\"21.0.0\"},\n" +
-                            "      {\"n\":\"betterend\", \"v\":\"21.0.0\"},\n" +
-                            "      {\"n\":\"betternether\", \"v\":\"21.0.0\"},\n" +
-                            "      {\"n\":\"wunderreich\", \"v\":\"21.0.0\"}\n" +
+                            "      {\"n\":\"bclib\", \"v\":\"21.11.1\"},\n" +
+                            "      {\"n\":\"wover\", \"v\":\"21.11.1\"},\n" +
+                            "      {\"n\":\"betterend\", \"v\":\"21.11.1\"},\n" +
+                            "      {\"n\":\"betternether\", \"v\":\"21.11.1\"},\n" +
+                            "      {\"n\":\"wunderreich\", \"v\":\"21.11.1\"}\n" +
                             "    ]\n" +
                             "  }";
                     Versions json = gson.fromJson(fakeVersions, Versions.class);

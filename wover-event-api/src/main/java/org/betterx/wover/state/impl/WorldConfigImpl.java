@@ -36,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
  * This class provides the ability for a mod to store persistent data inside a world.
  */
 public class WorldConfigImpl {
+    private static final long MAX_WORLD_CONFIG_NBT_SIZE = 0x1000000L; // 16 MiB
     private static final Map<ModCore, CompoundTag> TAGS = Maps.newHashMap();
     private static final List<ModCore> MODS = Lists.newArrayList();
     private static final Map<ModCore, EventImpl<OnWorldConfig>> EVENTS = Maps.newHashMap();
@@ -61,11 +62,18 @@ public class WorldConfigImpl {
                 File file = new File(dataDir, modCore.modId + ".nbt");
                 if (file.exists()) {
                     try {
-                        CompoundTag root = NbtIo.readCompressed(file.toPath(), NbtAccounter.create(0x200000L));
+                        CompoundTag root = NbtIo.readCompressed(
+                                file.toPath(),
+                                NbtAccounter.create(MAX_WORLD_CONFIG_NBT_SIZE)
+                        );
                         TAGS.put(modCore, root);
                         eventQueue.add(new Pair<>(modCore, OnWorldConfig.State.LOADED));
-                    } catch (IOException e) {
-                        LibWoverEvents.C.log.error("World data loading failed", e);
+                    } catch (Exception e) {
+                        LibWoverEvents.C.log.error(
+                                "World data loading failed for " + file.getName()
+                                        + " (max nbt size: " + MAX_WORLD_CONFIG_NBT_SIZE + " bytes)",
+                                e
+                        );
                         eventQueue.add(new Pair<>(modCore, OnWorldConfig.State.LOAD_FAILED));
                     }
                 } else {

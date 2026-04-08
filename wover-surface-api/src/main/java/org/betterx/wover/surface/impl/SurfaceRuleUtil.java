@@ -2,6 +2,7 @@ package org.betterx.wover.surface.impl;
 
 import org.betterx.wover.common.surface.api.InjectableSurfaceRules;
 import org.betterx.wover.common.surface.api.SurfaceRuleProvider;
+import org.betterx.wover.core.api.IntegrationCore;
 import org.betterx.wover.entrypoint.LibWoverSurface;
 import org.betterx.wover.state.api.WorldState;
 import org.betterx.wover.surface.api.AssignedSurfaceRule;
@@ -29,6 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.lang.reflect.Method;
 import org.jetbrains.annotations.ApiStatus;
 
 public class SurfaceRuleUtil {
@@ -84,15 +86,26 @@ public class SurfaceRuleUtil {
             if (additionalRules.isEmpty()) return null;
 
             // when we are in the nether, we want to keep the nether roof and floor rules in the beginning of the sequence
-            // we will add our rules whne the first biome test sequence is found
+            // we will add our rules when the first biome test sequence is found.
+            // 1.21.11 changed nether surface rule structure in some setups, so the anchor may become nested.
             if (dimensionKey.equals(LevelStem.NETHER)) {
                 final List<SurfaceRules.RuleSource> combined = new ArrayList<>(existingSequence.size() + additionalRules.size());
+                boolean inserted = false;
                 for (SurfaceRules.RuleSource rule : existingSequence) {
-                    if (rule instanceof SurfaceRules.TestRuleSource testRule
-                            && testRule.ifTrue() instanceof SurfaceRules.BiomeConditionSource) {
+                    if (!inserted && containsBiomeCondition(rule)) {
                         combined.addAll(additionalRules);
+                        inserted = true;
                     }
                     combined.add(rule);
+                }
+                if (!inserted) {
+                    // Fallback for alternate nether rule layouts: prepend biome-scoped rules.
+                    combined.addAll(0, additionalRules);
+                    LibWoverSurface.C.LOG.warn(
+                            "Unable to locate nether biome-rule anchor for {}; prepending {} additional rules.",
+                            source.getClass().getName(),
+                            additionalRules.size()
+                    );
                 }
                 additionalRules = combined;
             } else {
@@ -115,12 +128,68 @@ public class SurfaceRuleUtil {
         return new SurfaceRules.SequenceRuleSource(additionalRules);
     }
 
+    private static boolean containsBiomeCondition(SurfaceRules.RuleSource rule) {
+        if (rule instanceof SurfaceRules.TestRuleSource testRule) {
+            if (testRule.ifTrue() instanceof SurfaceRules.BiomeConditionSource) {
+                return true;
+            }
+            return containsBiomeCondition(testRule.thenRun());
+        }
+
+        if (rule instanceof SurfaceRules.SequenceRuleSource sequenceRule) {
+            for (SurfaceRules.RuleSource nestedRule : sequenceRule.sequence()) {
+                if (containsBiomeCondition(nestedRule)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void tryApplyTerraBlenderRuleCategory(
+            Holder<NoiseGeneratorSettings> holder,
+            ResourceKey<LevelStem> dimensionKey,
+            BiomeSource source
+    ) {
+        if (!IntegrationCore.RUNS_TERRABLENDER || dimensionKey == null || holder == null || !holder.isBound()) {
+            return;
+        }
+
+        final String categoryName;
+        if (dimensionKey.equals(LevelStem.NETHER)) {
+            categoryName = "NETHER";
+        } else if (dimensionKey.equals(LevelStem.END)) {
+            categoryName = "END";
+        } else if (dimensionKey.equals(LevelStem.OVERWORLD)) {
+            categoryName = "OVERWORLD";
+        } else {
+            return;
+        }
+
+        try {
+            final Class<?> ruleCategoryClass = Class.forName("terrablender.api.SurfaceRuleManager$RuleCategory");
+            final Enum ruleCategory = Enum.valueOf((Class<Enum>) ruleCategoryClass.asSubclass(Enum.class), categoryName);
+            final Method setRuleCategory = holder.value().getClass().getMethod("setRuleCategory", ruleCategoryClass);
+            setRuleCategory.invoke(holder.value(), ruleCategory);
+        } catch (ReflectiveOperationException e) {
+            LibWoverSurface.C.LOG.verbose(
+                    "Unable to set TerraBlender surface rule category {} for {}: {}",
+                    categoryName,
+                    source.getClass().getName(),
+                    e.getMessage()
+            );
+        }
+    }
+
     @ApiStatus.Internal
     public static void injectNoiseBasedSurfaceRules(
             ResourceKey<LevelStem> dimensionKey,
             Holder<NoiseGeneratorSettings> noiseSettings,
             BiomeSource loadedBiomeSource
     ) {
+        tryApplyTerraBlenderRuleCategory(noiseSettings, dimensionKey, loadedBiomeSource);
         Object o = noiseSettings.value();
         if (o instanceof SurfaceRuleProvider srp) {
             SurfaceRules.RuleSource originalRules = srp.wover_getOriginalSurfaceRules();

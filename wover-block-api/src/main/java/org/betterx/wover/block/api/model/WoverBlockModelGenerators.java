@@ -4,10 +4,8 @@ import org.betterx.wover.entrypoint.LibWoverBlock;
 
 import com.mojang.math.Quadrant;
 import net.minecraft.client.data.models.BlockModelGenerators;
-import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
 import net.minecraft.client.data.models.blockstates.MultiPartGenerator;
 import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
-import net.minecraft.client.data.models.blockstates.PropertyDispatch;
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
 import net.minecraft.client.data.models.model.ModelTemplate;
@@ -82,7 +80,7 @@ public class WoverBlockModelGenerators {
         generators.delegateItemModel(obsidianBlock, modelLocation);
     }
 
-    public void acceptBlockState(BlockModelDefinitionGenerator blockStateGenerator) {
+    public void acceptBlockState(Object blockStateGenerator) {
         this.vanillaGenerator.blockStateOutput().accept(blockStateGenerator);
     }
 
@@ -194,15 +192,13 @@ public class WoverBlockModelGenerators {
                 .get(barrelBlock)
                 .updateTextures((textureMapping) -> textureMapping.put(TextureSlot.TOP, openTop))
                 .createWithSuffix(barrelBlock, "_open", this.vanillaGenerator.modelOutput());
-        acceptBlockState(MultiVariantGenerator
-                .dispatch(barrelBlock)
-                .with(PropertyDispatch
-                        .initial(BlockStateProperties.OPEN)
-                        .select(false, BlockModelGenerators.plainVariant(closedModel))
-                        .select(true, BlockModelGenerators.plainVariant(openModel))
-                )
-                .with(vanillaGenerator.createColumnWithFacing())
-        );
+        Object openDispatch = DatagenModelDispatch.propertyDispatchInitial(BlockStateProperties.OPEN);
+        DatagenModelDispatch.propertyDispatchSelect(openDispatch, false, BlockModelGenerators.plainVariant(closedModel));
+        DatagenModelDispatch.propertyDispatchSelect(openDispatch, true, BlockModelGenerators.plainVariant(openModel));
+
+        Object modelDispatch = DatagenModelDispatch.dispatchWith(barrelBlock, openDispatch);
+        modelDispatch = DatagenModelDispatch.withDispatch(modelDispatch, vanillaGenerator.createColumnWithFacing());
+        acceptBlockState(modelDispatch);
         delegateItemModel(barrelBlock, closedModel);
     }
 

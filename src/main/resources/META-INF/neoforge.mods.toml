@@ -29,7 +29,7 @@ side="BOTH"
 [[dependencies.wover]]
 modId="wunderlib"
 mandatory=true
-versionRange="[21.0.8,)"
+versionRange="[21.11.1,)"
 ordering="NONE"
 side="BOTH"
 

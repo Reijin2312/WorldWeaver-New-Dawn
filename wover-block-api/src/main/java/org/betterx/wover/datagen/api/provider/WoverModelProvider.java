@@ -130,9 +130,16 @@ public abstract class WoverModelProvider implements WoverDataProvider<DataProvid
             boolean validateMissing,
             ModelOverides overrides
     ) {
+        final Set<Block> processedBlocks = new HashSet<>();
         registry
                 .allBlocks()
                 .forEach(block -> {
+                    // Some registries may expose the same Block instance under multiple ids.
+                    // Datagen must only emit models once per concrete Block instance.
+                    if (!processedBlocks.add(block)) {
+                        return;
+                    }
+
                     // If the block is not in the overrides, and it is a BlockModelProvider, provide the models.
                     if (!overrides.provideBlockModel(block) && block instanceof BlockModelProvider bmp) {
                         bmp.provideBlockModels(generator);
@@ -208,7 +215,7 @@ public abstract class WoverModelProvider implements WoverDataProvider<DataProvid
                 };
 
                 WoverBlockModelGeneratorsAccess blockModelGenerators = new WoverBlockModelGeneratorsAccess(
-                        blockStateConsumer, itemModelOutput, modelOutput, skippedItems
+                        (Consumer<Object>) (Consumer<?>) blockStateConsumer, itemModelOutput, modelOutput, skippedItems
                 );
                 bootstrapBlockStateModels(new WoverBlockModelGenerators(blockModelGenerators));
 

@@ -43,9 +43,9 @@ should respect that and ensure that your mod is not loaded with an incompatible 
 [[dependencies.wover]]
 modId="wover"
 mandatory=true
-versionRange="[21.0.0,)"
+versionRange="[21.11.1,)"
 ordering="NONE"
 side="BOTH"
 ```
 
-In this example `21.0.13` is the WorldWeaver Version you are building against.
+In this example `21.11.1` is the WorldWeaver Version you are building against.

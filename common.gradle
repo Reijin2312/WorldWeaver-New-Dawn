@@ -8,11 +8,31 @@ buildscript {
     }
 }
 
-version = project.mod_version
-group = project.maven_group
 def local_wunderlib = findProject(':wunderlib') != null
 def rootModId = project.findProperty('root_mod_id') ?: 'wover'
 def woverRootProject = rootProject.findProject(":WorldWeaver") ?: rootProject
+def woverGradleProperties = new Properties()
+def woverGradlePropertiesFile = new File(woverRootProject.projectDir, "gradle.properties")
+if (woverGradlePropertiesFile.exists()) {
+    woverGradlePropertiesFile.withInputStream { stream ->
+        woverGradleProperties.load(stream)
+    }
+}
+def resolveWoverProperty = { String key ->
+    woverGradleProperties.getProperty(key) ?: woverRootProject.findProperty(key) ?: rootProject.findProperty(key)
+}
+def woverModVersion = resolveWoverProperty('mod_version')
+def woverMavenGroup = resolveWoverProperty('maven_group')
+
+if (woverModVersion == null) {
+    throw new GradleException("Could not resolve 'mod_version' for WorldWeaver.")
+}
+if (woverMavenGroup == null) {
+    throw new GradleException("Could not resolve 'maven_group' for WorldWeaver.")
+}
+
+version = woverModVersion
+group = woverMavenGroup
 
 
 allprojects { projIt ->
@@ -37,8 +57,8 @@ allprojects { projIt ->
         maven { url 'https://maven.ambertation.de/releases' }
     }
 
-    version = rootProject.mod_version
-    group = rootProject.maven_group
+    version = woverModVersion
+    group = woverMavenGroup
 
 
     java {
@@ -203,7 +223,7 @@ allprojects { projIt ->
     }
 
     tasks.withType(ProcessResources).configureEach {
-        inputs.property "version", project.mod_version
+        inputs.property "version", woverModVersion
 
         if (project != woverRootProject) {
             // Subprojects are libraries; omit mod metadata to avoid NeoForge mod scan errors.
@@ -212,7 +232,7 @@ allprojects { projIt ->
             filesMatching("META-INF/neoforge.mods.toml") {
                 expand(
                         "mod_id": modId,
-                        "version": project.mod_version,
+                        "version": woverModVersion,
                         "minecraft_version": project.minecraft_version,
                         "neoforge_version": project.neoforge_version
                 )
@@ -259,6 +279,11 @@ allprojects { projIt ->
             removeUnusedImports()
             indentWithSpaces(4)
         }
+    }
+
+    // Auto-apply Spotless formatting before build tasks.
+    tasks.matching { it.name in ["build", "assemble", "jar"] }.configureEach {
+        dependsOn(tasks.named("spotlessApply"))
     }
 
     // Run this task after updating minecraft to regenerate any required resources
