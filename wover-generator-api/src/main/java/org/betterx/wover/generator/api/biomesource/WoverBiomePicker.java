@@ -66,7 +66,7 @@ public class WoverBiomePicker {
 
     private boolean isAllowed(BiomeData biomeData) {
         if (biomeData == null) return false;
-        return true;
+        return biomeData.isEnabled();
     }
 
     private BiomeData nullIfNotAllowed(BiomeData biomeData) {
@@ -122,7 +122,10 @@ public class WoverBiomePicker {
             for (PickableBiome builtBiome : beforeList) {
                 consumeSubBiomesForSource(
                         builtBiome.biomeData,
-                        (biomeData, weight) -> builtBiome.subbiomes.add(create(biomeData), weight)
+                        (biomeData, weight) -> {
+                            PickableBiome subBiome = create(nullIfNotAllowed(biomeData));
+                            if (subBiome != null) builtBiome.subbiomes.add(subBiome, weight);
+                        }
                 );
             }
 
@@ -165,7 +168,7 @@ public class WoverBiomePicker {
             if (biomeData instanceof WoverBiomeData wData) {
                 subbiomes.add(this, wData.genChance);
                 edge = create(nullIfNotAllowed(wData.getEdgeData()));
-                parent = create(wData.getParentData());
+                parent = create(nullIfNotAllowed(wData.getParentData()));
                 edgeSize = wData.edgeSize;
                 isVertical = wData.vertical;
             } else {
@@ -229,8 +232,8 @@ public class WoverBiomePicker {
 
 
     public static @Nullable Holder<Biome> getBiomeAt(WorldGenLevel world, BlockPos testPos) {
-        final ChunkPos chunkPos = new ChunkPos(testPos);
-        final ChunkAccess chunk = world.getChunkSource().getChunk(chunkPos.x, chunkPos.z, ChunkStatus.BIOMES, false);
+        final ChunkPos chunkPos = ChunkPos.containing(testPos);
+        final ChunkAccess chunk = world.getChunkSource().getChunk(chunkPos.x(), chunkPos.z(), ChunkStatus.BIOMES, false);
         if (chunk != null) {
             return chunk.getNoiseBiome(
                     QuartPos.fromBlock(testPos.getX()),

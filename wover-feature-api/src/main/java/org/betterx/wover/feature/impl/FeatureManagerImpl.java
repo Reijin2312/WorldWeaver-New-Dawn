@@ -10,8 +10,10 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.levelgen.feature.Feature;
+import org.betterx.wover.feature.impl.features.RandomPatchFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
+import org.betterx.wover.feature.impl.features.RandomPatchConfiguration;
 
 import java.util.function.Function;
 import java.util.LinkedHashMap;
@@ -95,6 +97,11 @@ public class FeatureManagerImpl {
             LibWoverFeature.C.id("template"),
             TemplateFeature::new,
             TemplateFeatureConfig.CODEC
+    );
+
+    public static final RandomPatchFeature RANDOM_PATCH = register(
+            Identifier.withDefaultNamespace("random_patch"),
+            new RandomPatchFeature(RandomPatchConfiguration.CODEC)
     );
 
     public static void register(RegisterEvent event) {

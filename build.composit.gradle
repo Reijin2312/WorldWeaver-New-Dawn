@@ -5,9 +5,15 @@ plugins {
     id 'eclipse'
     id 'net.neoforged.moddev' version "${moddev_version}"
 }
-archivesBaseName = project.archives_base_name
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+ext.archivesBaseName = project.archives_base_name
+base {
+    archivesName = project.archives_base_name
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
 
 
 def getDependencies(project, List<String> depNames, configuration) {

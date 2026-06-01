@@ -15,14 +15,14 @@ logoFile="assets/wover-tag/icon.png"
 [[dependencies.wover-tag]]
 modId="neoforge"
 mandatory=true
-versionRange="[${neoforge_version},)"
+versionRange="${neoforge_version_range}"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.wover-tag]]
 modId="minecraft"
 mandatory=true
-versionRange="[${minecraft_version}]"
+versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
 

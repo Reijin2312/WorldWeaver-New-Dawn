@@ -1,4 +1,7 @@
-archivesBaseName = "wover-item-api"
+ext.archivesBaseName = "wover-item-api"
+base {
+    archivesName = "wover-item-api"
+}
 
 ext {
     baseNamespace = "item"

@@ -15,13 +15,13 @@ logoFile="assets/wover-events-testmod/icon.png"
 [[dependencies.wover-events-testmod]]
 modId="neoforge"
 mandatory=true
-versionRange="[${neoforge_version},)"
+versionRange="${neoforge_version_range}"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.wover-events-testmod]]
 modId="minecraft"
 mandatory=true
-versionRange="[${minecraft_version}]"
+versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"

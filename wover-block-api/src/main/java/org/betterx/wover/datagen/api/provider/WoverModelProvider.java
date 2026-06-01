@@ -16,7 +16,7 @@ import net.minecraft.client.data.models.model.DelegatedModel;
 import net.minecraft.client.data.models.model.ItemModelUtils;
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
-import net.minecraft.client.renderer.block.model.BlockModelDefinition;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
@@ -229,7 +229,7 @@ public abstract class WoverModelProvider implements WoverDataProvider<DataProvid
                 return CompletableFuture.allOf(
                         DataProvider.saveAll(
                                 cache,
-                                generator -> BlockModelDefinition.CODEC.encodeStart(JsonOps.INSTANCE, generator.create()).getOrThrow(),
+                                generator -> BlockStateModelDispatcher.CODEC.encodeStart(JsonOps.INSTANCE, generator.create()).getOrThrow(),
                                 b -> blockStatePathProvider.json(
                                         b.builtInRegistryHolder().key().identifier()
                                 ),

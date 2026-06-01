@@ -4,10 +4,12 @@ import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelOutput;
 import net.minecraft.client.data.models.MultiVariant;
 import net.minecraft.client.data.models.blockstates.MultiVariantGenerator;
+import net.minecraft.client.data.models.model.ItemModelUtils;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
 import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.data.models.model.TexturedModel;
+import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
@@ -55,6 +57,10 @@ public class WoverBlockModelGeneratorsAccess extends BlockModelGenerators {
 
     public void delegateItemModel(Block block, Identifier model) {
         this.registerSimpleItemModel(block, model);
+    }
+
+    public void delegateTintedItemModel(Block block, Identifier model, ItemTintSource tintSource) {
+        this.itemModelOutput.accept(block.asItem(), ItemModelUtils.tintedModel(model, tintSource));
     }
 
     public void createSimpleFlatItemModel(Item item) {

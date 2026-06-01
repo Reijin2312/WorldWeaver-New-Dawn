@@ -8,8 +8,11 @@
   },
   "mixins": [
     "registry.MappedRegistryMixin",
+    "registry.NetworkRegistryLoadTaskMixin",
     "registry.RegistryDataLoaderMixin",
     "registry.RegistryDataLoaderMixinEarly",
+    "registry.RegistryLoadTaskMixin",
+    "registry.ResourceManagerRegistryLoadTaskMixin",
     "registry.VanillaRegistriesMixin"
   ]
 }

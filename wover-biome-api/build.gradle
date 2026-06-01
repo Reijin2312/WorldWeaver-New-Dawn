@@ -1,4 +1,7 @@
-archivesBaseName = "wover-biome-api"
+ext.archivesBaseName = "wover-biome-api"
+base {
+    archivesName = "wover-biome-api"
+}
 
 ext {
     baseNamespace = "biome"

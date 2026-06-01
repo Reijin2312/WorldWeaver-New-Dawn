@@ -213,6 +213,24 @@ public abstract class WoverTagProvider<T, P extends TagBootstrapContext<T>> impl
         return false;
     }
 
+    private static void setReplace(TagBuilder builder, boolean replace) {
+        if (!replace) {
+            return;
+        }
+
+        try {
+            TagBuilder.class.getMethod("replace", boolean.class).invoke(builder, true);
+        } catch (NoSuchMethodException ignored) {
+            try {
+                TagBuilder.class.getMethod("replace").invoke(builder);
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException("Unable to mark tag builder as replacing existing tags", e);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Unable to mark tag builder as replacing existing tags", e);
+        }
+    }
+
     @Override
     public TagsProvider<T> getProvider(
             PackOutput output,
@@ -253,7 +271,7 @@ public abstract class WoverTagProvider<T, P extends TagBootstrapContext<T>> impl
                         return;
                     }
                     final TagBuilder builder = getOrCreateRawBuilder(tag);
-                    builder.replace(replaceOriginalTags());
+                    setReplace(builder, replaceOriginalTags());
                     //write all elements that passed the above filtering...
                     for (var element : elements) {
                         if (element.tag()) {

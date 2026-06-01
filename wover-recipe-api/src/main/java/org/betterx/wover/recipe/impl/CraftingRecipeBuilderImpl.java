@@ -111,7 +111,7 @@ public class CraftingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CraftingRec
     }
 
     private void buildShaped(RecipeOutput ctx) {
-        var builder = ShapedRecipeBuilder.shaped(BuiltInRegistries.ITEM, category, output.copy());
+        var builder = ShapedRecipeBuilder.shaped(BuiltInRegistries.ITEM, category, outputTemplate());
 
         for (Map.Entry<Character, Ingredient> mat : materials.entrySet()) {
             builder.define(mat.getKey(), mat.getValue());
@@ -131,7 +131,7 @@ public class CraftingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CraftingRec
     }
 
     private void buildShapeless(RecipeOutput ctx) {
-        var builder = ShapelessRecipeBuilder.shapeless(BuiltInRegistries.ITEM, category, output.copy());
+        var builder = ShapelessRecipeBuilder.shapeless(BuiltInRegistries.ITEM, category, outputTemplate());
 
         for (Map.Entry<Character, Ingredient> mat : materials.entrySet()) {
             builder.requires(mat.getValue());

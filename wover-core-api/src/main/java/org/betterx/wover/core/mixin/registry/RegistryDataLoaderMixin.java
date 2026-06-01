@@ -32,7 +32,7 @@ public class RegistryDataLoaderMixin {
         // Intentionally no-op: avoid referencing split module classes from injected MC code in datagen/dev.
     }
 
-    @Inject(method = "loadContentsFromManager", at = @At("TAIL"))
+    @Inject(method = "loadContentsFromManager", at = @At("TAIL"), require = 0)
     private static <E> void wover_bootstrap(
             ResourceManager resourceManager,
             RegistryOps.RegistryInfoLookup registryInfoLookup,

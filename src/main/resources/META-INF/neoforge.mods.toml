@@ -15,21 +15,21 @@ logoFile="assets/wover/icon.png"
 [[dependencies.wover]]
 modId="neoforge"
 mandatory=true
-versionRange="[${neoforge_version},)"
+versionRange="${neoforge_version_range}"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.wover]]
 modId="minecraft"
 mandatory=true
-versionRange="[${minecraft_version}]"
+versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
 
 [[dependencies.wover]]
 modId="wunderlib"
 mandatory=true
-versionRange="[21.11.1,)"
+versionRange="[${wunderlib_version},)"
 ordering="NONE"
 side="BOTH"
 

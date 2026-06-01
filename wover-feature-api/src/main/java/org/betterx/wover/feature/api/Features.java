@@ -4,6 +4,7 @@ import org.betterx.wover.feature.api.features.config.*;
 import org.betterx.wover.feature.impl.FeatureManagerImpl;
 
 import net.minecraft.world.level.levelgen.feature.Feature;
+import org.betterx.wover.feature.impl.features.RandomPatchFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 /**
@@ -49,6 +50,11 @@ public class Features {
      * @see org.betterx.wover.feature.api.features.TemplateFeature
      */
     public static final Feature<TemplateFeatureConfig> TEMPLATE = FeatureManagerImpl.TEMPLATE;
+
+    /**
+     * {@code minecraft:random_patch} compatibility replacement for the removed vanilla feature.
+     */
+    public static final RandomPatchFeature RANDOM_PATCH = FeatureManagerImpl.RANDOM_PATCH;
 
     private Features() {
     }

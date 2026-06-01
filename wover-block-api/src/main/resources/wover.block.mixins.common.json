@@ -9,6 +9,7 @@
   "mixins": [
     "ModelProviderMixin",
     "BlockAccessorMixin",
-    "BlockBehaviourMixin"
+    "BlockBehaviourMixin",
+    "FireBlockAccessorMixin"
   ]
 }

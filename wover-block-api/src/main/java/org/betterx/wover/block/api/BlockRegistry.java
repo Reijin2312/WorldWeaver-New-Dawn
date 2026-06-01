@@ -1,6 +1,7 @@
 package org.betterx.wover.block.api;
 
 import org.betterx.wover.block.impl.WoverBlockItemImpl;
+import org.betterx.wover.block.mixin.FireBlockAccessorMixin;
 import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.item.api.ItemRegistry;
 import org.betterx.wover.loot.api.BlockLootProvider;
@@ -107,7 +108,7 @@ public class BlockRegistry {
 
             if (block.defaultBlockState().ignitedByLava()) {
                 FireBlock fire = (FireBlock) Blocks.FIRE;
-                fire.setFlammable(block, 5, 5);
+                ((FireBlockAccessorMixin) fire).wover$setFlammable(block, 5, 5);
             }
         }
         return block;
