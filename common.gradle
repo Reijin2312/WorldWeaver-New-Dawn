@@ -8,26 +8,21 @@ buildscript {
     }
 }
 
+version = project.mod_version
+group = project.maven_group
 def local_wunderlib = findProject(':wunderlib') != null
-def rootModId = project.findProperty('root_mod_id') ?: 'wover'
-def woverRootProject = rootProject.findProject(":WorldWeaver") ?: rootProject
-version = woverRootProject.mod_version
-group = woverRootProject.maven_group
 
 
 allprojects { projIt ->
-    if (projIt.name == "wunderlib") {
-        return
-    }
-    apply plugin: 'java-library'
+    apply plugin: 'java'
     apply plugin: 'idea'
     apply plugin: 'eclipse'
     apply plugin: 'maven-publish'
-    apply plugin: 'net.neoforged.moddev'
+    apply plugin: 'fabric-loom'
 
     repositories {
-        maven { url 'https://maven.neoforged.net/releases' }
         maven { url "https://maven.dblsaiko.net/" }
+        maven { url "https://maven.fabricmc.net/" }
         maven { url "https://maven.shedaniel.me/" }
         maven { url 'https://maven.blamejared.com' }
         maven { url 'https://jitpack.io' }
@@ -36,8 +31,8 @@ allprojects { projIt ->
         maven { url 'https://maven.ambertation.de/releases' }
     }
 
-    version = woverRootProject.mod_version
-    group = woverRootProject.maven_group
+    version = rootProject.mod_version
+    group = rootProject.maven_group
 
 
     java {
@@ -86,93 +81,87 @@ allprojects { projIt ->
         }
     }
 
-    if (projIt == woverRootProject && rootProject != woverRootProject) {
-        woverRootProject.subprojects.findAll { it.name != "wunderlib" }.each { sub ->
-            sourceSets.main.output.classesDirs.from(sub.sourceSets.main.output.classesDirs)
-            sourceSets.main.runtimeClasspath += sub.sourceSets.main.output
-        }
-    }
+    loom {
 
-    if (projIt == woverRootProject) {
-        tasks.matching { it.name == "writeDataLegacyClasspath" }.configureEach {
-            doLast {
-                def cpFile = file("${project.buildDir}/moddev/dataLegacyClasspath.txt")
-                def existing = cpFile.exists() ? new LinkedHashSet<>(cpFile.readLines()) : new LinkedHashSet<>()
-
-                def extraPaths = []
-                def addOutputs = { proj ->
-                    extraPaths.addAll(proj.sourceSets.main.output.classesDirs.files)
-                    def resDir = proj.sourceSets.main.output.resourcesDir
-                    if (resDir != null) extraPaths.add(resDir)
-                }
-
-                addOutputs(project)
-                woverRootProject.subprojects.findAll { it.name != "wunderlib" }.each { sub -> addOutputs(sub) }
-
-                def newEntries = extraPaths.collect { it.absolutePath }.findAll { it && !existing.contains(it) && new File(it).exists() }
-                if (!newEntries.isEmpty()) {
-                    cpFile.parentFile.mkdirs()
-                    cpFile << System.lineSeparator() + newEntries.join(System.lineSeparator())
-                }
-            }
-        }
-
-    }
-
-    def modId = projIt == woverRootProject ? rootModId : projIt.name.replace('-api', '')
-    projIt.ext.mod_id = modId
-
-    neoForge {
-        version = project.neoforge_version
-        def atFiles = [file("src/main/resources/META-INF/accesstransformer.cfg")]
-        if (projIt == woverRootProject) {
-            woverRootProject.subprojects.findAll { it.name != "wunderlib" }.each { sub ->
-                atFiles.add(sub.file("src/main/resources/META-INF/accesstransformer.cfg"))
-            }
-        }
-        atFiles = atFiles.findAll { it.exists() }
-        if (!atFiles.isEmpty()) {
-            accessTransformers = files(atFiles)
-        }
+        //runtimeOnlyLog4j = true
         runs {
-            client {
+            testmodClient {
                 client()
+                ideConfigGenerated project.rootProject == project
+                name = "Testmod Client"
+                source sourceSets.testmodClient
             }
-            server {
+            testmodServer {
                 server()
+                ideConfigGenerated project.rootProject == project
+                name = "Testmod Server"
+                runDir "run-server"
+                source sourceSets.testmod
             }
-            data {
-                data()
-                programArguments.addAll(
-                        "--mod", modId,
-                        "--all",
-                        "--output", file("src/main/generated").toString(),
-                        "--existing", file("src/main/resources").toString()
-                )
-            }
-        }
-        mods {
-            "${modId}" {
-                sourceSet sourceSets.main
-            }
-        }
-        // Datagen needs the resources output (neoforge.mods.toml) on the classpath, otherwise the mod
-        // directory (classes only) is rejected as an invalid mod file.
-        tasks.matching { it.name == "runData" }.configureEach {
-            dependsOn(processResources)
-            classpath += files(sourceSets.main.output.resourcesDir)
-        }
-    }
+            if (project.rootProject != project) {
+                println "${projIt.name}-testmod"
 
-    tasks.matching { it.name == "createMinecraftArtifacts" }.configureEach {
-        doNotTrackState("Work around Gradle 8.8 state tracking for moddev task outputs.")
+                if (projIt.file('src/testmod').exists()) {
+                    "${projIt.name}-testmod" {
+                        server()
+                        runDir "run-server"
+                        name = "Testmod - ${projIt.name}"
+                        ideConfigGenerated true
+                        //source sourceSets["${projIt.name}-testmod"]
+                        source sourceSets.testmod
+                    }
+                }
+
+                if (projIt.file('src/testmodClient').exists()) {
+                    "${projIt.name}-testmodClient" {
+                        client()
+                        runDir "run"
+                        name = "Testmod Client - ${projIt.name}"
+                        ideConfigGenerated true
+                        //source sourceSets["${projIt.name}-testmodClient"]
+                        source sourceSets.testmodClient
+                    }
+                }
+
+
+                if (projIt.file('src/testmodDatagen').exists()) {
+                    def modId = projIt.name.replace('-api', '-testmod');
+                    "${projIt.name}-testmodDatagen" {
+                        client()
+                        vmArg "-Dfabric-api.datagen"
+                        vmArg "-Dfabric-api.datagen.output-dir=${file("src/testmod/generated")}"
+                        vmArg "-Dfabric-api.datagen.modid=${modId}"
+
+                        runDir "build/datagenTestmod"
+                        name = "Testmod DataGen - ${projIt.name}"
+                        ideConfigGenerated true
+                        source sourceSets.testmodDatagen
+                    }
+                }
+
+                if (projIt.file('src/datagen').exists()) {
+                    def modId = projIt.name.replace('-api', '');
+                    println("Mod ID: ${modId}")
+                    "${projIt.name}-datagen" {
+                        client()
+                        vmArg "-Dfabric-api.datagen"
+                        vmArg "-Dfabric-api.datagen.output-dir=${file("src/main/generated")}"
+                        vmArg "-Dfabric-api.datagen.modid=${modId}"
+
+                        runDir "build/datagen"
+                        name = "DataGen - ${projIt.name}"
+                        ideConfigGenerated true
+                    }
+                }
+            }
+        }
     }
 
     configurations {
         dev {
             transitive true
-            canBeResolved true
-            canBeConsumed true
+            canBeResolved = true
+            canBeConsumed = true
             extendsFrom api
         }
         localDev {
@@ -182,6 +171,10 @@ allprojects { projIt ->
 
     dependencies {
         println("Adding dependencies for ${projIt.name}")
+        minecraft "com.mojang:minecraft:${project.minecraft_version}"
+        mappings loom.officialMojangMappings()
+        modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
         dev sourceSets.main.output
 
         testmodImplementation sourceSets.main.output
@@ -194,45 +187,19 @@ allprojects { projIt ->
 
         if (projIt.name != "wunderlib") {
             if (local_wunderlib) {
-                implementation project(path: ":wunderlib")
+                implementation project(path: ":wunderlib", configuration: 'dev')
             } else {
-                implementation "de.ambertation:wunderlib:${project.wunderlib_version}"
+                modApi "de.ambertation:wunderlib:${project.wunderlib_version}"
             }
         }
     }
 
-    tasks.withType(ProcessResources).configureEach {
+    processResources {
+        println "Version: ${project.mod_version}"
         inputs.property "version", project.mod_version
 
-        if (project != woverRootProject) {
-            // Subprojects are libraries; omit mod metadata to avoid NeoForge mod scan errors.
-            exclude("META-INF/neoforge.mods.toml")
-        } else {
-            filesMatching("META-INF/neoforge.mods.toml") {
-                expand(
-                        "mod_id": modId,
-                        "version": project.mod_version,
-                        "minecraft_version": project.minecraft_version,
-                        "neoforge_version": project.neoforge_version
-                )
-            }
-        }
-    }
-
-    tasks.withType(Jar).configureEach {
-        // Avoid split-package JPMS errors on server launches.
-        exclude("net/minecraft/**")
-    }
-
-    if (project == woverRootProject) {
-        tasks.named("processResources") {
-            // Pull subproject resources into the root mod output for mixin configs, etc.
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            woverRootProject.subprojects.findAll { it.name != "wunderlib" }.each { sub ->
-                from(sub.file("src/main/resources")) {
-                    exclude("META-INF/neoforge.mods.toml")
-                }
-            }
+        filesMatching("fabric.mod.json") {
+            expand "version": project.mod_version
         }
     }
 
@@ -251,7 +218,7 @@ allprojects { projIt ->
 
     // Run this task after updating minecraft to regenerate any required resources
     tasks.register('generateResources') {
-        group = "neoforge"
+        group = "fabric"
     }
 
     tasks.register('testmodJar', Jar) {
@@ -269,6 +236,22 @@ allprojects { projIt ->
     }
 }
 
+allprojects.each { p ->
+    loom.mods.register(p.name) {
+        sourceSet p.sourceSets.main
+    }
+
+    loom.mods.register(p.name + "-testmod") {
+        sourceSet p.sourceSets.testmod
+        sourceSet p.sourceSets.testmodClient
+        sourceSet p.sourceSets.testmodDatagen
+    }
+}
+
+subprojects.each {
+    remapJar.dependsOn("${it.path}:remapJar")
+}
+
 tasks.sourcesJar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
@@ -276,103 +259,56 @@ tasks.sourcesJar {
 
 //dependencies for the main Libraray
 dependencies {
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
     subprojects.each {
-        api project(path: "${it.path}")
+        api project(path: "${it.path}", configuration: "namedElements")
+
+//        testmodImplementation project("${it.path}").sourceSets.testmod.output
+//        testmodClientImplementation project("${it.path}").sourceSets.testmodClient.output
+//        testmodClientImplementation project("${it.path}").sourceSets.client.output
+//
+//        testmodDatagenImplementation project("${it.path}").sourceSets.testmodDatagen.output
+
+        include project("${it.path}")
+    }
+    modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+    modLocalRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+    if (local_wunderlib) {
+        implementation project(path: ":wunderlib", configuration: 'dev')
+        include project(path: ":wunderlib")
+    } else {
+        modApi "de.ambertation:wunderlib:${project.wunderlib_version}"
+        include "de.ambertation:wunderlib:${project.wunderlib_version}"
     }
 }
 
-// Build a single "worldweaver" jar that includes all wover-* modules.
-def woverProjects = subprojects.findAll { it.name != "wunderlib" }
-def mergedMetaDir = layout.buildDirectory.dir("generated/merged-meta")
-def mergedAccessTransformers = mergedMetaDir.map { it.file("META-INF/accesstransformer.cfg") }
-def mergedServicesDir = mergedMetaDir.map { it.dir("META-INF/services") }
+loom {
+    runs {
+        datagen {
+            inherit client
+            name "Data Generation"
+            vmArg "-Dfabric-api.datagen"
+            vmArg "-Dfabric-api.datagen.output-dir=${file("src/main/generated")}"
+            vmArg "-Dfabric-api.datagen.modid=${project.archives_base_name}"
 
-tasks.register("mergeWoverAccessTransformers") {
-    def atFiles = []
-    def rootAt = file("src/main/resources/META-INF/accesstransformer.cfg")
-    if (rootAt.exists()) {
-        atFiles.add(rootAt)
-    }
-    woverProjects.each { proj ->
-        def atFile = proj.file("src/main/resources/META-INF/accesstransformer.cfg")
-        if (atFile.exists()) {
-            atFiles.add(atFile)
+            runDir "build/datagen"
         }
     }
-    inputs.files(atFiles)
-    outputs.file(mergedAccessTransformers)
-    doLast {
-        def lines = new LinkedHashSet<String>()
-        atFiles.each { atFile ->
-            atFile.eachLine("UTF-8") { line ->
-                def trimmed = line.trim()
-                if (!trimmed.isEmpty()) {
-                    lines.add(line)
-                }
-            }
-        }
-        def outFile = mergedAccessTransformers.get().asFile
-        outFile.parentFile.mkdirs()
-        outFile.text = lines.join("\n") + "\n"
-    }
-}
 
-tasks.register("mergeWoverServices") {
-    def serviceFiles = []
-    def rootServicesDir = file("src/main/resources/META-INF/services")
-    if (rootServicesDir.exists()) {
-        serviceFiles.addAll(rootServicesDir.listFiles()?.findAll { it.isFile() } ?: [])
-    }
-    woverProjects.each { proj ->
-        def servicesDir = proj.file("src/main/resources/META-INF/services")
-        if (servicesDir.exists()) {
-            serviceFiles.addAll(servicesDir.listFiles()?.findAll { it.isFile() } ?: [])
-        }
-    }
-    inputs.files(serviceFiles)
-    outputs.dir(mergedServicesDir)
-    doLast {
-        def entries = [:].withDefault { new LinkedHashSet<String>() }
-        serviceFiles.each { serviceFile ->
-            serviceFile.eachLine("UTF-8") { line ->
-                def trimmed = line.trim()
-                if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
-                    entries[serviceFile.name].add(trimmed)
-                }
-            }
-        }
-        def outDir = mergedServicesDir.get().asFile
-        outDir.mkdirs()
-        entries.each { name, lines ->
-            def outFile = new File(outDir, name)
-            outFile.parentFile.mkdirs()
-            outFile.text = lines.join("\n") + "\n"
-        }
-    }
-}
+    subprojects.each { sub ->
+        //println "${sub.loom.accessWidenerPath.text}"
+        try {
 
-tasks.named("processResources") {
-    dependsOn("mergeWoverAccessTransformers", "mergeWoverServices")
-    exclude("META-INF/accesstransformer.cfg", "META-INF/services/**")
-    doLast {
-        def outDir = destinationDir
-        copy {
-            from(mergedMetaDir)
-            into(outDir)
-            include("META-INF/accesstransformer.cfg", "META-INF/services/**")
+        } catch (e) {
+            println "No access widener for ${sub.name}"
         }
-    }
-}
 
-tasks.named("jar") {
-    dependsOn(woverProjects.collect { it.tasks.named("classes") })
-    dependsOn("mergeWoverAccessTransformers", "mergeWoverServices")
-    dependsOn(tasks.matching { it.name == "runData" })
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    from(woverProjects.collect { it.sourceSets.main.output }) {
-        exclude("META-INF/neoforge.mods.toml", "META-INF/accesstransformer.cfg", "META-INF/services/**")
     }
-    from("src/main/generated")
+    accessWidenerPath = file("src/main/resources/wover.accesswidener")
+
+    enableTransitiveAccessWideners = true
 }
 
 task copyHighlightJs(type: Copy) {
@@ -390,7 +326,7 @@ javadoc {
         links("https://docs.oracle.com/en/java/javase/17/docs/api/")
         // Disable the crazy super-strict doclint tool in Java 8
         addStringOption("Xdoclint:none", "-quiet")
-        addStringOption("noqualifier", "net.minecraft.*:com.mojang.*:net.neoforged.*")
+        addStringOption("noqualifier", "net.minecraft.*:com.mojang.*:net.fabricmc.*")
         addBooleanOption("-allow-script-in-comments", true)
         tags(
                 'apiNote:a:API Note:',
@@ -399,7 +335,14 @@ javadoc {
         )
         header = "<script type=\"text/javascript\" src=\"../../../../../contrib/highlight/highlight.min.js\"></script>" +
                 " <link rel=\"stylesheet\" href=\"../../../../../contrib/highlight/styles/default.min.css\"></link>" +
-                " <script>window.onload=function(){var allPre,i,j;allPre=document.getElementsByTagName(\"pre\");console.log(allPre);for(i=0,j=allPre.length;i<j;i++){hljs.highlightElement(allPre[i]);}};</script>"
+                " <script>window.onload = function () {\n" +
+                "    var allPre, i, j;\n" +
+                "    allPre = document.getElementsByTagName(\"pre\");\n" +
+                "    console.log(allPre); \n" +
+                "    for (i = 0, j = allPre.length; i < j; i++) {\n" +
+                "        hljs.highlightElement(allPre[i]);\n" +
+                "    }\n" +
+                "};</script>"
 
         stylesheetFile = file("javadoc/wover.css")
     }
@@ -409,7 +352,7 @@ javadoc {
         source(it.sourceSets.main.allJava)
     }
 
-    classpath = files(allprojects.collect { it.sourceSets.main.compileClasspath })
+    classpath = files(sourceSets.main.compileClasspath, sourceSets.main.runtimeClasspath)
     include("**/api/**")
     include("de/ambertation/**")
     include("org/betterx/wover/util/**")
@@ -438,7 +381,7 @@ task javadocJar(type: Jar, dependsOn: [javadoc, copyHighlightJs]) {
 }
 
 artifacts {
-    dev jar
+    dev remapJar
     localDev jar
     archives sourcesJar
     archives javadocJar

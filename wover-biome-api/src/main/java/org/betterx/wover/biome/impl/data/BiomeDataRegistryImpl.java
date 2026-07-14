@@ -10,7 +10,6 @@ import org.betterx.wover.events.impl.EventImpl;
 import org.betterx.wover.state.api.WorldState;
 
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -42,9 +41,9 @@ public class BiomeDataRegistryImpl {
             ResourceKey<Biome> key,
             Function<ResourceKey<Biome>, BiomeData> factory
     ) {
-        final RegistryAccess access = WorldState.allStageRegistryAccess();
-        if (access == null) return null;
-        final Registry<BiomeData> registry = access.registry(BiomeDataRegistry.BIOME_DATA_REGISTRY).orElse(null);
+        if (WorldState.allStageRegistryAccess() == null) return null;
+        final Registry<BiomeData> registry = WorldState.allStageRegistryAccess()
+                                                       .registryOrThrow(BiomeDataRegistry.BIOME_DATA_REGISTRY);
         return getFromRegistryOrTemp(registry, key, factory);
     }
 
@@ -91,7 +90,6 @@ public class BiomeDataRegistryImpl {
         DatapackRegistryBuilder.register(
                 BiomeDataRegistry.BIOME_DATA_REGISTRY,
                 BiomeCodecRegistryImpl.CODEC,
-                BiomeCodecRegistryImpl.NETWORK_CODEC,
                 BiomeDataRegistryImpl::onBootstrap
         );
     }

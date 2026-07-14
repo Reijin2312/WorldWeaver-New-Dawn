@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "wover-feature-testmod",
+  "version": "21.0.0",
+  "name": "WorldWeaver - Feature (TestMod)",
+  "description": "",
+  "authors": [
+    "Quiqueck"
+  ],
+  "contact": {
+    "homepage": "https://github.com/quiqueck/WorldWeaver",
+    "sources": "https://github.com/quiqueck/WorldWeaver",
+    "issues": "https://github.com/quiqueck/WorldWeaver/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/wover-feature-testmod/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "org.betterx.wover.testmod.entrypoint.TestModWoverFeature"
+    ],
+    "fabric-datagen": [
+      "org.betterx.wover.testmod.feature.datagen.TestModWoverFeatureDatagen"
+    ],
+    "client": [
+      "org.betterx.wover.testmod.entrypoint.client.TestModWoverFeatureClient"
+    ]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.15.3",
+    "minecraft": [
+      "1.21.0",
+      "1.21.1"
+    ],
+    "java": ">=17",
+    "fabric-api": ">=0.100.1"
+  },
+  "custom": {
+    "modmenu": {
+      "badges": [
+        "library"
+      ],
+      "parent": "wover"
+    }
+  }
+}

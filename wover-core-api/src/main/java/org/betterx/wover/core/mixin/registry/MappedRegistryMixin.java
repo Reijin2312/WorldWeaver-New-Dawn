@@ -12,15 +12,10 @@ import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import com.google.common.collect.Iterators;
-
-import java.util.Iterator;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,21 +37,6 @@ public class MappedRegistryMixin implements CustomRegistryData {
 
     public <T> void wover_putData(@NotNull DataKey<T> id, @Nullable T data) {
         wover$custom.put(id.id, data);
-    }
-
-    @Redirect(
-            method = "iterator",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lcom/google/common/collect/Iterators;transform(Ljava/util/Iterator;Lcom/google/common/base/Function;)Ljava/util/Iterator;"
-            )
-    )
-    private Iterator<?> wover_safeIterator(
-            Iterator<?> input,
-            com.google.common.base.Function<?, ?> transformer
-    ) {
-        Iterator<?> filtered = Iterators.filter(input, Objects::nonNull);
-        return Iterators.transform(filtered, (com.google.common.base.Function<Object, Object>) transformer);
     }
 
     @Inject(method = "register", at = @At("HEAD"), cancellable = false)

@@ -20,10 +20,9 @@ import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.GenerationStep;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
-@Mod("wover-feature-testmod")
-public class TestModWoverFeature {
+public class TestModWoverFeature implements ModInitializer {
     // ModCore for the TestMod. TestMod's do not share the wover namespace,
     // but (like other Mods that include Wover) have a unique one
     public static final ModCore C = ModCore.create("wover-feature-testmod");
@@ -51,7 +50,8 @@ public class TestModWoverFeature {
             TEST_FEATURE_SIMPLE
     );
 
-    public TestModWoverFeature() {
+    @Override
+    public void onInitialize() {
         final var PLATEAU = PlacedFeatureManager.createKey(C.id("plateau"));
         final var PATCH = PlacedFeatureManager.createKey(C.id("patch"))
                                               .setDecoration(GenerationStep.Decoration.TOP_LAYER_MODIFICATION);

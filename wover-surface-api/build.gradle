@@ -5,5 +5,13 @@ ext {
     baseClass = "WoverSurface"
 }
 
+dependencies {
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+loom {
+    accessWidenerPath = file('src/main/resources/wover-surface.accesswidener')
+}
+
 moduleDependencies(project, ['wover-common-api', 'wover-datagen-api', 'wover-core-api', 'wover-math-api', 'wover-event-api'])
 //datagenDependencies(project, ['wover-preset-api'])

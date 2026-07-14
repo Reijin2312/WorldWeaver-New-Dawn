@@ -5,14 +5,12 @@ import org.betterx.wover.core.api.ModCore;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistrySetBuilder;
-import net.minecraft.data.DataProvider;
-import net.minecraft.data.PackOutput;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
 
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricDynamicRegistryProvider;
 
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -21,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * @param <T> The element type of the registry.
  */
-public abstract class WoverRegistryProvider<T> implements WoverDataProvider<DataProvider> {
+public abstract class WoverRegistryProvider<T> implements WoverDataProvider<FabricDynamicRegistryProvider> {
     /**
      * The title of the provider. Mainly used for logging.
      */
@@ -63,17 +61,15 @@ public abstract class WoverRegistryProvider<T> implements WoverDataProvider<Data
 
     /**
      * Called, when the Registry needs to be serialized. The returned provider
-     * should list all elements from the registry that need to be serialized.
+     * basically lists all elements from the registry that need to be serialized.
      *
-     * @param output             The output to write the data to.
-     * @param registriesFuture   A future sent from the data generator
-     * @param existingFileHelper The existing file helper from NeoForge datagen
-     * @return A new {@link DataProvider} that serializes registry entries
+     * @param output           The output to write the data to.
+     * @param registriesFuture A future sent from the Fabric DataGen API
+     * @return A new {@link FabricDynamicRegistryProvider} that lists all elements
      */
-    public abstract DataProvider getProvider(
-            PackOutput output,
-            CompletableFuture<HolderLookup.Provider> registriesFuture,
-            ExistingFileHelper existingFileHelper
+    public abstract FabricDynamicRegistryProvider getProvider(
+            FabricDataOutput output,
+            CompletableFuture<HolderLookup.Provider> registriesFuture
     );
 
     /**
@@ -82,10 +78,4 @@ public abstract class WoverRegistryProvider<T> implements WoverDataProvider<Data
      * @param registryBuilder The builder to add the registry to.
      */
     public abstract void buildRegistry(RegistrySetBuilder registryBuilder);
-
-    protected final Set<String> modIdSet() {
-        return modCore.modId.equals(modCore.namespace)
-                ? Set.of(modCore.modId)
-                : Set.of(modCore.modId, modCore.namespace);
-    }
 }

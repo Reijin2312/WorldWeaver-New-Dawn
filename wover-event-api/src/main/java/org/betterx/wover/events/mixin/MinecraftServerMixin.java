@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.net.Proxy;
 
-//priority needs to be low, to ensure that our modifications are applied before other biome hooks
+//priority needs to be low, to ensure that our modifications are applied before fabric
 //otherwise other mods, that for example modify all nether biomes will generate a feature order cycle
 //as those modification will be added after our features in custom nether biomes, but might be added to
 //the vanilla biomes before our features are added.
@@ -76,7 +76,8 @@ public class MinecraftServerMixin {
     }
 
     /**
-     * We need a hook here to alter surface rules after biome modifications have been applied.
+     * We need a hook here to alter surface rules after Fabric did add its biomes
+     * in {@link net.fabricmc.fabric.mixin.biome.modification.MinecraftServerMixin}
      */
     @Inject(method = "createLevels", at = @At(value = "HEAD"))
     private void wover_biomesReady(ChunkProgressListener worldGenerationProgressListener, CallbackInfo ci) {

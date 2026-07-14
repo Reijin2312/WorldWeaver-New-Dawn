@@ -4,45 +4,153 @@ import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.datagen.impl.WoverDataGenEntryPointImpl;
 import org.betterx.wover.entrypoint.LibWoverDatagen;
 
-import com.mojang.serialization.Lifecycle;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.Registry;
 import net.minecraft.core.RegistrySetBuilder;
-import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
-import net.minecraft.data.PackOutput;
 import net.minecraft.data.metadata.PackMetadataGenerator;
-import net.minecraft.data.loot.LootTableProvider;
-import net.minecraft.data.recipes.RecipeOutput;
-import net.minecraft.data.recipes.RecipeProvider;
-import net.minecraft.data.registries.RegistryPatchGenerator;
+import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 
-import net.neoforged.neoforge.common.data.DatapackBuiltinEntriesProvider;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
-import net.neoforged.neoforge.data.event.GatherDataEvent;
+import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
-import org.betterx.wover.datagen.api.WoverLootProvider;
 
 /**
- * A simplified entrypoint for NeoForge data generators with support for multiple datapacks
- * and registry providers.
+ * A simplified entrypoint for fabric data generators.
+ * <p>
+ * This class provides some abstractions compared to vanilla fabric data generators. Those abstractions are:
+ * <ul>
+ *     <li><b>Registry Abstraction</b>: Datagenerators of the register (or bootstrap) a
+ *     set of elements into a Minecraft {@link net.minecraft.core.Registry}. Those
+ *     elements should then get serialized to the Datapack. Think of Structures, Features and
+ *     Biomes. All those are added to a specific registry and can (at runtime) be loaded from
+ *     a Datapack.
+ * <p>
+ *     By implementing {@link WoverFullRegistryProvider} you can easily bootstrap and serialize
+ *     all Elements from a registry. With {@link WoverRegistryContentProvider} you
+ *     can serialize only those elements that were generated during the Instances
+ *     bootstrap phase. The later class is especially usefull when creating
+ *     additional Datapacks, as you can have multiple Instances of a
+ *     {@link WoverRegistryContentProvider} for the same Registry, that provide only a select
+ *     subset of elements to a given Datapack (instead of writing all elements in
+ *     the Namespace of the mod as {@link WoverFullRegistryProvider} would do.
+ * <p>
+ *     You should add your custom Registry Providers by overriding {@link #onInitializeProviders(PackBuilder)}
+ *     and calling {@link PackBuilder#addRegistryProvider(PackBuilder.RegistryFactory)} on the global pack
+ *     for each of them.</li>
+ *     <li><b>Datapack Abstraction</b>: Mods can ship with multiple (optional) Data or ResourcePacks. By
+ *     overriding {@link #onInitializeProviders(PackBuilder)} you can create custom Datapacks using the
+ *     {@link #addDatapack(ResourceLocation)} Method.
+ * <p>
+ *     Every Datapack (like the global one) can have a set of {@link WoverRegistryProvider}s that will
+ *     serialize the content to the Datapack. You can also specify a
+ *     {@link org.betterx.wover.datagen.api.PackBuilder.DatapackBootstrap} that will
+ *     be executed once the Datapack was preapred in order to add additional providers to the Datapack.
+ * </li>
+ * </ul>
+ * <h2>Example</h2>
+ * In the following example we create some data that will be included in the global
+ * Datapack of the mod, and some values that will be included in an optional Datapack, that
+ * is also included in your mod.
+ * <p>
+ * First, we need to register the optional Datapack with Fabric. In order to do that, we
+ * use {@link ModCore#addDatapack(String, ResourcePackActivationType)} in the Mod's main
+ * Entrypoint {@code MyMod}:
+ * <pre class="java"> public class MyMod implements ModInitializer {
+ *     public static final ModCore C = ModCore.create("my-mod");
+ *
+ *     public static final ResourceLocation OPTIONAL_PACK = C.addDatapack(
+ *             "optional-pack",
+ *             ResourcePackActivationType.NORMAL
+ *     );
+ *     /*...*&#47;
+ * }</pre>
+ * This is needed in the main Entrypoint for fabric to recognize and automatically
+ * provide the Datapack. It will also create a unique {@link ResourceLocation}
+ * we can use to reference the Datapack.
+ * <p>
+ * Next, we create a new class that extends {@link WoverDataGenEntryPoint}. This will
+ * be responsible for creating the global and optional Datapack and providing the content
+ * for each of them:
+ * <pre class="java"> public class MyModDatagen extends WoverDataGenEntryPoint {
+ *     &#64;Override
+ *     protected ModCore modCore() {
+ *         return MyMod.C;
+ *     }
+ *
+ *     private void onInitializeOptionalDatapack(
+ *             FabricDataGenerator fabricDataGenerator,
+ *             FabricDataGenerator.Pack pack,
+ *             ResourceLocation location
+ *     ) {
+ *         // Nothing to do here, we only use content from a registry provider
+ *     }
+ *
+ *     &#64;Override
+ *      protected void onInitializeProviders(PackBuilder globalPackBuilder) {
+ *         this.addDatapack(MyMod.OPTIONAL_PACK)
+ *                 .onInitializeDatapack(this::onInitializeOptionalDatapack)
+ *                 .addRegistryProvider(AddonSurfaceRuleProvider::new);
+ *
+ *         globalPackBuilder
+ *                 .addRegistryProvider(SurfaceRuleProvider::new)
+ *     }
+ * }</pre>
+ * This example first tells the Datagenerator, that it should provide our optional
+ * Datapack we registered in the main Entrypoint. It also adds two Registry Providers
+ * for the SurfaceRule Registry. The first one ({@code SurfaceRuleProvider}) will
+ * serialize content to the global datapack, while the second one ({@code AddonSurfaceRuleProvider})
+ * will serialize content to the optional Datapack.
+ * <p>
+ * {@code AddonSurfaceRuleProvider} will look like this
+ * <pre class="java"> public class AddonSurfaceRuleProvider extends WoverRegistryContentProvider&lt;AssignedSurfaceRule> {
+ *     public static final ResourceKey&lt;AssignedSurfaceRule> TEST_MEADOW
+ *             = SurfaceRuleRegistry.createKey(TestModWoverSurface.C.id("test-meadow"));
+ *
+ *     public AddonSurfaceRuleProvider(ModCore modCore) {
+ *         super(modCore, "Additional Surface Rules", SurfaceRuleRegistry.SURFACE_RULES_REGISTRY);
+ *     }
+ *
+ *     &#64;Override
+ *     protected void bootstrap(BootstrapContext&lt;AssignedSurfaceRule> ctx) {
+ *         SurfaceRuleBuilder
+ *                 .start()
+ *                 .biome(Biomes.MEADOW)
+ *                 .surface(Blocks.LIME_CONCRETE.defaultBlockState())
+ *                 .steep(Blocks.ORANGE_CONCRETE.defaultBlockState(), 3)
+ *                 .register(ctx, TEST_MEADOW);
+ *     }
+ * }</pre>
+ * The {@link WoverRegistryContentProvider#bootstrap(BootstrapContext)} Method does build the
+ * Surface Rules that will then be added to the optional Datapack.
+ * <p>
+ * The {@code SurfaceRuleProvider} will be responsible for creating the content that will
+ * be added to the global Datapack, and looks like this:
+ * <pre class="java"> public class SurfaceRuleProvider extends WoverRegistryContentProvider&lt;AssignedSurfaceRule> {
+ *     public static final ResourceKey&lt;AssignedSurfaceRule> TEST_PLAINS
+ *             = SurfaceRuleRegistry.createKey(MyMod.C.id("test-plains"));
+ *
+ *     public SurfaceRuleProvider(ModCore modCore) {
+ *         super(modCore, "Test Surface Rules", SurfaceRuleRegistry.SURFACE_RULES_REGISTRY);
+ *     }
+ *
+ *     &#64;Override
+ *     protected void bootstrap(BootstrapContext&lt;AssignedSurfaceRule> ctx) {
+ *         SurfaceRuleBuilder
+ *                 .start()
+ *                 .biome(Biomes.PLAINS)
+ *                 .surface(Blocks.ACACIA_PLANKS.defaultBlockState())
+ *                 .register(ctx, TEST_PLAINS, 1001);
+ *     }
+ * }</pre>
  */
-public abstract class WoverDataGenEntryPoint {
+public abstract class WoverDataGenEntryPoint implements DataGeneratorEntrypoint {
     /**
      * Creates a new {@link WoverDataGenEntryPoint}.
      */
@@ -51,8 +159,6 @@ public abstract class WoverDataGenEntryPoint {
 
     private List<PackBuilder> builders = null;
     private PackBuilder globalBuilder = null;
-    private static final Map<Path, RegistryPackContext> REGISTRY_CONTEXTS = new HashMap<>();
-    private static Path registryContextRoot = null;
 
     /**
      * Creates a new {@link PackBuilder} for an additional Datapack.
@@ -60,7 +166,7 @@ public abstract class WoverDataGenEntryPoint {
      * @param location The {@link ResourceLocation} of the Datapack
      * @return The new {@link PackBuilder} for the Datapack
      */
-    protected PackBuilder addDatapack(@Nullable ResourceLocation location) {
+    protected PackBuilder addDatapack(ResourceLocation location) {
         PackBuilder res = new PackBuilder(modCore(), location);
         builders.add(res);
         return res;
@@ -77,7 +183,7 @@ public abstract class WoverDataGenEntryPoint {
     protected abstract void onInitializeProviders(PackBuilder globalPack);
 
     /**
-     * Returns the {@link ModCore} instance that is responsible for the
+     * Returns the {@link ModCore} instance that is resposible for the
      * Datagenerator. This is used to get the namespace and the logger of
      * the mod.
      *
@@ -93,158 +199,80 @@ public abstract class WoverDataGenEntryPoint {
                 this.builders = new LinkedList<>();
                 this.globalBuilder = addDatapack(null);
 
-                // call the custom providers for the global Datapack
+                //call the custom providers for the global Datapack
                 addDefaultGlobalProviders(this.globalBuilder);
 
-                // run mod specific init
+                //run mod specific init
                 onInitializeProviders(this.globalBuilder);
             }
         }
     }
 
+    private FabricDataGenerator.Pack createBuiltinDatapack(
+            FabricDataGenerator generator,
+            ResourceLocation location
+    ) {
+        FabricDataGenerator.Pack pack = generator.createBuiltinResourcePack(location);
+
+        //add a pack description
+        pack.addProvider(
+                (FabricDataOutput packOutput) -> PackMetadataGenerator.forFeaturePack(
+                        packOutput,
+                        Component.translatable("pack." + location.getNamespace() + "." + location.getPath() + ".description")
+                )
+        );
+
+        return pack;
+    }
+
+    @Override
+    public @Nullable String getEffectiveModId() {
+        return modCore().modId;
+    }
+
     /**
-     * Entry point for NeoForge datagen. Register this from the mod event bus.
+     * Manages the creation of the Datapacks. You should override
+     * {@link #onInitializeDataGenerator(FabricDataGenerator)} in order to register custom Providers
      *
-     * @param event The {@link GatherDataEvent}
+     * @param fabricDataGenerator The {@link FabricDataGenerator} instance
      */
     @ApiStatus.Internal
-    public final void onGatherData(GatherDataEvent event) {
-        if (ignoreRun(event)) {
+    @Override
+    public final void onInitializeDataGenerator(FabricDataGenerator fabricDataGenerator) {
+        if (ignoreRun()) {
             LibWoverDatagen.C.LOG.debug("Ignoring run for " + this);
             return;
         }
         initialize();
+        globalBuilder.pack = fabricDataGenerator.createPack();
 
-        final PackOutput baseOutput = event.getGenerator().getPackOutput();
-        final ExistingFileHelper existingFileHelper = event.getExistingFileHelper();
+        builders
+                .stream()
+                .filter(p -> p.location != null)
+                .forEach(p -> p.pack = createBuiltinDatapack(fabricDataGenerator, p.location));
 
         for (PackBuilder builder : builders) {
-            PackOutput packOutput = createPackOutput(event, baseOutput, builder.location);
-            builder.pack(packOutput);
+            //run other providers
+            builder.providerFactories()
+                   .stream()
+                   .forEach(provider -> {
+                       builder.pack.addProvider(provider::getProvider);
+                       addMultiProviders(builder, provider);
+                   });
 
-            RegistryPackContext registryContext = getRegistryContext(event, packOutput);
-            CompletableFuture<HolderLookup.Provider> registryLookup = registryContext.registryLookup;
-            final List<? extends WoverRegistryProvider<?>> registryProviders = builder.registryProviders();
-            if (!registryProviders.isEmpty()) {
-                registryContext.addModCore(builder.modCore);
-                registryContext.addRegistryProviders(registryProviders);
-                onBuildRegistry(registryContext.registryBuilder);
-                if (!registryContext.providerAdded) {
-                    event.addProvider(registryContext.createProvider());
-                    registryContext.providerAdded = true;
-                }
-            }
-
-            List<WoverLootProvider> lootProviders = new ArrayList<>();
-            List<WoverRecipeGenerator> recipeGenerators = new ArrayList<>();
-            for (WoverDataProvider<?> provider : builder.providerFactories()) {
-                if (provider instanceof WoverRegistryProvider<?>) {
-                    continue;
-                }
-                if (provider instanceof WoverLootProvider lootProvider) {
-                    lootProviders.add(lootProvider);
-                    continue;
-                }
-                if (provider instanceof WoverRecipeGenerator recipeGenerator) {
-                    recipeGenerators.add(recipeGenerator);
-                    continue;
-                }
-                event.addProvider(provider.getProvider(packOutput, registryLookup, existingFileHelper));
-                addMultiProviders(event, provider, packOutput, registryLookup, existingFileHelper);
-            }
-
-            if (!lootProviders.isEmpty()) {
-                final List<LootTableProvider.SubProviderEntry> entries = lootProviders
-                        .stream()
-                        .map(WoverLootProvider::toSubProviderEntry)
-                        .toList();
-                event.addProvider(new LootTableProvider(
-                        packOutput,
-                        Set.of(),
-                        entries,
-                        registryLookup
-                ));
-            }
-
-            if (!recipeGenerators.isEmpty()) {
-                final List<WoverRecipeGenerator> generators = List.copyOf(recipeGenerators);
-                final String recipeName = builder.modCore.modId + " Recipes" +
-                        (builder.location != null ? " [" + builder.location + "]" : "");
-                RecipeProvider delegate = new RecipeProvider(packOutput, registryLookup) {
-                    @Override
-                    protected void buildRecipes(RecipeOutput exporter, HolderLookup.Provider lookup) {
-                        generators.forEach(gen -> gen.buildRecipes(lookup, exporter));
-                    }
-                };
-                event.addProvider(new NamedDataProvider(recipeName, delegate));
-            }
-
+            //call the custom bootstrap method
             if (builder.datapackBootstrap != null) {
-                builder.datapackBootstrap.bootstrap(event, packOutput, builder.location);
+                builder.datapackBootstrap.bootstrap(fabricDataGenerator, builder.pack, builder.location);
             }
         }
     }
 
-    private record NamedDataProvider(String name, net.minecraft.data.DataProvider delegate)
-            implements net.minecraft.data.DataProvider {
-        @Override
-        public CompletableFuture<?> run(CachedOutput output) {
-            return delegate.run(output);
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-    }
-
-    private PackOutput createPackOutput(GatherDataEvent event, PackOutput baseOutput, @Nullable ResourceLocation location) {
-        if (location == null) {
-            return baseOutput;
-        }
-        final Path root = baseOutput
-                .getOutputFolder()
-                .resolve("data")
-                .resolve(location.getNamespace())
-                .resolve("datapacks")
-                .resolve(location.getPath());
-        final PackOutput packOutput = new PackOutput(root);
-        final DataProvider packMetaProvider = PackMetadataGenerator.forFeaturePack(
-                packOutput,
-                Component.translatable("pack." + location.getNamespace() + "." + location.getPath() + ".description")
-        );
-        event.addProvider(new NamedDataProvider(
-                "Pack Metadata [" + location + "]",
-                packMetaProvider
-        ));
-        return packOutput;
-    }
-
-    private static RegistryPackContext getRegistryContext(GatherDataEvent event, PackOutput packOutput) {
-        Path root = event.getGenerator().getPackOutput().getOutputFolder();
-        if (registryContextRoot == null || !registryContextRoot.equals(root)) {
-            REGISTRY_CONTEXTS.clear();
-            registryContextRoot = root;
-        }
-        Path key = packOutput.getOutputFolder();
-        return REGISTRY_CONTEXTS.computeIfAbsent(
-                key,
-                path -> new RegistryPackContext(packOutput, event.getLookupProvider())
-        );
-    }
-
-    private static void addMultiProviders(
-            GatherDataEvent event,
-            WoverDataProvider<?> provider,
-            PackOutput output,
-            CompletableFuture<HolderLookup.Provider> registriesFuture,
-            ExistingFileHelper existingFileHelper
-    ) {
+    private static void addMultiProviders(PackBuilder builder, Object provider) {
         if (provider instanceof WoverDataProvider.Secondary<?> wpp) {
-            event.addProvider(wpp.getSecondaryProvider(output, registriesFuture, existingFileHelper));
+            builder.pack.addProvider(wpp::getSecondaryProvider);
         }
         if (provider instanceof WoverDataProvider.Tertiary<?> wpp) {
-            event.addProvider(wpp.getTertiaryProvider(output, registriesFuture, existingFileHelper));
+            builder.pack.addProvider(wpp::getTertiaryProvider);
         }
     }
 
@@ -253,8 +281,8 @@ public abstract class WoverDataGenEntryPoint {
     }
 
     /**
-     * Called when the Registry set is built for a pack. This is the place where you can add
-     * custom Registry bootstrap methods to the Datagenerator.
+     * Called when the Registry set is built in {@link #buildRegistry(RegistrySetBuilder)}.
+     * This is the place where you can add custom Registry boostrap methods to the Datagenerator.
      *
      * @param registryBuilder The {@link RegistrySetBuilder} instance
      */
@@ -262,7 +290,31 @@ public abstract class WoverDataGenEntryPoint {
     }
 
     /**
-     * Register an automatic provider that is automatically added to all global packs.
+     * Adds all Registry Providers to the Datagenerator. If you need to add
+     * custom Registry Providers, you can override
+     * {@link #onBuildRegistry(RegistrySetBuilder)}.
+     *
+     * @param registryBuilder a {@link RegistrySetBuilder} instance
+     */
+    @ApiStatus.Internal
+    @Override
+    public final void buildRegistry(RegistrySetBuilder registryBuilder) {
+        if (ignoreRun()) return;
+
+        DataGeneratorEntrypoint.super.buildRegistry(registryBuilder);
+        initialize();
+
+        for (PackBuilder builder : builders) {
+            builder.registryProviders()
+                   .forEach(provider -> provider.buildRegistry(registryBuilder));
+        }
+
+        onBuildRegistry(registryBuilder);
+    }
+
+    /**
+     * Register an automatic provider that is automatically added to all global packs
+     * in the {@link #onInitializeDataGenerator(FabricDataGenerator)} method.
      *
      * @param providerFactory The {@link PackBuilder.ProviderFactory} to register
      * @param <T>             The type of the provider
@@ -272,182 +324,46 @@ public abstract class WoverDataGenEntryPoint {
     }
 
     /**
-     * Returns whether the Datagenerator should be run for the given event.
+     * Returns whether the Datagenerator should be run. This will check if the Datagenerator
+     * was started by the Mod specified in the {@link #targetModID()} method.
      *
      * @return Whether the Datagenerator should be run
      */
-    protected boolean ignoreRun(GatherDataEvent event) {
-        return !runsForMod(modCore(), event.getMods());
+    protected boolean ignoreRun() {
+        return !runsForMod(modCore());
     }
 
     /**
      * Returns whether the Datagenerator was started by the Mod specified in the
-     * passed {@link ModCore} instance.
+     * passed {@link ModCore} instance. This will check if the id returned by
+     * {@link #targetModID()} is equal to the mod id of the passed {@link ModCore}.
      *
      * @param modCore The {@link ModCore} instance to check
-     * @param mods    The set of mod ids requested by datagen
      * @return Whether the Datagenerator was started by the Mod
      */
-    public static boolean runsForMod(ModCore modCore, Set<String> mods) {
-        if (mods == null || mods.isEmpty()) return true;
-        return mods.contains(modCore.modId) || mods.contains(modCore.namespace);
+    public static boolean runsForMod(ModCore modCore) {
+        final String target = targetModID();
+
+        if (!modCore.namespace.equals(LibWoverDatagen.C.namespace)) {
+            if (target == null || target.isEmpty()) return true;
+        }
+
+        return modCore.modId.equals(targetModID());
+    }
+
+    /**
+     * Returns the mod id of the mod that is responsible for the Datagenerator run. This is
+     * the mod that started the Datagenerator. The value is read from the system property
+     * {@code fabric-api.datagen.modid}.
+     *
+     * @return The mod id
+     */
+    public static String targetModID() {
+        return System.getProperty("fabric-api.datagen.modid");
     }
 
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + " for " + modCore();
-    }
-
-    private static final class RegistryPackContext {
-        private final PackOutput packOutput;
-        private final RegistrySetBuilder registryBuilder = new RegistrySetBuilder();
-        private final Map<ResourceKey<?>, RegistryBootstrapGroup> bootstrapGroups = new LinkedHashMap<>();
-        private final CompletableFuture<RegistrySetBuilder.PatchedRegistries> patchedRegistries;
-        private final CompletableFuture<HolderLookup.Provider> registryLookup;
-        private final Set<String> modIds = new HashSet<>();
-        private boolean providerAdded = false;
-
-        private RegistryPackContext(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> baseLookup) {
-            this.packOutput = packOutput;
-            this.patchedRegistries = RegistryPatchGenerator.createLookup(baseLookup, registryBuilder);
-            this.registryLookup = patchedRegistries.thenApply(RegistrySetBuilder.PatchedRegistries::full);
-        }
-
-        private void addModCore(ModCore modCore) {
-            modIds.add(modCore.modId);
-            if (!modCore.modId.equals(modCore.namespace)) {
-                modIds.add(modCore.namespace);
-            }
-        }
-
-        private void addRegistryProviders(List<? extends WoverRegistryProvider<?>> registryProviders) {
-            RegistrySetBuilderCollector collector = new RegistrySetBuilderCollector();
-            registryProviders.forEach(provider -> provider.buildRegistry(collector));
-            collector.entries().forEach(this::addBootstraps);
-        }
-
-        private void addBootstraps(
-                ResourceKey<?> registryKey,
-                List<RegistryBootstrapEntry<?>> entries
-        ) {
-            for (RegistryBootstrapEntry<?> entry : entries) {
-                addBootstrap(registryKey, entry.lifecycle, entry.bootstrap);
-            }
-        }
-
-        @SuppressWarnings({"rawtypes", "unchecked"})
-        private void addBootstrap(
-                ResourceKey registryKey,
-                @Nullable Lifecycle lifecycle,
-                RegistrySetBuilder.RegistryBootstrap bootstrap
-        ) {
-            RegistryBootstrapGroup group = bootstrapGroups.get(registryKey);
-            if (group == null) {
-                RegistryBootstrapGroup newGroup = new RegistryBootstrapGroup(lifecycle);
-                bootstrapGroups.put(registryKey, newGroup);
-                RegistrySetBuilder.RegistryBootstrap combined = context -> {
-                    for (RegistrySetBuilder.RegistryBootstrap entry : newGroup.bootstraps) {
-                        entry.run(context);
-                    }
-                };
-                if (newGroup.lifecycle != null) {
-                    registryBuilder.add(registryKey, newGroup.lifecycle, combined);
-                } else {
-                    registryBuilder.add(registryKey, combined);
-                }
-                group = newGroup;
-            }
-            group.bootstraps.add(bootstrap);
-        }
-
-        private DataProvider createProvider() {
-            return new DeferredRegistryProvider(packOutput, patchedRegistries, modIds);
-        }
-    }
-
-    private static final class DeferredRegistryProvider implements DataProvider {
-        private final PackOutput output;
-        private final CompletableFuture<RegistrySetBuilder.PatchedRegistries> registries;
-        private final Set<String> modIds;
-
-        private DeferredRegistryProvider(
-                PackOutput output,
-                CompletableFuture<RegistrySetBuilder.PatchedRegistries> registries,
-                Set<String> modIds
-        ) {
-            this.output = output;
-            this.registries = registries;
-            this.modIds = modIds;
-        }
-
-        @Override
-        public CompletableFuture<?> run(CachedOutput cache) {
-            return new DatapackBuiltinEntriesProvider(output, registries, modIds).run(cache);
-        }
-
-        @Override
-        public String getName() {
-            return "Registries";
-        }
-    }
-
-    private static final class RegistryBootstrapGroup {
-        @Nullable
-        private final Lifecycle lifecycle;
-        private final List<RegistrySetBuilder.RegistryBootstrap<?>> bootstraps = new LinkedList<>();
-
-        private RegistryBootstrapGroup(@Nullable Lifecycle lifecycle) {
-            this.lifecycle = lifecycle;
-        }
-    }
-
-    private static final class RegistryBootstrapEntry<T> {
-        @Nullable
-        private final Lifecycle lifecycle;
-        private final RegistrySetBuilder.RegistryBootstrap<T> bootstrap;
-
-        private RegistryBootstrapEntry(
-                @Nullable Lifecycle lifecycle,
-                RegistrySetBuilder.RegistryBootstrap<T> bootstrap
-        ) {
-            this.lifecycle = lifecycle;
-            this.bootstrap = bootstrap;
-        }
-    }
-
-    private static final class RegistrySetBuilderCollector extends RegistrySetBuilder {
-        private final Map<ResourceKey<?>, List<RegistryBootstrapEntry<?>>> entries = new LinkedHashMap<>();
-
-        @Override
-        public <T> RegistrySetBuilder add(
-                ResourceKey<? extends Registry<T>> registryKey,
-                RegistrySetBuilder.RegistryBootstrap<T> bootstrap
-        ) {
-            addEntry(registryKey, null, bootstrap);
-            return this;
-        }
-
-        @Override
-        public <T> RegistrySetBuilder add(
-                ResourceKey<? extends Registry<T>> registryKey,
-                Lifecycle lifecycle,
-                RegistrySetBuilder.RegistryBootstrap<T> bootstrap
-        ) {
-            addEntry(registryKey, lifecycle, bootstrap);
-            return this;
-        }
-
-        private <T> void addEntry(
-                ResourceKey<? extends Registry<T>> registryKey,
-                @Nullable Lifecycle lifecycle,
-                RegistrySetBuilder.RegistryBootstrap<T> bootstrap
-        ) {
-            entries.computeIfAbsent(registryKey, key -> new LinkedList<>())
-                   .add(new RegistryBootstrapEntry<>(lifecycle, bootstrap));
-        }
-
-        private Map<ResourceKey<?>, List<RegistryBootstrapEntry<?>>> entries() {
-            return entries;
-        }
     }
 }

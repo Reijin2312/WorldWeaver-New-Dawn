@@ -106,7 +106,7 @@ public class WorldGeneratorConfigImpl {
         WorldConfig.saveFile(LibWoverWorldGenerator.C);
     }
 
-    public static void migrateGeneratorSettings(RegistryAccess registryAccess, Registry<LevelStem> dimensions) {
+    public static void migrateGeneratorSettings() {
         final CompoundTag settingsNbt = getPresetsNbt();
 
         if (settingsNbt.isEmpty()) {
@@ -145,12 +145,12 @@ public class WorldGeneratorConfigImpl {
                                 DimensionsWrapper.getDimensionsMap(PresetRegistryImpl.BCL_WORLD_17),
                                 DimensionsWrapper.getDimensionsMap(net.minecraft.world.level.levelgen.presets.WorldPresets.NORMAL)
                         );
-                        Map<ResourceKey<LevelStem>, ChunkGenerator> migratedDimensions = new HashMap<>();
-                        migratedDimensions.put(LevelStem.OVERWORLD, presets.get(0).get(LevelStem.OVERWORLD));
-                        migratedDimensions.put(LevelStem.NETHER, presets.get(netherVersion).get(LevelStem.NETHER));
-                        migratedDimensions.put(LevelStem.END, presets.get(endVersion).get(LevelStem.END));
+                        Map<ResourceKey<LevelStem>, ChunkGenerator> dimensions = new HashMap<>();
+                        dimensions.put(LevelStem.OVERWORLD, presets.get(0).get(LevelStem.OVERWORLD));
+                        dimensions.put(LevelStem.NETHER, presets.get(netherVersion).get(LevelStem.NETHER));
+                        dimensions.put(LevelStem.END, presets.get(endVersion).get(LevelStem.END));
 
-                        writeWorldPresetSettingsDirect(migratedDimensions);
+                        writeWorldPresetSettingsDirect(dimensions);
                     }
                     return;
                 }
@@ -182,12 +182,10 @@ public class WorldGeneratorConfigImpl {
                         : WorldPresets.WOVER_WORLD;
             }
 
-            WorldDimensions presetDimensions = registryAccess != null
-                    ? DimensionsWrapper.getDimensions(registryAccess, biomeSourceVersion)
-                    : DimensionsWrapper.getDimensions(biomeSourceVersion);
-            if (presetDimensions != null) {
+            WorldDimensions dimensions = DimensionsWrapper.getDimensions(biomeSourceVersion);
+            if (dimensions != null) {
                 LibWoverWorldGenerator.C.log.info("Set world to BiomeSource Version " + biomeSourceVersion);
-                writeWorldPresetSettings(new DimensionsWrapper(presetDimensions));
+                writeWorldPresetSettings(new DimensionsWrapper(dimensions));
             } else {
                 LibWoverWorldGenerator.C.log.error("Failed to set world to BiomeSource Version " + biomeSourceVersion);
             }

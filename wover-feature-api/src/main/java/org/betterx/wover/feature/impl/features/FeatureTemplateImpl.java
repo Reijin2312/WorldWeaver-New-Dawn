@@ -87,7 +87,6 @@ public class FeatureTemplateImpl extends StructureNBT implements TemplateFeature
     }
 
     public boolean canGenerate(LevelAccessor level, BlockPos pos, Rotation rotation) {
-        if (structure == null) return false;
         if (containsBedrock(level, pos)) return false;
         return true;
     }

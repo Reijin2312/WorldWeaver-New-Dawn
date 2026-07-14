@@ -4,10 +4,10 @@ import de.ambertation.wunderlib.configs.ConfigFile;
 import org.betterx.wover.config.api.MainConfig;
 import org.betterx.wover.entrypoint.LibWoverUi;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 
-@OnlyIn(Dist.CLIENT)
+@Environment(EnvType.CLIENT)
 public class ClientConfig extends ConfigFile {
     public final static String INTERNAL_CATEGORY = "internal";
     public final static String LOADING_CATEGORY = "loading";

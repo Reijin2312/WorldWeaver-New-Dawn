@@ -10,10 +10,7 @@ import org.betterx.wover.tag.api.event.context.TagElementWrapper;
 import org.betterx.wover.tag.impl.TagManagerImpl;
 
 import net.minecraft.core.HolderLookup;
-import net.minecraft.data.PackOutput;
-import net.minecraft.data.tags.TagsProvider;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.TagBuilder;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -21,7 +18,8 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -29,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A {@link TagsProvider} that writes tags to the data directory.
+ * A {@link FabricTagProvider} that writes tags to the data directory.
  * <p>
  * This class does interface with the Tag API. It allows you to
  * bootstrap Tags and serialize them to disk. Only tags that are
@@ -39,7 +37,7 @@ import org.jetbrains.annotations.Nullable;
  * @param <T> the taggable type
  * @param <P> the bootstrap context type
  */
-public abstract class WoverTagProvider<T, P extends TagBootstrapContext<T>> implements WoverDataProvider<TagsProvider<T>> {
+public abstract class WoverTagProvider<T, P extends TagBootstrapContext<T>> implements WoverDataProvider<FabricTagProvider<T>> {
     /**
      * All allowed namespaces for this tag provider.
      * <p>
@@ -216,12 +214,11 @@ public abstract class WoverTagProvider<T, P extends TagBootstrapContext<T>> impl
     }
 
     @Override
-    public TagsProvider<T> getProvider(
-            PackOutput output,
-            CompletableFuture<HolderLookup.Provider> registriesFuture,
-            ExistingFileHelper existingFileHelper
+    public FabricTagProvider<T> getProvider(
+            FabricDataOutput output,
+            CompletableFuture<HolderLookup.Provider> registriesFuture
     ) {
-        return new TagsProvider<T>(output, tagRegistry.registryKey(), registriesFuture, modCore.modId, existingFileHelper) {
+        return new FabricTagProvider<T>(output, tagRegistry.registryKey(), registriesFuture) {
             @Override
             public String getName() {
                 return getTitle() + " (" + super.getName() + ")";
@@ -255,16 +252,15 @@ public abstract class WoverTagProvider<T, P extends TagBootstrapContext<T>> impl
                     if (!force && elements.isEmpty()) {
                         return;
                     }
-                    final TagBuilder builder = getOrCreateRawBuilder(tag);
-                    builder.replace(replaceOriginalTags());
+                    final FabricTagProvider<T>.FabricTagBuilder builder = getOrCreateTagBuilder(tag).setReplace(replaceOriginalTags());
                     //write all elements that passed the above filtering...
                     for (var element : elements) {
                         if (element.tag()) {
-                            if (element.required()) builder.addTag(element.id());
+                            if (element.required()) builder.forceAddTag(TagKey.create(registryKey, element.id()));
                             else builder.addOptionalTag(element.id());
                         } else {
-                            if (element.required()) builder.addElement(element.id());
-                            else builder.addOptionalElement(element.id());
+                            if (element.required()) builder.add(element.id());
+                            else builder.addOptional(element.id());
                         }
                     }
                 });

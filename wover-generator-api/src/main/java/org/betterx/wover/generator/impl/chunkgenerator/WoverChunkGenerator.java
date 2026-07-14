@@ -109,12 +109,10 @@ public class WoverChunkGenerator extends NoiseBasedChunkGenerator implements
         if (BlueprintBiomeSourceCompat.wraps(getBiomeSource(), initialBiomeSource)) {
             if (LevelStem.END.equals(dimensionKey) && wover_removeBlueprintEndWrapper()) {
                 return;
-            } else {
-                ChunkGeneratorHelper.rebuildFeaturesPerStep(this, getBiomeSource());
             }
+            ChunkGeneratorHelper.rebuildFeaturesPerStep(this, getBiomeSource());
             return;
         }
-
         if (initialBiomeSource != getBiomeSource()) {
             if (this instanceof ChunkGeneratorAccessor acc) {
                 if (initialBiomeSource instanceof MergeableBiomeSource<?> bs) {
@@ -212,11 +210,9 @@ public class WoverChunkGenerator extends NoiseBasedChunkGenerator implements
         if (LevelStem.END.equals(dimensionKey)) {
             wover_removeBlueprintEndWrapper();
         }
-
         if (IntegrationCore.RUNS_TERRABLENDER) {
             applyTerraBlenderRuleCategory(generatorSettings(), dimensionKey, this.getBiomeSource());
         }
-
         SurfaceRuleUtil.injectNoiseBasedSurfaceRules(
                 dimensionKey,
                 generatorSettings(),
@@ -230,32 +226,19 @@ public class WoverChunkGenerator extends NoiseBasedChunkGenerator implements
             ResourceKey<LevelStem> dimensionKey,
             BiomeSource biomeSource
     ) {
-        if (!holder.isBound()) {
-            return;
-        }
+        if (!holder.isBound()) return;
 
         String categoryName = null;
         if (dimensionKey != null) {
-            if (dimensionKey.equals(LevelStem.NETHER)) {
-                categoryName = "NETHER";
-            } else if (dimensionKey.equals(LevelStem.END)) {
-                categoryName = "END";
-            } else if (dimensionKey.equals(LevelStem.OVERWORLD)) {
-                categoryName = "OVERWORLD";
-            }
+            if (dimensionKey.equals(LevelStem.NETHER)) categoryName = "NETHER";
+            else if (dimensionKey.equals(LevelStem.END)) categoryName = "END";
+            else if (dimensionKey.equals(LevelStem.OVERWORLD)) categoryName = "OVERWORLD";
         }
-
         if (categoryName == null) {
-            if (biomeSource instanceof WoverNetherBiomeSource) {
-                categoryName = "NETHER";
-            } else if (biomeSource instanceof WoverEndBiomeSource) {
-                categoryName = "END";
-            }
+            if (biomeSource instanceof WoverNetherBiomeSource) categoryName = "NETHER";
+            else if (biomeSource instanceof WoverEndBiomeSource) categoryName = "END";
         }
-
-        if (categoryName == null) {
-            return;
-        }
+        if (categoryName == null) return;
 
         try {
             final Class<?> ruleCategoryClass = Class.forName("terrablender.api.SurfaceRuleManager$RuleCategory");
@@ -272,29 +255,20 @@ public class WoverChunkGenerator extends NoiseBasedChunkGenerator implements
         }
     }
 
-    /**
-     * Blueprint applies its End overlay after the configured generator was created. Once every active overlay has
-     * been imported into the Wover picker, retaining that wrapper makes the surface-rule context observe a different
-     * source than the one that owns BetterEnd's biome rules.
-     */
     boolean wover_removeBlueprintEndWrapper() {
-        final BiomeSource currentSource = getBiomeSource();
-        final BiomeSource unwrappedSource = LithostitchedBiomeSourceCompat.unwrap(currentSource);
+        BiomeSource currentSource = getBiomeSource();
+        BiomeSource unwrappedSource = LithostitchedBiomeSourceCompat.unwrap(currentSource);
         if (!BlueprintBiomeSourceCompat.canReplaceEndWrapper()
                 || currentSource == unwrappedSource
                 || !(unwrappedSource instanceof WoverEndBiomeSource)
                 || !(this instanceof ChunkGeneratorAccessor acc)) {
             return false;
         }
-
         acc.wover_setBiomeSource(unwrappedSource);
         if (unwrappedSource instanceof ReloadableBiomeSource reloadable) {
             reloadable.reloadBiomes();
         }
         ChunkGeneratorHelper.rebuildFeaturesPerStep(this, unwrappedSource);
-        LibWoverWorldGenerator.C.log.info(
-                "Replaced Blueprint End wrapper after importing all active biome overlays"
-        );
         return true;
     }
 }

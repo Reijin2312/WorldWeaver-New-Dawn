@@ -7,15 +7,15 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
-@Mod("wover-tag-testmod")
-public class TestModWoverTag {
+public class TestModWoverTag implements ModInitializer {
     // ModCore for the TestMod. TestMod's do not share the wover namespace,
     // but (like other Mods that include Wover) have a unique one
     public static final ModCore C = ModCore.create("wover-tag-testmod");
 
-    public TestModWoverTag() {
+    @Override
+    public void onInitialize() {
         TagKey<Block> aa = TagManager.BLOCKS.makeTag(C, "aa");
         var aaa = TagManager.BLOCKS.makeTag(C, "aa");
         var bb = TagManager.BLOCKS.makeTag(C, "bb");

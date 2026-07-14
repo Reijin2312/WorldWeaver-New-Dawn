@@ -13,8 +13,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value = Registries.class, priority = 200)
 public class RegistryDataLoaderMixinEarly {
-    // Some loaders prefix registry data paths with the mod id. We keep vanilla behavior for
-    // registries managed by our DatapackRegistryBuilder.
+    // Fabric (0.68) force-changes the directory path for all modded registries to be prefixed with
+    // the mod id. We do not want this for Registries managed using our DatapackRegistryBuilder,
+    // but instead force the vanilla behavior.
     @Inject(method = "elementsDirPath", at = @At("RETURN"), cancellable = true)
     private static void prependDirectoryWithNamespace(
             ResourceKey<? extends Registry<?>> resourceKey,

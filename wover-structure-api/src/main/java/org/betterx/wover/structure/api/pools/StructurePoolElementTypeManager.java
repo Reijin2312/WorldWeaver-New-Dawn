@@ -12,6 +12,6 @@ public class StructurePoolElementTypeManager {
             ResourceLocation location,
             MapCodec<P> codec
     ) {
-        return StructurePoolElementTypeManagerImpl.registerExternal(location, codec);
+        return StructurePoolElementTypeManagerImpl.register(location, codec);
     }
 }

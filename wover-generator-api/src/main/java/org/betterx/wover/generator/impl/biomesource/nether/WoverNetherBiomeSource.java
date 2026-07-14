@@ -25,8 +25,8 @@ import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.Climate;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -164,9 +164,6 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements
             biomeMap.clearCache();
         }
         WoverBiomePicker.PickableBiome bb = biomeMap.getBiome(biomeX << 2, biomeY << 2, biomeZ << 2);
-        // MosaicBiomeSource may offer an external biome at every position. Once the picker selected
-        // a vanilla Nether biome, preserving it is required for a stable vanilla distribution and
-        // for /locate to agree with the biome actually generated at that position.
         if (VanillaNetherBiomeCompat.isVanillaNetherBiome(bb.biome)) {
             return bb.biome;
         }
@@ -186,7 +183,7 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
+    @Environment(EnvType.CLIENT)
     public BiomeSourceConfigPanel<WoverNetherBiomeSource, WoverNetherConfig> biomeSourceConfigPanel(
             @NotNull Screen parent
     ) {

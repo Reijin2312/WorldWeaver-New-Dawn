@@ -287,10 +287,6 @@ public class BiomeData {
         return KEY_CODEC;
     }
 
-    public KeyDispatchDataCodec<? extends BiomeData> networkCodec() {
-        return codec();
-    }
-
     public @Nullable Holder<Biome> biomeHolder() {
         if (WorldState.registryAccess() == null) {
             if (WorldState.allStageRegistryAccess() == null) return null;
@@ -323,15 +319,6 @@ public class BiomeData {
      * @return true if the Biome is pickable, false otherwise.
      */
     public boolean isPickable() {
-        return true;
-    }
-
-    /**
-     * Used to determine whether a Biome is enabled for world generation.
-     *
-     * @return true if the Biome is enabled, false otherwise.
-     */
-    public boolean isEnabled() {
         return true;
     }
 

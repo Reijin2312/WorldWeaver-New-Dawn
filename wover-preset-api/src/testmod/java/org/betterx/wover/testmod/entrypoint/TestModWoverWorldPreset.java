@@ -14,12 +14,11 @@ import net.minecraft.world.level.levelgen.flat.FlatLayerInfo;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
 import java.util.HashSet;
 
-@Mod("wover-preset-testmod")
-public class TestModWoverWorldPreset {
+public class TestModWoverWorldPreset implements ModInitializer {
     // ModCore for the TestMod. TestMod's do not share the wover namespace,
     // but (like other Mods that include Wover) have a unique one
     public static final ModCore C = ModCore.create("wover-preset-testmod");
@@ -31,7 +30,8 @@ public class TestModWoverWorldPreset {
     public static final ResourceKey<FlatLevelGeneratorPreset> FLAT_NETHER =
             FlatLevelPresetManager.createKey(LibWoverWorldPreset.C.id("nether"));
 
-    public TestModWoverWorldPreset() {
+    @Override
+    public void onInitialize() {
         WorldPresetManager.BOOTSTRAP_WORLD_PRESETS.subscribe(
                 ctx -> {
                     var preset = WorldPresetManager.fromStems(ctx.endStem, ctx.overworldStem, ctx.netherStem);

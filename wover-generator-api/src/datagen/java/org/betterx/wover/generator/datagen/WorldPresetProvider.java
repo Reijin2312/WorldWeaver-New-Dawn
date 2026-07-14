@@ -14,8 +14,6 @@ import org.betterx.wover.preset.api.context.WorldPresetBootstrapContext;
 import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
 
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderGetter;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
@@ -40,7 +38,6 @@ public class WorldPresetProvider extends WoverWorldPresetProvider {
         ctx.register(WorldPresets.WOVER_WORLD, createNormal(ctx));
         ctx.register(WorldPresets.WOVER_WORLD_LARGE, createLarge(ctx));
         ctx.register(WorldPresets.WOVER_WORLD_AMPLIFIED, createAmplified(ctx));
-        ctx.register(WorldPresets.WOVER_WORLD_SUPERFLAT, createSuperflat(ctx));
 
         //for compatibility with BCLib
         if (LegacyHelper.isLegacyEnabled()) {
@@ -65,8 +62,7 @@ public class WorldPresetProvider extends WoverWorldPresetProvider {
                 WorldPresetTags.NORMAL,
                 WorldPresets.WOVER_WORLD,
                 WorldPresets.WOVER_WORLD_AMPLIFIED,
-                WorldPresets.WOVER_WORLD_LARGE,
-                WorldPresets.WOVER_WORLD_SUPERFLAT
+                WorldPresets.WOVER_WORLD_LARGE
         );
     }
 
@@ -118,26 +114,6 @@ public class WorldPresetProvider extends WoverWorldPresetProvider {
                 ctx.netherContext, WoverNetherConfig.DEFAULT,
                 ctx.endContext, WoverEndConfig.DEFAULT
         );
-    }
-
-    private static WorldPreset createSuperflat(WorldPresetBootstrapContext ctx) {
-        return buildPreset(
-                resolveFlatOverworld(ctx),
-                ctx.netherContext, WoverNetherConfig.DEFAULT,
-                ctx.endContext, WoverEndConfig.DEFAULT
-        );
-    }
-
-    private static LevelStem resolveFlatOverworld(WorldPresetBootstrapContext ctx) {
-        final HolderGetter<WorldPreset> presets = ctx.lookup(Registries.WORLD_PRESET);
-        if (presets != null) {
-            final Holder<WorldPreset> flatPreset = presets.getOrThrow(net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT);
-            final LevelStem stem = WorldPresetManager.getDimension(flatPreset, LevelStem.OVERWORLD);
-            if (stem != null) {
-                return stem;
-            }
-        }
-        return ctx.overworldStem;
     }
 
     private static WorldPreset buildPreset(

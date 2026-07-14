@@ -60,8 +60,18 @@ public interface TagRegistry<T, P extends TagBootstrapContext<T>> {
      *
      * @param name - The name of the Tag;
      * @return the corresponding TagKey {@link TagKey<T>}.
+     * @see <a href="https://fabricmc.net/wiki/tutorial:tags">Fabric Wiki (Tags)</a>
      */
     TagKey<T> makeCommonTag(String name);
+
+    /**
+     * Get or create a fabric {@link TagKey} (namespace is 'fabric').
+     *
+     * @param name - The name of the Tag;
+     * @return the corresponding TagKey {@link TagKey<T>}.
+     * @see <a href="https://fabricmc.net/wiki/tutorial:tags">Fabric Wiki (Tags)</a>
+     */
+    TagKey<T> makeFabricTag(String name);
 
     /**
      * Get or create a {@link TagKey}.

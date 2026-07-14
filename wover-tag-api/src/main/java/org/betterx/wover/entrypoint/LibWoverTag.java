@@ -8,17 +8,16 @@ import org.betterx.wover.datagen.impl.AutoItemTagProvider;
 import org.betterx.wover.events.api.WorldLifecycle;
 import org.betterx.wover.tag.api.predefined.*;
 import org.betterx.wover.tag.impl.TagBootstrapContextImpl;
-import org.betterx.wover.tag.datagen.WoverTagDatagen;
 
-import net.neoforged.bus.api.IEventBus;
+import net.fabricmc.api.ModInitializer;
+
 import static org.betterx.wover.events.impl.AbstractEvent.SYSTEM_PRIORITY;
 
-public class LibWoverTag {
+public class LibWoverTag implements ModInitializer {
     public static final ModCore C = ModCore.create("wover-tag", "wover");
 
-    public LibWoverTag(IEventBus modEventBus) {
-        C.registerDatapackListener(modEventBus);
-        modEventBus.addListener(new WoverTagDatagen()::onGatherData);
+    @Override
+    public void onInitialize() {
         WoverDataGenEntryPoint.registerAutoProvider(AutoBlockTagProvider::new);
         WoverDataGenEntryPoint.registerAutoProvider(AutoItemTagProvider::new);
         WoverDataGenEntryPoint.registerAutoProvider(AutoBiomeTagProvider::new);

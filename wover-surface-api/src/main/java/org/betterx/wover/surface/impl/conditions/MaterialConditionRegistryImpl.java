@@ -1,16 +1,15 @@
 package org.betterx.wover.surface.impl.conditions;
 
+import org.betterx.wover.core.api.registry.BuiltInRegistryManager;
 import org.betterx.wover.entrypoint.LibWoverSurface;
 import org.betterx.wover.legacy.api.LegacyHelper;
 import org.betterx.wover.surface.api.conditions.ConditionManager;
 
 import com.mojang.serialization.MapCodec;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.levelgen.SurfaceRules;
-
-import net.neoforged.neoforge.registries.RegisterEvent;
 
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -28,38 +27,30 @@ public class MaterialConditionRegistryImpl {
             MapCodec<? extends SurfaceRules.ConditionSource> codec,
             boolean withBCLibLegacy
     ) {
+        BuiltInRegistryManager.register(BuiltInRegistries.MATERIAL_CONDITION, key, codec);
+        if (withBCLibLegacy && LegacyHelper.isLegacyEnabled()) {
+            BuiltInRegistryManager.register(
+                    BuiltInRegistries.MATERIAL_CONDITION,
+                    LegacyHelper.BCLIB_CORE.convertNamespace(key.location()),
+                    LegacyHelper.wrap(codec)
+            );
+        }
+
         return key;
     }
 
     @NotNull
     public static ResourceKey<MapCodec<? extends SurfaceRules.ConditionSource>> createKey(ResourceLocation location) {
         return ResourceKey.create(
-                Registries.MATERIAL_CONDITION,
+                BuiltInRegistries.MATERIAL_CONDITION.key(),
                 location
         );
     }
 
     @ApiStatus.Internal
-    public static void register(RegisterEvent event) {
-        event.register(Registries.MATERIAL_CONDITION, helper -> {
-            helper.register(THRESHOLD_CONDITION.location(), ThresholdConditionImpl.CODEC);
-            helper.register(VOLUME_THRESHOLD_CONDITION.location(), VolumeThresholdConditionImpl.CODEC);
-            helper.register(ROUGH_NOISE_CONDITION.location(), RoughNoiseConditionImpl.CODEC);
-
-            if (LegacyHelper.isLegacyEnabled()) {
-                helper.register(
-                        LegacyHelper.BCLIB_CORE.convertNamespace(THRESHOLD_CONDITION.location()),
-                        LegacyHelper.wrap(ThresholdConditionImpl.CODEC)
-                );
-                helper.register(
-                        LegacyHelper.BCLIB_CORE.convertNamespace(VOLUME_THRESHOLD_CONDITION.location()),
-                        LegacyHelper.wrap(VolumeThresholdConditionImpl.CODEC)
-                );
-                helper.register(
-                        LegacyHelper.BCLIB_CORE.convertNamespace(ROUGH_NOISE_CONDITION.location()),
-                        LegacyHelper.wrap(RoughNoiseConditionImpl.CODEC)
-                );
-            }
-        });
+    public static void bootstrap() {
+        register(THRESHOLD_CONDITION, ThresholdConditionImpl.CODEC, true);
+        register(VOLUME_THRESHOLD_CONDITION, VolumeThresholdConditionImpl.CODEC, true);
+        register(ROUGH_NOISE_CONDITION, RoughNoiseConditionImpl.CODEC, true);
     }
 }

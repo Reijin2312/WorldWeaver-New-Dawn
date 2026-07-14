@@ -11,9 +11,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Reads Regions Unexplored's resolved biome settings without making it a required dependency.
- */
 public final class RegionsUnexploredBiomeConfigCompat {
     private static final String CONFIG_HANDLER = "net.regions_unexplored.config.RUConfigHandler";
 
@@ -23,30 +20,18 @@ public final class RegionsUnexploredBiomeConfigCompat {
     @SuppressWarnings("unchecked")
     public static Set<ResourceKey<Biome>> disabledBiomes() {
         try {
-            ClassLoader loader = RegionsUnexploredBiomeConfigCompat.class.getClassLoader();
-            Class<?> configHandler = Class.forName(CONFIG_HANDLER, false, loader);
+            Class<?> configHandler = Class.forName(CONFIG_HANDLER, false, RegionsUnexploredBiomeConfigCompat.class.getClassLoader());
             Object common = configHandler.getField("COMMON").get(null);
-            if (common == null) {
-                return Set.of();
-            }
-
+            if (common == null) return Set.of();
             Field biomePlacementsField = common.getClass().getField("biomePlacements");
             Object biomePlacements = biomePlacementsField.get(common);
-            if (biomePlacements == null) {
-                return Set.of();
-            }
-
+            if (biomePlacements == null) return Set.of();
             Object placements = biomePlacements.getClass().getField("placements").get(biomePlacements);
-            if (!(placements instanceof Map<?, ?> placementMap)) {
-                return Set.of();
-            }
+            if (!(placements instanceof Map<?, ?> placementMap)) return Set.of();
 
             Set<ResourceKey<Biome>> disabled = new HashSet<>();
             for (Map.Entry<?, ?> entry : placementMap.entrySet()) {
-                if (!(entry.getKey() instanceof ResourceKey<?> key) || entry.getValue() == null) {
-                    continue;
-                }
-
+                if (!(entry.getKey() instanceof ResourceKey<?> key) || entry.getValue() == null) continue;
                 Method canGenerate = entry.getValue().getClass().getMethod("canGenerate");
                 if (Boolean.FALSE.equals(canGenerate.invoke(entry.getValue()))) {
                     disabled.add((ResourceKey<Biome>) key);

@@ -10,7 +10,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.core.QuartPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.WorldGenLevel;
@@ -52,8 +51,7 @@ public class WoverBiomePicker {
             BiomeData sourceBiome,
             BiConsumer<BiomeData, Float> consumeChild
     ) {
-        final Registry<BiomeData> reg = WoverBiomeData.tryGetDataRegistry("biome alternatives", sourceBiome.biomeKey);
-        if (reg == null) return;
+        final Registry<BiomeData> reg = WoverBiomeData.getDataRegistry("biome alternatives", sourceBiome.biomeKey);
 
         for (Map.Entry<ResourceKey<BiomeData>, BiomeData> entry : reg.entrySet()) {
             if (entry.getValue() instanceof WoverBiomeData b
@@ -66,7 +64,7 @@ public class WoverBiomePicker {
 
     private boolean isAllowed(BiomeData biomeData) {
         if (biomeData == null) return false;
-        return biomeData.isEnabled();
+        return true;
     }
 
     private BiomeData nullIfNotAllowed(BiomeData biomeData) {
@@ -122,10 +120,7 @@ public class WoverBiomePicker {
             for (PickableBiome builtBiome : beforeList) {
                 consumeSubBiomesForSource(
                         builtBiome.biomeData,
-                        (biomeData, weight) -> {
-                            PickableBiome subBiome = create(nullIfNotAllowed(biomeData));
-                            if (subBiome != null) builtBiome.subbiomes.add(subBiome, weight);
-                        }
+                        (biomeData, weight) -> builtBiome.subbiomes.add(create(biomeData), weight)
                 );
             }
 
@@ -168,7 +163,7 @@ public class WoverBiomePicker {
             if (biomeData instanceof WoverBiomeData wData) {
                 subbiomes.add(this, wData.genChance);
                 edge = create(nullIfNotAllowed(wData.getEdgeData()));
-                parent = create(nullIfNotAllowed(wData.getParentData()));
+                parent = create(wData.getParentData());
                 edgeSize = wData.edgeSize;
                 isVertical = wData.vertical;
             } else {
@@ -235,11 +230,7 @@ public class WoverBiomePicker {
         final ChunkPos chunkPos = new ChunkPos(testPos);
         final ChunkAccess chunk = world.getChunkSource().getChunk(chunkPos.x, chunkPos.z, ChunkStatus.BIOMES, false);
         if (chunk != null) {
-            return chunk.getNoiseBiome(
-                    QuartPos.fromBlock(testPos.getX()),
-                    QuartPos.fromBlock(testPos.getY()),
-                    QuartPos.fromBlock(testPos.getZ())
-            );
+            return chunk.getBiomeFabric(testPos);
         } else {
             return null;
         }

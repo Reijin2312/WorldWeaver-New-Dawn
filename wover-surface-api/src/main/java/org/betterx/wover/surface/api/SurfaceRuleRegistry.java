@@ -49,7 +49,7 @@ public class SurfaceRuleRegistry {
      * The Key of the Registry. ({@code wover/worldgen/surface_rules})
      */
     public static final ResourceKey<Registry<AssignedSurfaceRule>> SURFACE_RULES_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverSurface.C.id("worldgen/surface_rules"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverSurface.C.id("wover/worldgen/surface_rules"));
 
     /**
      * Creates a ResourceKey for a SurfaceRule.

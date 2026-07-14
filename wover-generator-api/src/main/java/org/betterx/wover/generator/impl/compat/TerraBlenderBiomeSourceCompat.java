@@ -21,14 +21,7 @@ public final class TerraBlenderBiomeSourceCompat {
     private TerraBlenderBiomeSourceCompat() {
     }
 
-    public static boolean initialize(
-            BiomeSource source,
-            RegistryAccess registryAccess,
-            Holder<DimensionType> dimensionType,
-            ResourceKey<LevelStem> dimensionKey,
-            ChunkGenerator settingsOwner,
-            long seed
-    ) {
+    public static boolean initialize(BiomeSource source, RegistryAccess registryAccess, Holder<DimensionType> dimensionType, ResourceKey<LevelStem> dimensionKey, ChunkGenerator settingsOwner, long seed) {
         if (!(source instanceof MultiNoiseBiomeSource) || !(settingsOwner instanceof NoiseBasedChunkGenerator noise)) {
             return false;
         }
@@ -40,36 +33,16 @@ public final class TerraBlenderBiomeSourceCompat {
             if (!Boolean.TRUE.equals(shouldApply.invoke(null, externalGenerator))) {
                 return false;
             }
-
-            Method initialize = levelUtils.getMethod(
-                    "initializeBiomes",
-                    RegistryAccess.class,
-                    Holder.class,
-                    ResourceKey.class,
-                    ChunkGenerator.class,
-                    long.class
-            );
+            Method initialize = levelUtils.getMethod("initializeBiomes", RegistryAccess.class, Holder.class, ResourceKey.class, ChunkGenerator.class, long.class);
             initialize.invoke(null, registryAccess, dimensionType, dimensionKey, externalGenerator, seed);
-            LibWoverWorldGenerator.C.log.info(
-                    "Initialized TerraBlender fallback for {} with {} possible biomes",
-                    dimensionKey.location(),
-                    source.possibleBiomes().size()
-            );
+            LibWoverWorldGenerator.C.log.info("Initialized TerraBlender fallback for {} with {} possible biomes", dimensionKey.location(), source.possibleBiomes().size());
             return true;
         } catch (ClassNotFoundException ignored) {
             return false;
         } catch (InvocationTargetException e) {
-            LibWoverWorldGenerator.C.log.warn(
-                    "TerraBlender fallback failed to initialize for {}",
-                    dimensionKey.location(),
-                    e.getCause()
-            );
+            LibWoverWorldGenerator.C.log.warn("TerraBlender fallback failed to initialize for {}", dimensionKey.location(), e.getCause());
         } catch (ReflectiveOperationException | RuntimeException e) {
-            LibWoverWorldGenerator.C.log.warn(
-                    "Unable to initialize TerraBlender fallback for {}",
-                    dimensionKey.location(),
-                    e
-            );
+            LibWoverWorldGenerator.C.log.warn("Unable to initialize TerraBlender fallback for {}", dimensionKey.location(), e);
         }
         return false;
     }

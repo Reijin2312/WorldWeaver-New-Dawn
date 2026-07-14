@@ -10,10 +10,11 @@ import org.betterx.wover.tabs.api.interfaces.CreativeTabsBuilderWithTab;
 
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
+
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -61,7 +62,7 @@ public class CreativeTabManagerImpl implements CreativeTabsBuilder, CreativeTabs
 
     public void registerAllTabs() {
         for (SimpleCreativeTabImpl tab : tabs) {
-            var tabItem = CreativeModeTab
+            var tabItem = FabricItemGroup
                     .builder()
                     .icon(() -> new ItemStack(tab.icon))
                     .title(tab.title)

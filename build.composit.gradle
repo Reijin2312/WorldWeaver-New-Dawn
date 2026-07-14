@@ -1,9 +1,9 @@
 plugins {
-    id 'java-library'
+    id 'java'
     id 'maven-publish'
     id 'idea'
     id 'eclipse'
-    id 'net.neoforged.moddev' version "${moddev_version}"
+    id 'fabric-loom' version "${loom_version}"
 }
 archivesBaseName = project.archives_base_name
 sourceCompatibility = JavaVersion.VERSION_21

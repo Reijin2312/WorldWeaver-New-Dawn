@@ -255,9 +255,6 @@ public class RecipeBuilder {
         }
 
         public void makeFireBowlRecipe(Block material, Block inside, Item leg, Block result) {
-            if (material == null || inside == null || leg == null || result == null) {
-                return;
-            }
             String name = BuiltInRegistries.BLOCK.getKey(result).getPath();
 
             RecipeBuilder

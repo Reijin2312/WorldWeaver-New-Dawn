@@ -6,12 +6,13 @@ import org.betterx.wover.biome.impl.modification.BiomeModificationRegistryImpl;
 import org.betterx.wover.biome.impl.modification.predicates.BiomePredicateRegistryImpl;
 import org.betterx.wover.core.api.ModCore;
 
-import net.neoforged.bus.api.IEventBus;
-public class LibWoverBiome {
+import net.fabricmc.api.ModInitializer;
+
+public class LibWoverBiome implements ModInitializer {
     public static final ModCore C = ModCore.create("wover-biome", "wover");
 
-    public LibWoverBiome(IEventBus modEventBus) {
-        C.registerDatapackListener(modEventBus);
+    @Override
+    public void onInitialize() {
         BiomeManagerImpl.initialize();
         BiomeCodecRegistryImpl.initialize();
         //BiomeDataRegistryImpl.initialize(); //done in the wover.datapack.registry entrypoint

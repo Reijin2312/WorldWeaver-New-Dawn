@@ -10,6 +10,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.data.worldgen.Pools;
+import net.minecraft.data.worldgen.ProcessorLists;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
@@ -39,9 +40,6 @@ public class StructurePoolBuilderImpl implements StructurePoolBuilder {
     private Holder<StructureTemplatePool> terminator;
     @NotNull
     private StructureTemplatePool.Projection projection;
-
-    private static final ResourceKey<StructureProcessorList> EMPTY_PROCESSOR_LIST =
-            ResourceKey.create(Registries.PROCESSOR_LIST, ResourceLocation.withDefaultNamespace("empty"));
 
     private List<Pair<Function<StructureTemplatePool.Projection, ? extends StructurePoolElement>, Integer>> elements = new LinkedList<>();
 
@@ -196,7 +194,7 @@ public class StructurePoolBuilderImpl implements StructurePoolBuilder {
 
         @Override
         public @NotNull ElementBuilder emptyProcessor() {
-            return processor(EMPTY_PROCESSOR_LIST);
+            return processor(ProcessorLists.EMPTY);
         }
 
         @Override

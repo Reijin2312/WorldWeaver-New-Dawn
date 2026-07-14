@@ -6,6 +6,7 @@ import net.minecraft.advancements.Criterion;
 import net.minecraft.advancements.critereon.InventoryChangeTrigger;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.recipes.RecipeCategory;
+import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -72,7 +73,7 @@ public abstract class BaseRecipeBuilderImpl<I extends BaseRecipeBuilder<I>> impl
     public I unlockedBy(ItemLike item) {
         this.unlocks(
                 "has_" + item.asItem().getDescriptionId(),
-                WoverRecipeProviderAccess.has(item.asItem())
+                RecipeProvider.has(item.asItem())
         );
 
         return (I) this;
@@ -81,7 +82,7 @@ public abstract class BaseRecipeBuilderImpl<I extends BaseRecipeBuilder<I>> impl
     public I unlockedBy(TagKey<Item> tag) {
         this.unlocks(
                 "has_tag_" + tag.location().getNamespace() + "_" + tag.location().getPath(),
-                WoverRecipeProviderAccess.has(tag)
+                RecipeProvider.has(tag)
         );
 
         return (I) this;

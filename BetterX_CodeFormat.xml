@@ -12,6 +12,7 @@
         <package name="com.mojang" withSubpackages="true" static="false" />
         <package name="net.minecraft" withSubpackages="true" static="false" />
         <emptyLine />
+        <package name="net.fabricmc" withSubpackages="true" static="false" />
         <emptyLine />
         <package name="" withSubpackages="true" static="false" />
         <emptyLine />

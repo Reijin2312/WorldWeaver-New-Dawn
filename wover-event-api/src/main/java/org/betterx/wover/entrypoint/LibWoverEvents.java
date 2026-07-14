@@ -5,12 +5,13 @@ import org.betterx.wover.state.impl.WorldConfigImpl;
 import org.betterx.wover.state.impl.WorldDatapackConfigImpl;
 import org.betterx.wover.state.impl.WorldStateImpl;
 
-import net.neoforged.bus.api.IEventBus;
-public class LibWoverEvents {
+import net.fabricmc.api.ModInitializer;
+
+public class LibWoverEvents implements ModInitializer {
     public static final ModCore C = ModCore.create("wover-events", "wover");
 
-    public LibWoverEvents(IEventBus modEventBus) {
-        C.registerDatapackListener(modEventBus);
+    @Override
+    public void onInitialize() {
         WorldConfigImpl.initialize();
         WorldDatapackConfigImpl.initialize();
         WorldStateImpl.ensureStaticallyLoaded();

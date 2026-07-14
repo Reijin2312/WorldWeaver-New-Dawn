@@ -10,7 +10,7 @@ import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.FeatureSorter;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 
-import net.neoforged.neoforge.common.util.Lazy;
+import com.google.common.base.Suppliers;
 
 import java.util.List;
 import java.util.function.Function;
@@ -20,7 +20,7 @@ public class ChunkGeneratorHelper {
         if (generator instanceof ChunkGeneratorAccessor acc) {
             Function<Holder<Biome>, BiomeGenerationSettings> function
                     = (Holder<Biome> biomeHolder) -> biomeHolder.value().getGenerationSettings();
-            acc.wover_setFeaturesPerStep(Lazy.of(() -> {
+            acc.wover_setFeaturesPerStep(Suppliers.memoize(() -> {
                 try {
                     return FeatureSorter.buildFeaturesPerStep(
                             List.copyOf(biomeSource.possibleBiomes()),

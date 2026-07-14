@@ -2,13 +2,13 @@ package org.betterx.test.wover;
 
 import org.betterx.wover.core.api.ModCore;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
-@Mod("wover-testmod")
-public class TestModWover {
-    public static final ModCore C = ModCore.create("wover-testmod");
+public class TestModWover implements ModInitializer {
+    public static final ModCore C = ModCore.create("wover-test-mod");
 
-    public TestModWover() {
+    @Override
+    public void onInitialize() {
         C.log.info("Hello from TestModWover!");
     }
 }

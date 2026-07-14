@@ -7,7 +7,6 @@ import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 import org.betterx.wover.generator.impl.compat.BlueprintBiomeSourceCompat;
-import org.betterx.wover.generator.impl.compat.CopiedEndBiomeRegistryCompat;
 import org.betterx.wover.generator.impl.compat.TerraBlenderEndBiomeCompat;
 import org.betterx.wover.generator.impl.compat.VanillaNetherBiomeCompat;
 import org.betterx.wover.state.api.WorldState;
@@ -72,7 +71,7 @@ public class WoverBiomeSourceImpl {
         final Set<Holder<Biome>> allBiomes = new HashSet<>();
         final Set<BiomePlacement> addedBiomePlacements = new HashSet<>();
         final Registry<Biome> biomes = access.registryOrThrow(Registries.BIOME);
-        final Registry<BiomeData> biomeData = access.registry(BiomeDataRegistry.BIOME_DATA_REGISTRY).orElse(null);
+        final Registry<BiomeData> biomeData = access.registryOrThrow(BiomeDataRegistry.BIOME_DATA_REGISTRY);
 
         for (WoverBiomeSource.TagToPicker mapper : pickers) {
             final Optional<HolderSet.Named<Biome>> optionalTag = biomes.getTag(mapper.tag());
@@ -93,26 +92,16 @@ public class WoverBiomeSourceImpl {
                                pair.second
                        );
 
-                       if (data != null && !data.isTemp()) {
-                           // Parent and edge biomes are selected by an existing picker rather than registered as
-                           // independent candidates. They must still remain in possibleBiomes for /locate, feature
-                           // sorting, and surface-rule injection.
-                           isPossible = data.isPickable()
-                                   ? pickerAdder.add(data, mapper.tag(), mapper.picker())
-                                   : true;
-                       } else {
+                       if (data != null && !data.isTemp() && data.isPickable()) {
+                           isPossible = pickerAdder.add(data, mapper.tag(), mapper.picker());
+                       } else if (data == null || data.isTemp()) {
                            data = BlueprintBiomeSourceCompat.getImportedBiomeData(pair.second);
-                           if (data == null || data.isTemp()) {
-                               data = TerraBlenderEndBiomeCompat.getImportedBiomeData(pair.second);
-                           }
-                           if (data == null || data.isTemp()) {
-                               data = CopiedEndBiomeRegistryCompat.getImportedBiomeData(pair.second);
-                           }
-                           if (data == null || data.isTemp()) {
-                               data = VanillaNetherBiomeCompat.getImportedBiomeData(pair.second);
-                           }
+                           if (data == null || data.isTemp()) data = TerraBlenderEndBiomeCompat.getImportedBiomeData(pair.second);
+                           if (data == null || data.isTemp()) data = VanillaNetherBiomeCompat.getImportedBiomeData(pair.second);
                            isPossible = data != null && !data.isTemp() && data.isPickable()
                                    && pickerAdder.add(data, mapper.tag(), mapper.picker());
+                       } else {
+                           isPossible = true;
                        }
 
                        if (isPossible) {

@@ -11,10 +11,9 @@ import org.betterx.wover.testmod.structure.TestStructure;
 
 import net.minecraft.world.level.levelgen.GenerationStep;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
-@Mod("wover-structure-testmod")
-public class TestModWoverStructure {
+public class TestModWoverStructure implements ModInitializer {
     // ModCore for the TestMod. TestMod's do not share the wover namespace,
     // but (like other Mods that include Wover) have a unique one
     public static final ModCore C = ModCore.create("wover-structure-testmod");
@@ -46,4 +45,8 @@ public class TestModWoverStructure {
             = StructureKeys.processor(C.id("test_structure_processor"));
 
 
+    @Override
+    public void onInitialize() {
+
+    }
 }

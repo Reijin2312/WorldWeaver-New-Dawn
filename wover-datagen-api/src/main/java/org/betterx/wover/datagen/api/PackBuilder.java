@@ -4,10 +4,10 @@ import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.datagen.impl.PackBuilderImpl;
 
 import net.minecraft.data.DataProvider;
-import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 
-import net.neoforged.neoforge.data.event.GatherDataEvent;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricDynamicRegistryProvider;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -34,7 +34,7 @@ public class PackBuilder extends PackBuilderImpl {
     @Nullable
     public final ResourceLocation location;
 
-    PackOutput packOutput;
+    FabricDataGenerator.Pack pack;
     DatapackBootstrap datapackBootstrap;
 
 
@@ -114,8 +114,8 @@ public class PackBuilder extends PackBuilderImpl {
     }
 
 
-    PackBuilder pack(PackOutput packOutput) {
-        this.packOutput = packOutput;
+    PackBuilder pack(FabricDataGenerator.Pack pack) {
+        this.pack = pack;
         return this;
     }
 
@@ -130,7 +130,7 @@ public class PackBuilder extends PackBuilderImpl {
      * @param <T> The element type of the registry.
      */
     @FunctionalInterface
-    public interface RegistryFactory<T> extends ProviderFactory<DataProvider> {
+    public interface RegistryFactory<T> extends ProviderFactory<FabricDynamicRegistryProvider> {
         /**
          * Creates a new {@link WoverRegistryProvider}.
          *
@@ -148,13 +148,13 @@ public class PackBuilder extends PackBuilderImpl {
         /**
          * Called when the Datapack is created.
          *
-         * @param event               The GatherDataEvent
-         * @param packOutput          The pack output for this datapack
+         * @param fabricDataGenerator The Fabric Datagenerator
+         * @param pack                The Datapack
          * @param location            The {@link ResourceLocation} of the Datapack
          */
         void bootstrap(
-                GatherDataEvent event,
-                PackOutput packOutput,
+                FabricDataGenerator fabricDataGenerator,
+                FabricDataGenerator.Pack pack,
                 ResourceLocation location
         );
     }

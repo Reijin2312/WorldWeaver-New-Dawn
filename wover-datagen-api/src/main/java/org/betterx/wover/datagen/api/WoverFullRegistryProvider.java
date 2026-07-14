@@ -2,16 +2,16 @@ package org.betterx.wover.datagen.api;
 
 import org.betterx.wover.core.api.ModCore;
 
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistrySetBuilder;
-import net.minecraft.data.DataProvider;
-import net.minecraft.data.PackOutput;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
 
-import net.neoforged.neoforge.common.data.DatapackBuiltinEntriesProvider;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricDynamicRegistryProvider;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -110,22 +110,40 @@ public abstract class WoverFullRegistryProvider<T> extends WoverRegistryProvider
     }
 
     /**
-     * Gets the {@link DataProvider} that will serialize the Registry to the DataPack.
+     * Gets the {@link FabricDynamicRegistryProvider} that will serialize the
+     * Registry to the DataPack. This method is called internally by
+     * {@link WoverDataGenEntryPoint#onInitializeDataGenerator(FabricDataGenerator)}
      *
-     * @param output             The output to write the data to.
-     * @param registriesFuture   A future sent from the data generator
-     * @param existingFileHelper The existing file helper from NeoForge datagen
-     * @return The {@link DataProvider} that will serialize the Registry to the DataPack.
+     * @param output           The output to write the data to.
+     * @param registriesFuture A future sent from the Fabric DataGen API
+     * @return The {@link FabricDynamicRegistryProvider} that will serialize the
+     * Registry to the DataPack.
      */
     @ApiStatus.Internal
     @Override
-    public DataProvider getProvider(
-            PackOutput output,
-            CompletableFuture<HolderLookup.Provider> registriesFuture,
-            ExistingFileHelper existingFileHelper
+    public FabricDynamicRegistryProvider getProvider(
+            FabricDataOutput output,
+            CompletableFuture<HolderLookup.Provider> registriesFuture
     ) {
-        RegistrySetBuilder registryBuilder = new RegistrySetBuilder();
-        buildRegistry(registryBuilder);
-        return new DatapackBuiltinEntriesProvider(output, registriesFuture, registryBuilder, modIdSet());
+        return new FabricDynamicRegistryProvider(output, registriesFuture) {
+            @Override
+            protected void configure(HolderLookup.Provider registries, Entries entries) {
+                final var registry = registries.lookupOrThrow(registryKey);
+                final long countAll = registry.listElementIds().count();
+                var filtered = registry.listElementIds()
+                                       .filter(key -> validNamespace.test(key.location().getNamespace()))
+                                       .map(registry::getOrThrow)
+                                       .filter(Holder.Reference::isBound)
+                                       .toList();
+                final long filteredCount = filtered.size();
+                filtered.forEach(holder -> entries.add(holder.key(), holder.value()));
+                modCore.log.info("[" + filteredCount + " / " + countAll + "] " + registryKey.location());
+            }
+
+            @Override
+            public String getName() {
+                return title;
+            }
+        };
     }
 }

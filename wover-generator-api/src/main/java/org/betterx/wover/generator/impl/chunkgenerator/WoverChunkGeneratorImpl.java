@@ -47,32 +47,17 @@ public class WoverChunkGeneratorImpl {
             LayeredRegistryAccess<RegistryLayer> registries,
             WorldData worldData
     ) {
-        final long seed = worldData.worldGenOptions().seed();
-        final RegistryAccess registryAccess = registries.compositeAccess();
-        final Registry<LevelStem> dimensions = registryAccess.registryOrThrow(Registries.LEVEL_STEM);
-        LibWoverWorldGenerator.C.log.info(
-                "Initializing external biome sources from active dimensions registry ({} entries)",
-                dimensions.size()
-        );
+        long seed = worldData.worldGenOptions().seed();
+        RegistryAccess registryAccess = registries.compositeAccess();
+        Registry<LevelStem> dimensions = registryAccess.registryOrThrow(Registries.LEVEL_STEM);
         for (var entry : dimensions.entrySet()) {
-            final ChunkGenerator generator = entry.getValue().generator();
-            final var loadedSource = generator.getBiomeSource();
-            final var sourceForCompatibility = LithostitchedBiomeSourceCompat.unwrap(loadedSource);
-            if (sourceForCompatibility instanceof WoverBiomeSource source
-                    && source.initializeExternalBiomeSource(
-                    seed,
-                    registryAccess,
-                    entry.getValue().type(),
-                    entry.getKey(),
-                    generator
+            ChunkGenerator generator = entry.getValue().generator();
+            var loadedSource = generator.getBiomeSource();
+            var sourceForCompatibility = LithostitchedBiomeSourceCompat.unwrap(loadedSource);
+            if (sourceForCompatibility instanceof WoverBiomeSource source && source.initializeExternalBiomeSource(
+                    seed, registryAccess, entry.getValue().type(), entry.getKey(), generator
             )) {
-                if (LithostitchedBiomeSourceCompat.refreshPossibleBiomes(loadedSource, source.possibleBiomes())) {
-                    LibWoverWorldGenerator.C.log.info(
-                            "Refreshed Lithostitched biome cache for {} with {} possible biomes",
-                            entry.getKey().location(),
-                            loadedSource.possibleBiomes().size()
-                    );
-                }
+                LithostitchedBiomeSourceCompat.refreshPossibleBiomes(loadedSource, source.possibleBiomes());
                 if (generator instanceof RebuildableFeaturesPerStep<?> rebuildable) {
                     rebuildable.wover_rebuildFeaturesPerStep();
                 }
@@ -119,10 +104,10 @@ public class WoverChunkGeneratorImpl {
     }
 
     private static LayeredRegistryAccess<RegistryLayer> repairBiomeSourceInAllDimensions(LayeredRegistryAccess<RegistryLayer> registries) {
+        WorldGeneratorConfigImpl.migrateGeneratorSettings();
+
         final RegistryAccess.Frozen access = registries.compositeAccess();
         final Registry<LevelStem> dimensions = access.registryOrThrow(Registries.LEVEL_STEM);
-
-        WorldGeneratorConfigImpl.migrateGeneratorSettings(access, dimensions);
 
         final BiomeRepairHelper biomeHelper = new BiomeRepairHelper();
         final Registry<LevelStem> changedDimensions = biomeHelper.repairBiomeSourceInAllDimensions(access, dimensions);

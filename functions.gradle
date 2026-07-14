@@ -1,37 +1,35 @@
-def resolveProjectPath(project, String name) {
-    def direct = ":${name}"
-    if (project.findProject(direct) != null) {
-        return direct
-    }
-    def nested = ":WorldWeaver:${name}"
-    if (project.findProject(nested) != null) {
-        return nested
-    }
-    return direct
-}
-
 def moduleDependencies(project, List<String> depNames) {
+    def deps = getDependencies(project, depNames, 'namedElements')
+
     project.dependencies {
-        depNames.each {
-            api project.dependencies.project(path: resolveProjectPath(project, it))
+        deps.each {
+            api it
         }
     }
 }
 
 def testDependencies(project, List<String> depNames) {
+    def deps = getDependencies(project, depNames, 'namedElements')
+
     project.dependencies {
-        depNames.each {
-            def dep = project.dependencies.project(path: resolveProjectPath(project, it))
-            testmodImplementation dep
-            testmodClientImplementation dep
+        deps.each {
+            testmodImplementation it
+            testmodClientImplementation it
         }
     }
 }
 
 def datagenDependencies(project, List<String> depNames) {
+    def deps = getDependencies(project, depNames, 'namedElements')
+    def depsClient = getDependencies(project, depNames, 'devClient')
+
     project.dependencies {
-        depNames.each {
-            testmodDatagenImplementation project.dependencies.project(path: resolveProjectPath(project, it))
+        deps.each {
+            datagenImplementation it
+        }
+
+        depsClient.each {
+            datagenImplementation it
         }
     }
 }

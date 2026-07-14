@@ -18,6 +18,7 @@ import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BiomeDefaultFeatures;
 import net.minecraft.data.worldgen.BootstrapContext;
+import net.minecraft.data.worldgen.biome.OverworldBiomes;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.Music;
 import net.minecraft.sounds.SoundEvent;
@@ -46,7 +47,7 @@ public abstract class BiomeBuilder<B extends BiomeBuilder<B>> {
     public final BiomeBootstrapContext bootstrapContext;
 
     public static int calculateSkyColor(float temperature) {
-        return WoverOverworldBiomesAccess.calculateSkyColor(temperature);
+        return OverworldBiomes.calculateSkyColor(temperature);
     }
 
     public static int DEFAULT_WATER_FOG_COLOR = 0x050533;
@@ -488,8 +489,10 @@ public abstract class BiomeBuilder<B extends BiomeBuilder<B>> {
 
 
         private static BiomeGenerationSettings fixGenerationSettings(BiomeGenerationSettings settings) {
-            // Some biome modification pipelines cannot handle an empty carver map,
-            // so create an empty HolderSet for every possible step.
+            //Fabric Biome Modification API can not handle an empty carver map, thus we will create one with
+            //an empty HolderSet for every possible step:
+            //https://github.com/FabricMC/fabric/issues/2079
+            //TODO: Remove, once fabric gets fixed
             if (settings instanceof BiomeGenerationSettingsAccessor acc) {
                 Map<GenerationStep.Carving, HolderSet<ConfiguredWorldCarver<?>>> carvers = new HashMap<>(acc.wover_getCarvers());
                 for (GenerationStep.Carving step : GenerationStep.Carving.values()) {

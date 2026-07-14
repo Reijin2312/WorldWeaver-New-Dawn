@@ -7,8 +7,10 @@ import org.betterx.wover.loot.api.BlockLootProvider;
 import org.betterx.wover.loot.api.LootLookupProvider;
 import org.betterx.wover.loot.api.LootTableManager;
 import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
+
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -16,34 +18,22 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.FireBlock;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.core.registries.BuiltInRegistries;
-import java.util.Comparator;
+
+import net.fabricmc.fabric.api.registry.FlammableBlockRegistry;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
-import java.util.concurrent.atomic.AtomicBoolean;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.RegisterEvent;
 import org.jetbrains.annotations.NotNull;
 
 public class BlockRegistry {
     private static final Map<ModCore, BlockRegistry> REGISTRIES = new HashMap<>();
-    private static final Comparator<BlockRegistry> REGISTRY_ORDER = Comparator
-            .comparing((BlockRegistry registry) -> registry.C.modId)
-            .thenComparing(registry -> registry.C.namespace);
-    private static final Comparator<ResourceLocation> ID_ORDER = Comparator
-            .comparing(ResourceLocation::getNamespace)
-            .thenComparing(ResourceLocation::getPath);
-    private static final AtomicBoolean HOOKED = new AtomicBoolean(false);
     public final ModCore C;
     private final Map<ResourceLocation, Block> blocks = new HashMap<>();
     private Map<Block, TagKey<Block>[]> datagenTags;
     private final ItemRegistry itemRegistry;
-    private Runnable initializer;
-    private boolean initialized;
 
     private BlockRegistry(ModCore modeCore) {
         this.C = modeCore;
@@ -81,7 +71,6 @@ public class BlockRegistry {
 
     public <T extends Block> T register(String path, T block, TagKey<Block>[] tags, TagKey<Item>[] itemTags) {
         if (block != null && block != Blocks.AIR) {
-            ensureIntrusiveHolder(block);
             final ResourceLocation id = tags == null
                     ? _registerBlockOnly(path, block)
                     : _registerBlockOnly(path, block, tags);
@@ -97,9 +86,11 @@ public class BlockRegistry {
             else
                 registerBlockItem(path, item, itemTags);
 
-            if (block.defaultBlockState().ignitedByLava()) {
-                FireBlock fire = (FireBlock) Blocks.FIRE;
-                fire.setFlammable(block, 5, 5);
+            if (block.defaultBlockState().ignitedByLava()
+                    && FlammableBlockRegistry.getDefaultInstance()
+                                             .get(block)
+                                             .getBurnChance() == 0) {
+                FlammableBlockRegistry.getDefaultInstance().add(block, 5, 5);
             }
         }
         return block;
@@ -108,6 +99,7 @@ public class BlockRegistry {
     @SafeVarargs
     private ResourceLocation _registerBlockOnly(String path, Block block, TagKey<Block>... tags) {
         ResourceLocation id = C.mk(path);
+        Registry.register(BuiltInRegistries.BLOCK, id, block);
         blocks.put(id, block);
 
         if (datagenTags != null && tags != null && tags.length > 0) datagenTags.put(block, tags);
@@ -117,7 +109,6 @@ public class BlockRegistry {
     @SafeVarargs
     public final <T extends Block> T registerBlockOnly(String path, T block, TagKey<Block>... tags) {
         if (block != null && block != Blocks.AIR) {
-            ensureIntrusiveHolder(block);
             _registerBlockOnly(path, block, tags);
         }
 
@@ -126,19 +117,7 @@ public class BlockRegistry {
 
     @SafeVarargs
     private BlockItem registerBlockItem(String path, BlockItem item, TagKey<Item>... tags) {
-        this.itemRegistry.register(path, item, tags); // enqueues item registration
-        return item;
-    }
-
-    public void setInitializer(Runnable initializer) {
-        this.initializer = initializer;
-    }
-
-    private void ensureInitialized() {
-        if (!initialized && initializer != null) {
-            initialized = true;
-            initializer.run();
-        }
+        return this.itemRegistry.register(path, item, tags);
     }
 
     protected Item.Properties defaultBlockItemSettings() {
@@ -173,46 +152,5 @@ public class BlockRegistry {
                     if (builder != null)
                         biConsumer.accept(key, builder);
                 });
-    }
-
-    private void performBlockRegistration(RegisterEvent.RegisterHelper<Block> helper) {
-        ensureInitialized();
-        blocks.entrySet()
-              .stream()
-              .sorted(Map.Entry.comparingByKey(ID_ORDER))
-              .forEach(entry -> {
-                  ResourceLocation id = entry.getKey();
-                  Block block = entry.getValue();
-                  ensureIntrusiveHolder(block);
-                  helper.register(id, block);
-                  var key = ResourceKey.create(Registries.BLOCK, id);
-                  BuiltInRegistries.BLOCK
-                          .getHolder(key)
-                          .ifPresent(holder -> {
-                              ((org.betterx.wover.block.impl.BlockHolderBridge) block).wover$setBuiltInRegistryHolder(holder);
-                          });
-              });
-    }
-
-    private static void ensureIntrusiveHolder(Block block) {
-        BuiltInRegistries.BLOCK.createIntrusiveHolder(block);
-    }
-
-    public static void onRegister(RegisterEvent event) {
-        if (event.getRegistryKey().equals(Registries.BLOCK)) {
-            event.register(
-                    Registries.BLOCK,
-                    helper -> REGISTRIES.values()
-                                        .stream()
-                                        .sorted(REGISTRY_ORDER)
-                                        .forEach(reg -> reg.performBlockRegistration(helper))
-            );
-        }
-    }
-
-    public static void hook(IEventBus bus) {
-        if (HOOKED.compareAndSet(false, true)) {
-            bus.addListener(RegisterEvent.class, BlockRegistry::onRegister);
-        }
     }
 }

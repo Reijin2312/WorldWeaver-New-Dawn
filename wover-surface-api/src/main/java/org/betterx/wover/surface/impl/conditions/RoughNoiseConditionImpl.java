@@ -1,17 +1,22 @@
 package org.betterx.wover.surface.impl.conditions;
 
+
+import org.betterx.wover.surface.api.noise.NoiseParameterManager;
+import org.betterx.wover.surface.mixin.SurfaceRulesContextAccessor;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.KeyDispatchDataCodec;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.FloatProvider;
 import net.minecraft.util.valueproviders.UniformFloat;
 import net.minecraft.world.level.levelgen.SurfaceRules;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
-public class RoughNoiseConditionImpl extends WoverRoughNoiseCondition {
+public class RoughNoiseConditionImpl implements SurfaceRules.ConditionSource {
     public static final MapCodec<RoughNoiseConditionImpl> CODEC = RecordCodecBuilder.mapCodec(instance -> instance
             .group(
                     ResourceKey.codec(Registries.NOISE).fieldOf("noise").forGetter(o -> o.noise),
@@ -63,22 +68,35 @@ public class RoughNoiseConditionImpl extends WoverRoughNoiseCondition {
     }
 
     @Override
-    protected ResourceKey<NormalNoise.NoiseParameters> noise() {
-        return noise;
-    }
+    public SurfaceRules.Condition apply(final SurfaceRules.Context context2) {
+        final SurfaceRulesContextAccessor ctx = SurfaceRulesContextAccessor.class.cast(context2);
+        final NormalNoise normalNoise = ctx.getRandomState().getOrCreateNoise(this.noise);
+        final RandomSource roughnessSource = ctx.getRandomState()
+                                                .getOrCreateRandomFactory(NoiseParameterManager.ROUGHNESS_NOISE.location())
+                                                .fromHashOf(NoiseParameterManager.ROUGHNESS_NOISE.location());
 
-    @Override
-    protected double minThreshold() {
-        return minThreshold;
-    }
+        class NoiseThresholdCondition extends SurfaceRules.LazyCondition {
+            NoiseThresholdCondition() {
+                super(context2);
+            }
 
-    @Override
-    protected double maxThreshold() {
-        return maxThreshold;
-    }
+            @Override
+            protected long getContextLastUpdate() {
+                final SurfaceRulesContextAccessor ctx = SurfaceRulesContextAccessor.class.cast(this.context);
+                return ctx.getLastUpdateY() + ctx.getLastUpdateXZ();
+            }
 
-    @Override
-    protected FloatProvider roughness() {
-        return roughness;
+            protected boolean compute() {
+                double d = normalNoise
+                        .getValue(
+                                ctx.getBlockX(),
+                                ctx.getBlockY(),
+                                ctx.getBlockZ()
+                        ) + roughness.sample(roughnessSource);
+                return d >= minThreshold && d <= maxThreshold;
+            }
+        }
+
+        return new NoiseThresholdCondition();
     }
 }

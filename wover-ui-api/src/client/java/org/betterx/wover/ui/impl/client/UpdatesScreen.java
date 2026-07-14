@@ -19,15 +19,14 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.fml.ModContainer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.fabricmc.loader.api.ModContainer;
+import net.fabricmc.loader.api.metadata.CustomValue;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Map;
-
-@OnlyIn(Dist.CLIENT)
+@Environment(EnvType.CLIENT)
 public class UpdatesScreen extends WoverLayoutScreen {
     static final ResourceLocation UPDATE_LOGO_LOCATION = LibWoverUi.C.mk("icon_updater.png");
 
@@ -53,24 +52,15 @@ public class UpdatesScreen extends WoverLayoutScreen {
             return UPDATE_LOGO_LOCATION;
         }
         ModContainer nfo = core.modContainer;
-        Map<String, Object> props = getWoverProperties(nfo);
-        if (props != null) {
-            Object icon = props.get("updater_icon");
-            if (icon instanceof String iconName) {
-                return core.mk(iconName);
+        if (nfo != null) {
+            CustomValue element = nfo.getMetadata().getCustomValue("wover");
+            if (element != null) {
+                CustomValue.CvObject obj = element.getAsObject();
+                if (obj != null) {
+                    CustomValue icon = obj.get("updater_icon");
+                    return core.mk(icon.getAsString());
+                }
             }
-        }
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> getWoverProperties(ModContainer container) {
-        if (container == null) {
-            return null;
-        }
-        Object props = container.getModInfo().getModProperties().get("wover");
-        if (props instanceof Map<?, ?> map) {
-            return (Map<String, Object>) map;
         }
         return null;
     }
@@ -95,7 +85,7 @@ public class UpdatesScreen extends WoverLayoutScreen {
                 row.addSpacer(36);
             }
             if (nfo != null) {
-                row.addText(fit(), fit(), Component.literal(nfo.getModInfo().getDisplayName()))
+                row.addText(fit(), fit(), Component.literal(nfo.getMetadata().getName()))
                    .setColor(ColorHelper.WHITE);
             } else {
                 row.addText(fit(), fit(), Component.literal(mod)).setColor(ColorHelper.WHITE);
@@ -106,17 +96,21 @@ public class UpdatesScreen extends WoverLayoutScreen {
             row.addText(fit(), fit(), Component.literal(updated)).setColor(ColorHelper.GREEN);
             row.addFiller();
             boolean createdDownloadLink = false;
-            Map<String, Object> woverProps = getWoverProperties(nfo);
-            if (woverProps != null && woverProps.get("downloads") instanceof Map<?, ?> downloadLinks) {
+            if (nfo != null
+                    && nfo.getMetadata().getCustomValue("wover") != null
+                    && nfo.getMetadata().getCustomValue("wover").getAsObject().get("downloads") != null) {
+                CustomValue.CvObject downloadLinks = nfo.getMetadata()
+                                                        .getCustomValue("wover")
+                                                        .getAsObject()
+                                                        .get("downloads")
+                                                        .getAsObject();
                 String link = null;
                 Component name = null;
-                Object modrinth = downloadLinks.get("modrinth");
-                Object curseforge = downloadLinks.get("curseforge");
-                if (ClientConfigs.CLIENT.prefereModrinth.get() && modrinth instanceof String modrinthLink) {
-                    link = modrinthLink;
+                if (ClientConfigs.CLIENT.prefereModrinth.get() && downloadLinks.get("modrinth") != null) {
+                    link = downloadLinks.get("modrinth").getAsString();
                     name = Component.translatable("wover.updates.modrinth_link");
-                } else if (curseforge instanceof String curseforgeLink) {
-                    link = curseforgeLink;
+                } else if (downloadLinks.get("curseforge") != null) {
+                    link = downloadLinks.get("curseforge").getAsString();
                     name = Component.translatable("wover.updates.curseforge_link");
                 }
 
@@ -130,10 +124,10 @@ public class UpdatesScreen extends WoverLayoutScreen {
                 }
             }
 
-            if (!createdDownloadLink && nfo != null && nfo.getModInfo().getModURL().isPresent()) {
+            if (!createdDownloadLink && nfo != null && nfo.getMetadata().getContact().get("homepage").isPresent()) {
                 row.addButton(fit(), fit(), Component.translatable("wover.updates.download_link"))
                    .onPress((bt) -> {
-                       this.openLink(nfo.getModInfo().getModURL().get().toString());
+                       this.openLink(nfo.getMetadata().getContact().get("homepage").get());
                    }).centerVertical();
             }
         });

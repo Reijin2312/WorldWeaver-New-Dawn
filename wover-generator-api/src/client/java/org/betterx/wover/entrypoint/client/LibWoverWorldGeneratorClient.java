@@ -11,16 +11,11 @@ import org.betterx.wover.preset.api.client.WorldPresetsUI;
 
 import net.minecraft.world.level.dimension.LevelStem;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.fabricmc.api.ClientModInitializer;
 
-@EventBusSubscriber(modid = "wover", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-public class LibWoverWorldGeneratorClient {
-    @SubscribeEvent
-    public static void onClientSetup(FMLClientSetupEvent event) {
+public class LibWoverWorldGeneratorClient implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
         ClientWorldLifecycle.AFTER_WELCOME_SCREEN.subscribe(() -> {
             if (ClientConfigs.CLIENT.forceBetterXPreset.get()) {
                 WorldPresetManager.suggestDefault(WorldPresets.WOVER_WORLD, 2000);
@@ -54,6 +49,5 @@ public class LibWoverWorldGeneratorClient {
 
         WorldPresetsUI.registerCustomUI(WorldPresets.WOVER_WORLD_AMPLIFIED, WorldSetupScreen::new);
         WorldPresetsUI.registerCustomUI(WorldPresets.WOVER_WORLD_LARGE, WorldSetupScreen::new);
-        WorldPresetsUI.registerCustomUI(WorldPresets.WOVER_WORLD_SUPERFLAT, WorldSetupScreen::new);
     }
 }

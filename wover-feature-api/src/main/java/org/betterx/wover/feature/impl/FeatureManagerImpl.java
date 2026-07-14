@@ -6,7 +6,8 @@ import org.betterx.wover.feature.api.features.config.*;
 import org.betterx.wover.legacy.api.LegacyHelper;
 
 import com.mojang.serialization.Codec;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.levelgen.feature.Feature;
@@ -14,14 +15,10 @@ import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfigur
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 import java.util.function.Function;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import net.neoforged.neoforge.registries.RegisterEvent;
 
 public class FeatureManagerImpl {
-    private static final Map<ResourceKey<Feature<?>>, Feature<?>> FEATURES = new LinkedHashMap<>();
 
 
     public static <C extends FeatureConfiguration, F extends Feature<C>> F register(
@@ -35,7 +32,7 @@ public class FeatureManagerImpl {
             @NotNull ResourceKey<Feature<?>> key,
             @NotNull F feature
     ) {
-        FEATURES.putIfAbsent(key, feature);
+        Registry.register(BuiltInRegistries.FEATURE, key, feature);
         return feature;
     }
 
@@ -55,7 +52,7 @@ public class FeatureManagerImpl {
     @NotNull
     public static ResourceKey<Feature<?>> createKey(ResourceLocation location) {
         return ResourceKey.create(
-                Registries.FEATURE,
+                BuiltInRegistries.FEATURE.key(),
                 location
         );
     }
@@ -96,12 +93,6 @@ public class FeatureManagerImpl {
             TemplateFeature::new,
             TemplateFeatureConfig.CODEC
     );
-
-    public static void register(RegisterEvent event) {
-        if (event.getRegistryKey().equals(Registries.FEATURE)) {
-            event.register(Registries.FEATURE, helper -> FEATURES.forEach((k, v) -> helper.register(k.location(), v)));
-        }
-    }
 
     @ApiStatus.Internal
     public static void ensureStaticInitialization() {

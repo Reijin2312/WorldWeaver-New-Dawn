@@ -11,8 +11,6 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 
-import net.neoforged.neoforge.common.conditions.ICondition;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
@@ -57,16 +55,6 @@ public class RecipeRuntimeProviderImpl {
                 RecipeHolder<?> recipeHolder = new RecipeHolder<>(resourceLocation, recipe);
                 typeBuilder.put(recipe.getType(), recipeHolder);
                 nameBuilder.put(resourceLocation, recipeHolder);
-            }
-
-            @Override
-            public void accept(
-                    ResourceLocation resourceLocation,
-                    Recipe<?> recipe,
-                    @Nullable AdvancementHolder advancementHolder,
-                    ICondition... conditions
-            ) {
-                accept(resourceLocation, recipe, advancementHolder);
             }
 
             @Override

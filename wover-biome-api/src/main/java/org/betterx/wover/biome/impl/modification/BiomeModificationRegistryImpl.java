@@ -47,7 +47,6 @@ public class BiomeModificationRegistryImpl {
         DatapackRegistryBuilder.register(
                 BiomeModificationRegistry.BIOME_MODIFICATION_REGISTRY,
                 BiomeModification.CODEC,
-                BiomeModification.NETWORK_CODEC,
                 BiomeModificationRegistryImpl::onBootstrap
         );
 
@@ -58,7 +57,10 @@ public class BiomeModificationRegistryImpl {
         BOOTSTRAP_BIOME_MODIFICATION_REGISTRY.emit(c -> c.bootstrap(ctx));
     }
 
-    // We reimplement this because modifications are driven by a datapack-backed registry.
+    // based on Fabrics net.fabricmc.fabric.api.biome.v1.BiomeModifications
+    // We need to reimplement this, as we want to drive the Modifications
+    // from a Datapack backed Registry.
+    // The current Fabric API implementation is not suitable for this.
     private static void whenReady(
             LevelStorageSource.LevelStorageAccess storageSource,
             PackRepository packRepository,

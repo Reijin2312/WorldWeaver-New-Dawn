@@ -1,7 +1,10 @@
 package org.betterx.wover.testmod.entrypoint;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
-@Mod("wover-common-testmod")
-public class TestModWoverCommon {
+public class TestModWoverCommon implements ModInitializer {
+    @Override
+    public void onInitialize() {
+
+    }
 }

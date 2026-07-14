@@ -1,12 +1,11 @@
 package org.betterx.wover.generator.impl.compat;
 
 import org.betterx.wover.biome.api.data.BiomeData;
-import org.betterx.wover.biome.api.data.BiomeGenerationDataContainer;
 import org.betterx.wover.biome.impl.modification.BiomeTagModificationWorker;
 import org.betterx.wover.generator.api.biomesource.WoverBiomeData;
 
-import net.minecraft.core.Registry;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.world.level.biome.Biome;
@@ -16,13 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Makes the vanilla Nether biomes first-class candidates of the WoVer Nether picker.
- *
- * The external biome source remains available for third-party namespaces, but deliberately
- * does not override WoVer with vanilla output. Therefore vanilla biomes need picker data just
- * like they did in the BCLib 1.20 implementation.</p>
- */
+/** Makes vanilla Nether biomes first-class candidates of the WoVer Nether picker. */
 public final class VanillaNetherBiomeCompat {
     private static final List<ResourceKey<Biome>> VANILLA_NETHER_BIOMES = List.of(
             Biomes.NETHER_WASTES,
@@ -46,8 +39,8 @@ public final class VanillaNetherBiomeCompat {
     }
 
     public static int importBiomes(Registry<Biome> biomes) {
-        final Map<ResourceKey<Biome>, BiomeData> imported = new LinkedHashMap<>();
-        final BiomeTagModificationWorker tagWorker = new BiomeTagModificationWorker();
+        Map<ResourceKey<Biome>, BiomeData> imported = new LinkedHashMap<>();
+        BiomeTagModificationWorker tagWorker = new BiomeTagModificationWorker();
 
         for (ResourceKey<Biome> biome : VANILLA_NETHER_BIOMES) {
             if (!biomes.containsKey(biome)) {

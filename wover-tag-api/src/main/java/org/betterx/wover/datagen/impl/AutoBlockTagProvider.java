@@ -54,11 +54,10 @@ public class AutoBlockTagProvider extends WoverTagProvider.ForBlocks implements 
     }
 
     private void addBlockTags(TagBootstrapContext<Block> provider, ResourceKey<Block> blockKey, Block block) {
-        if (block instanceof BlockTagDataProvider tagDataProvider) {
-            tagDataProvider.addBlockTags(provider);
+        if (block instanceof BlockTagDataProvider tagProvider) {
+            tagProvider.addBlockTags(provider);
         }
 
-        // Compatibility: avoid hard dependency on wover-block-api by invoking registerBlockTags via reflection
         try {
             var method = block.getClass().getMethod(
                     "registerBlockTags",
@@ -76,7 +75,7 @@ public class AutoBlockTagProvider extends WoverTagProvider.ForBlocks implements 
     @Override
     public @Nullable <T extends DataProvider> WoverDataProvider<T> redirect(@Nullable WoverDataProvider<T> provider) {
         if (provider instanceof WoverTagProvider<?, ?> tagProvider) {
-            if (tagProvider.tagRegistry == this.tagRegistry) {
+            if (tagProvider.tagRegistry == this.tagRegistry && tagProvider.modCore.equals(this.modCore)) {
                 LibWoverTag.C.LOG.debug("Redirecting {}  to {} ({})",
                         tagProvider.getClass().getName(),
                         this.getClass().getName(), this.modIDs

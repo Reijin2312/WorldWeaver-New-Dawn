@@ -24,12 +24,11 @@ import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.LevelBasedValue;
 import net.minecraft.world.item.enchantment.effects.EnchantmentAttributeEffect;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
 import java.util.List;
 
-@Mod("wover-item-testmod")
-public class TestModWoverItem {
+public class TestModWoverItem implements ModInitializer {
     // ModCore for the TestMod. TestMod's do not share the wover namespace,
     // but (like other Mods that include Wover) have a unique one
     public static final ModCore C = ModCore.create("wover-item-testmod");
@@ -49,7 +48,8 @@ public class TestModWoverItem {
             new RangedAttribute("attribute.name.player.bn_obsidian_block_break_speed", 1.0, 1.0f, 100.0f).setSyncable(true)
     );
 
-    public TestModWoverItem() {
+    @Override
+    public void onInitialize() {
 
         TestItemRegistry.ensureStaticallyLoaded();
 

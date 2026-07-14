@@ -31,8 +31,8 @@ import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 
 import java.awt.*;
 import java.util.List;
@@ -223,8 +223,6 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
             if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
                 LibWoverWorldGenerator.C.log.verbose("No Barrens Biomes found. Disabling by using land Biomes");
             endBarrensBiomePicker = endLandBiomePicker;
-            // Void biomes are selected independently from barrens. Keeping a populated void picker is required for
-            // Blueprint overlays such as Unusual End's warped reef, even when no barrens biome is registered.
             if (endVoidBiomePicker.isEmpty()) {
                 endVoidBiomePicker = endLandBiomePicker;
             }
@@ -337,7 +335,7 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
+    @Environment(EnvType.CLIENT)
     public BiomeSourceConfigPanel<WoverEndBiomeSource, WoverEndConfig> biomeSourceConfigPanel(@NotNull Screen parent) {
         return new EndConfigPage(config);
     }

@@ -2,28 +2,15 @@ package org.betterx.wover.core.api;
 
 import de.ambertation.wunderlib.utils.Version;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.PackLocationInfo;
-import net.minecraft.server.packs.PackResources;
-import net.minecraft.server.packs.PackSelectionConfig;
-import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.PathPackResources;
-import net.minecraft.server.packs.repository.KnownPack;
-import net.minecraft.server.packs.repository.Pack;
 
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.data.loading.DatagenModLoader;
-import net.neoforged.neoforge.event.AddPackFindersEvent;
-import net.neoforged.neoforgespi.locating.IModFile;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.ModContainer;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -33,13 +20,13 @@ import java.util.stream.Stream;
  * specific to your Mod.
  * <p>
  * It is considered best practice to create, and store an instance of this class
- * for you mod in your main mod class (the one annotated with
- * {@link net.neoforged.fml.common.Mod}).
+ * for you mod in your main Entrypoint (the class that implements
+ * {@link net.fabricmc.api.ModInitializer}).
  */
 public final class ModCore implements Version.ModVersionProvider {
-    private static final Map<String, ModCore> cache = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final HashMap<String, ModCore> cache = new HashMap<>();
 
-    private final List<DatapackInfo> providedDatapacks = new LinkedList<>();
+    private final List<ResourceLocation> providedDatapacks = new LinkedList<>();
     /**
      * This logger is used to write text to the console and the log file.
      * The mod id is used as the logger's name, making it clear which mod wrote info,
@@ -61,26 +48,16 @@ public final class ModCore implements Version.ModVersionProvider {
 
     public final ModContainer modContainer;
 
-    private record DatapackInfo(ResourceLocation id, DatapackActivationType activationType) {
-    }
-
     private ModCore(String modID, String namespace) {
         LOG = Logger.create(modID);
         log = LOG;
         modId = modID;
         this.namespace = namespace;
 
-        ModList modList = ModList.get();
-        Optional<? extends ModContainer> optional = Optional.empty();
-        if (modList != null) {
-            optional = modList.getModContainerById(modId);
-            if (optional.isEmpty() && "wover".equals(namespace) && !"wover".equals(modId)) {
-                optional = modList.getModContainerById("wover");
-            }
-        }
+        Optional<ModContainer> optional = FabricLoader.getInstance().getModContainer(modId);
         if (optional.isPresent()) {
             this.modContainer = optional.get();
-            modVersion = new Version(modContainer.getModInfo().getVersion().toString());
+            modVersion = new Version(modContainer.getMetadata().getVersion().toString());
         } else {
             this.modContainer = null;
             modVersion = new Version(0, 0, 0);
@@ -177,95 +154,26 @@ public final class ModCore implements Version.ModVersionProvider {
      * @return a stream of all Datapacks {@link ResourceLocation}s that are provided by this mod.
      */
     public Stream<ResourceLocation> providedDatapacks() {
-        return providedDatapacks.stream().map(DatapackInfo::id);
+        return providedDatapacks.stream();
     }
 
     /**
      * Register a Datapack {@link ResourceLocation} that is provided by this mod.
      *
      * @param name           The name of the Datapack.
-     * @param activationType The {@link DatapackActivationType} of the Datapack.
+     * @param activationType The {@link ResourcePackActivationType} of the Datapack.
      * @return The {@link ResourceLocation} of the Datapack.
      */
-    public ResourceLocation addDatapack(String name, DatapackActivationType activationType) {
+    public ResourceLocation addDatapack(String name, ResourcePackActivationType activationType) {
         final ResourceLocation id = id(name);
-        providedDatapacks.add(new DatapackInfo(id, activationType));
+        providedDatapacks.add(id);
+
+        ResourceManagerHelper.registerBuiltinResourcePack(
+                id,
+                this.modContainer,
+                activationType
+        );
         return id;
-    }
-
-    /**
-     * Registers built-in datapacks for this mod on the mod event bus.
-     *
-     * @param modEventBus The mod event bus
-     */
-    public void registerDatapackListener(IEventBus modEventBus) {
-        modEventBus.addListener(this::onAddPackFinders);
-    }
-
-    private void onAddPackFinders(AddPackFindersEvent event) {
-        if (event.getPackType() != PackType.SERVER_DATA || modContainer == null) {
-            return;
-        }
-        final var modInfo = modContainer.getModInfo();
-        final var modFile = modInfo.getOwningFile().getFile();
-        final var modVersion = modInfo.getVersion().toString();
-        for (DatapackInfo info : providedDatapacks) {
-            final var packRoot = resolvePackRoot(modFile, info.id.getPath());
-            if (packRoot == null) {
-                LOG.warn("Skipping built-in datapack {}: pack.mcmeta not found.", info.id);
-                continue;
-            }
-            final var packId = "mod/" + info.id;
-            final var title =
-                    Component.translatable(
-                            "pack." + info.id.getNamespace() + "." + info.id.getPath() + ".description"
-                    );
-            final var locationInfo = new PackLocationInfo(
-                    packId,
-                    title,
-                    info.activationType.packSource(),
-                    Optional.of(new KnownPack("neoforge", packId, modVersion))
-            );
-            final Pack.ResourcesSupplier resources = new Pack.ResourcesSupplier() {
-                @Override
-                public PackResources openPrimary(PackLocationInfo location) {
-                    return new PathPackResources(location, packRoot);
-                }
-
-                @Override
-                public PackResources openFull(PackLocationInfo location, Pack.Metadata metadata) {
-                    return new PathPackResources(location, packRoot);
-                }
-            };
-            final var selectionConfig = new PackSelectionConfig(
-                    info.activationType.alwaysActive(),
-                    Pack.Position.TOP,
-                    false
-            );
-            final var pack = Pack.readMetaAndCreate(
-                    locationInfo,
-                    resources,
-                    PackType.SERVER_DATA,
-                    selectionConfig
-            );
-            if (pack == null) {
-                LOG.warn("Skipping built-in datapack {}: invalid pack metadata.", info.id);
-                continue;
-            }
-            event.addRepositorySource(consumer -> consumer.accept(pack));
-        }
-    }
-
-    private static Path resolvePackRoot(IModFile modFile, String packId) {
-        final Path root = modFile.findResource(packId);
-        if (root != null && Files.exists(root.resolve("pack.mcmeta"))) {
-            return root;
-        }
-        final Path resourcepacks = modFile.findResource("resourcepacks", packId);
-        if (resourcepacks != null && Files.exists(resourcepacks.resolve("pack.mcmeta"))) {
-            return resourcepacks;
-        }
-        return null;
     }
 
     /**
@@ -279,8 +187,8 @@ public final class ModCore implements Version.ModVersionProvider {
      */
     public ResourceLocation addDatapack(ModCore dependency) {
         return this.addDatapack(dependency.namespace + "_extensions", dependency.isLoaded()
-                ? DatapackActivationType.DEFAULT_ENABLED
-                : DatapackActivationType.NORMAL);
+                ? ResourcePackActivationType.DEFAULT_ENABLED
+                : ResourcePackActivationType.NORMAL);
     }
 
     @Override
@@ -332,7 +240,7 @@ public final class ModCore implements Version.ModVersionProvider {
      * @return true if the game is currently running in a data generation environment.
      */
     public static boolean isDatagen() {
-        return DatagenModLoader.isRunningDataGen();
+        return System.getProperty("fabric-api.datagen") != null;
     }
 
     /**
@@ -341,7 +249,7 @@ public final class ModCore implements Version.ModVersionProvider {
      * @return true if the game is currently running in a development environment.
      */
     public static boolean isDevEnvironment() {
-        return !FMLLoader.isProduction();
+        return FabricLoader.getInstance().isDevelopmentEnvironment();
     }
 
     /**
@@ -350,7 +258,7 @@ public final class ModCore implements Version.ModVersionProvider {
      * @return true if the game is currently running on the client.
      */
     public static boolean isClient() {
-        return FMLEnvironment.dist.isClient();
+        return FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT;
     }
 
     /**
@@ -359,7 +267,7 @@ public final class ModCore implements Version.ModVersionProvider {
      * @return true if the game is currently running on the server.
      */
     public static boolean isServer() {
-        return FMLEnvironment.dist.isDedicatedServer();
+        return FabricLoader.getInstance().getEnvironmentType() == EnvType.SERVER;
     }
 
 }

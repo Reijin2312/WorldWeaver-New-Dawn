@@ -3,6 +3,7 @@ package org.betterx.wover.generator.impl.chunkgenerator;
 import org.betterx.wover.biome.mixin.ChunkGeneratorAccessor;
 import org.betterx.wover.config.api.Configs;
 import org.betterx.wover.core.api.ModCore;
+import org.betterx.wover.core.api.registry.BuiltInRegistryManager;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.events.api.WorldLifecycle;
 import org.betterx.wover.generator.api.chunkgenerator.ChunkGeneratorManager;
@@ -17,6 +18,7 @@ import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -41,7 +43,6 @@ public class ChunkGeneratorManagerImpl {
     private static final ResourceLocation LEGACY_ID = LegacyHelper.BCLIB_CORE.convertNamespace(WoverChunkGenerator.ID);
 
     private static final List<String> GENERATOR_IDS = new ArrayList<>(1);
-    private static final Map<ResourceLocation, MapCodec<? extends ChunkGenerator>> PENDING_GENERATORS = new LinkedHashMap<>();
 
     /**
      * We need this for mods that use the DSL system to actually fix the generator data.
@@ -111,19 +112,7 @@ public class ChunkGeneratorManagerImpl {
             throw new IllegalStateException("Duplicate generator id: " + idString);
         }
         GENERATOR_IDS.add(idString);
-        PENDING_GENERATORS.put(location, codec);
-    }
-
-    public static void onRegister(net.neoforged.neoforge.registries.RegisterEvent event) {
-        if (!event.getRegistryKey().equals(Registries.CHUNK_GENERATOR)) return;
-
-        event.register(Registries.CHUNK_GENERATOR, helper -> {
-            PENDING_GENERATORS.forEach((location, codec) -> {
-                @SuppressWarnings("unchecked")
-                MapCodec<ChunkGenerator> casted = (MapCodec<ChunkGenerator>) codec;
-                helper.register(location, casted);
-            });
-        });
+        BuiltInRegistryManager.register(BuiltInRegistries.CHUNK_GENERATOR, location, codec);
     }
 
     public static String enumerateFeatureNamespaces(@NotNull ChunkGenerator chunkGenerator) {

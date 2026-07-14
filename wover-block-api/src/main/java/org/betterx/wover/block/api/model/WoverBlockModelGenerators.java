@@ -30,22 +30,18 @@ public class WoverBlockModelGenerators {
     public static final ResourceLocation COMPOSTER = LibWoverBlock.C.id("block/composter");
 
     public static final ModelTemplate COMPOSTER_MODEL = new ModelTemplate(Optional.of(COMPOSTER), Optional.empty(), TextureSlot.SIDE, TextureSlot.BOTTOM, TextureSlot.TOP);
-    public final WoverBlockModelGeneratorsAccess vanillaGenerator;
+    public final BlockModelGenerators vanillaGenerator;
 
     public WoverBlockModelGenerators(
             BlockModelGenerators vanillaGenerator
     ) {
-        if (vanillaGenerator instanceof WoverBlockModelGeneratorsAccess access) {
-            this.vanillaGenerator = access;
-        } else {
-            throw new IllegalArgumentException("Expected WoverBlockModelGeneratorsAccess");
-        }
+        this.vanillaGenerator = vanillaGenerator;
     }
 
     public void createObsidianVariants(WoverBlockModelGenerators generators, Block obsidianBlock) {
         var model = generators.getTextureModels(obsidianBlock, TexturedModel.CUBE.get(obsidianBlock));
         var template = model.getTemplate();
-        var modelLocation = template.create(obsidianBlock, model.getMapping(), generators.vanillaGenerator.modelOutput());
+        var modelLocation = template.create(obsidianBlock, model.getMapping(), generators.vanillaGenerator.modelOutput);
         final VariantProperties.Rotation[] rotations = {
                 VariantProperties.Rotation.R0,
                 VariantProperties.Rotation.R90,
@@ -74,11 +70,11 @@ public class WoverBlockModelGenerators {
     }
 
     public void acceptBlockState(BlockStateGenerator blockStateGenerator) {
-        this.vanillaGenerator.blockStateOutput().accept(blockStateGenerator);
+        this.vanillaGenerator.blockStateOutput.accept(blockStateGenerator);
     }
 
     public void acceptModelOutput(ResourceLocation id, Supplier<JsonElement> supplier) {
-        this.vanillaGenerator.modelOutput().accept(id, supplier);
+        this.vanillaGenerator.modelOutput.accept(id, supplier);
     }
 
     public void delegateItemModel(Block block) {
@@ -90,7 +86,7 @@ public class WoverBlockModelGenerators {
     }
 
     public TexturedModel getTextureModels(Block block, TexturedModel defaultModel) {
-        return vanillaGenerator.texturedModels().getOrDefault(block, defaultModel);
+        return vanillaGenerator.texturedModels.getOrDefault(block, defaultModel);
     }
 
     public Builder modelFor(Block block) {
@@ -129,20 +125,13 @@ public class WoverBlockModelGenerators {
 
     public void createBookshelf(Block shelf, Block planks) {
         TextureMapping textureMapping = TextureMapping.column(TextureMapping.getBlockTexture(shelf), TextureMapping.getBlockTexture(planks));
-        ResourceLocation resourceLocation = ModelTemplates.CUBE_COLUMN.create(shelf, textureMapping, vanillaGenerator.modelOutput());
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(shelf, resourceLocation));
+        ResourceLocation resourceLocation = ModelTemplates.CUBE_COLUMN.create(shelf, textureMapping, vanillaGenerator.modelOutput);
+        acceptBlockState(vanillaGenerator.createSimpleBlock(shelf, resourceLocation));
     }
 
     public void createLadder(Block ladderBlock) {
         vanillaGenerator.createNonTemplateHorizontalBlock(ladderBlock);
         vanillaGenerator.createSimpleFlatItemModel(ladderBlock);
-    }
-
-    public void createCrossBlock(Block block, boolean tinted) {
-        TextureMapping mapping = TextureMapping.cross(block);
-        ModelTemplate template = tinted ? ModelTemplates.TINTED_CROSS : ModelTemplates.CROSS;
-        ResourceLocation modelLocation = template.create(block, mapping, vanillaGenerator.modelOutput());
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(block, modelLocation));
     }
 
     private final Map<ResourceLocation, ResourceLocation> PARTICLE_ONLY_MODELS = Maps.newHashMap();
@@ -154,15 +143,15 @@ public class WoverBlockModelGenerators {
         return PARTICLE_ONLY_MODELS.computeIfAbsent(name, (n) -> ModelTemplates.PARTICLE_ONLY.create(
                 finalName,
                 new TextureMapping().put(TextureSlot.PARTICLE, TextureMapping.getBlockTexture(block)),
-                vanillaGenerator.modelOutput()
+                vanillaGenerator.modelOutput
         ));
     }
 
     public void createSign(Block baseBlock, Block signBlock, Block wallSignBlock) {
         final ResourceLocation particleLocation = particleOnlyModel(baseBlock);
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(signBlock, particleLocation));
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(wallSignBlock, particleLocation));
+        acceptBlockState(BlockModelGenerators.createSimpleBlock(signBlock, particleLocation));
+        acceptBlockState(BlockModelGenerators.createSimpleBlock(wallSignBlock, particleLocation));
 
         vanillaGenerator.createSimpleFlatItemModel(signBlock.asItem());
         vanillaGenerator.skipAutoItemBlock(wallSignBlock);
@@ -170,8 +159,8 @@ public class WoverBlockModelGenerators {
 
     public void createHangingSign(Block baseBlock, Block hangingSignBlock, Block wallHangingSignBlock) {
         ResourceLocation resourceLocation = particleOnlyModel(baseBlock);
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(hangingSignBlock, resourceLocation));
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(wallHangingSignBlock, resourceLocation));
+        acceptBlockState(vanillaGenerator.createSimpleBlock(hangingSignBlock, resourceLocation));
+        acceptBlockState(vanillaGenerator.createSimpleBlock(wallHangingSignBlock, resourceLocation));
         vanillaGenerator.createSimpleFlatItemModel(hangingSignBlock.asItem());
         vanillaGenerator.skipAutoItemBlock(wallHangingSignBlock);
     }
@@ -185,7 +174,7 @@ public class WoverBlockModelGenerators {
                         .property(BlockStateProperties.OPEN)
                         .select(false, Variant
                                 .variant()
-                                .with(VariantProperties.MODEL, TexturedModel.CUBE_TOP_BOTTOM.create(barrelBlock, this.vanillaGenerator.modelOutput()))
+                                .with(VariantProperties.MODEL, TexturedModel.CUBE_TOP_BOTTOM.create(barrelBlock, this.vanillaGenerator.modelOutput))
                         )
                         .select(true, Variant
                                 .variant()
@@ -194,7 +183,7 @@ public class WoverBlockModelGenerators {
                                         .updateTextures((textureMapping) -> {
                                             textureMapping.put(TextureSlot.TOP, resourceLocation);
                                         })
-                                        .createWithSuffix(barrelBlock, "_open", this.vanillaGenerator.modelOutput())
+                                        .createWithSuffix(barrelBlock, "_open", this.vanillaGenerator.modelOutput)
                                 )
                         )
                 )
@@ -206,7 +195,7 @@ public class WoverBlockModelGenerators {
                 .put(TextureSlot.SIDE, TextureMapping.getBlockTexture(composterBlock, "_side"))
                 .put(TextureSlot.TOP, TextureMapping.getBlockTexture(composterBlock, "_top"))
                 .put(TextureSlot.BOTTOM, TextureMapping.getBlockTexture(composterBlock, "_bottom"));
-        var location = COMPOSTER_MODEL.create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var location = COMPOSTER_MODEL.create(composterBlock, mapping, vanillaGenerator.modelOutput);
         acceptBlockState(MultiPartGenerator
                 .multiPart(composterBlock)
                 .with(Variant.variant().with(VariantProperties.MODEL, location))
@@ -241,17 +230,17 @@ public class WoverBlockModelGenerators {
                 .put(TextureSlot.SIDE, TextureMapping.getBlockTexture(coverBlock, "_side"))
                 .put(TextureSlot.TOP, TextureMapping.getBlockTexture(coverBlock, "_top"))
                 .put(TextureSlot.BOTTOM, TextureMapping.getBlockTexture(bottomBlock));
-        var location = ModelTemplates.CUBE_BOTTOM_TOP.create(coverBlock, mapping, vanillaGenerator.modelOutput());
+        var location = ModelTemplates.CUBE_BOTTOM_TOP.create(coverBlock, mapping, vanillaGenerator.modelOutput);
 
         if (withVariants) acceptBlockState(randomTopModelVariant(coverBlock, location));
-        else acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(coverBlock, location));
+        else acceptBlockState(BlockModelGenerators.createSimpleBlock(coverBlock, location));
     }
 
     public void createCubeModel(Block block) {
         final var model = TexturedModel.CUBE.get(block);
         final TextureMapping mapping = this.getTextureModels(block, model).getMapping();
-        final var location = model.getTemplate().create(block, mapping, vanillaGenerator.modelOutput());
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(block, location));
+        final var location = model.getTemplate().create(block, mapping, vanillaGenerator.modelOutput);
+        acceptBlockState(BlockModelGenerators.createSimpleBlock(block, location));
     }
 
     public void createPressurePlate(Block plateBlock, ResourceLocation textureLocation) {
@@ -268,9 +257,9 @@ public class WoverBlockModelGenerators {
         final List<ResourceLocation> locations = Stream.of(
                 ModelTemplates.PRESSURE_PLATE_UP,
                 ModelTemplates.PRESSURE_PLATE_DOWN
-        ).map(template -> template.create(plateBlock, mapping, vanillaGenerator.modelOutput())).toList();
+        ).map(template -> template.create(plateBlock, mapping, vanillaGenerator.modelOutput)).toList();
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createPressurePlate(plateBlock, locations.get(0), locations.get(1)));
+        acceptBlockState(BlockModelGenerators.createPressurePlate(plateBlock, locations.get(0), locations.get(1)));
     }
 
 
@@ -288,9 +277,9 @@ public class WoverBlockModelGenerators {
         final List<ResourceLocation> locations = Stream.of(
                 ModelTemplates.BUTTON,
                 ModelTemplates.BUTTON_PRESSED
-        ).map(template -> template.create(buttonBlock, mapping, vanillaGenerator.modelOutput())).toList();
+        ).map(template -> template.create(buttonBlock, mapping, vanillaGenerator.modelOutput)).toList();
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createButton(buttonBlock, locations.get(0), locations.get(1)));
+        acceptBlockState(BlockModelGenerators.createButton(buttonBlock, locations.get(0), locations.get(1)));
         createItemModel(buttonBlock, ModelTemplates.BUTTON_INVENTORY, mapping);
     }
 
@@ -308,9 +297,9 @@ public class WoverBlockModelGenerators {
         final List<ResourceLocation> locations = Stream.of(
                 ModelTemplates.FENCE_POST,
                 ModelTemplates.FENCE_SIDE
-        ).map(template -> template.create(fenceBlock, mapping, vanillaGenerator.modelOutput())).toList();
+        ).map(template -> template.create(fenceBlock, mapping, vanillaGenerator.modelOutput)).toList();
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createFence(fenceBlock, locations.get(0), locations.get(1)));
+        acceptBlockState(BlockModelGenerators.createFence(fenceBlock, locations.get(0), locations.get(1)));
         createInventoryModel(fenceBlock, ModelTemplates.FENCE_INVENTORY, mapping);
     }
 
@@ -330,9 +319,9 @@ public class WoverBlockModelGenerators {
                 ModelTemplates.FENCE_GATE_CLOSED,
                 ModelTemplates.FENCE_GATE_WALL_OPEN,
                 ModelTemplates.FENCE_GATE_WALL_CLOSED
-        ).map(template -> template.create(gateBlock, mapping, vanillaGenerator.modelOutput())).toList();
+        ).map(template -> template.create(gateBlock, mapping, vanillaGenerator.modelOutput)).toList();
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createFenceGate(gateBlock, locations.get(0), locations.get(1), locations.get(2), locations.get(3), true));
+        acceptBlockState(BlockModelGenerators.createFenceGate(gateBlock, locations.get(0), locations.get(1), locations.get(2), locations.get(3), true));
     }
 
     public void createStairs(
@@ -359,7 +348,7 @@ public class WoverBlockModelGenerators {
             ResourceLocation outer,
             ResourceLocation inner
     ) {
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createStairs(stairBlock, inner, stair, outer));
+        acceptBlockState(BlockModelGenerators.createStairs(stairBlock, inner, stair, outer));
         delegateItemModel(stairBlock, stair);
     }
 
@@ -370,9 +359,9 @@ public class WoverBlockModelGenerators {
                         ModelTemplates.STAIRS_STRAIGHT,
                         ModelTemplates.STAIRS_OUTER
                 )
-                .map(template -> template.create(stairBlock, mapping, vanillaGenerator.modelOutput())).toList();
+                .map(template -> template.create(stairBlock, mapping, vanillaGenerator.modelOutput)).toList();
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createStairs(stairBlock, locations.get(0), locations.get(1), locations.get(2)));
+        acceptBlockState(BlockModelGenerators.createStairs(stairBlock, locations.get(0), locations.get(1), locations.get(2)));
         delegateItemModel(stairBlock, locations.get(1));
     }
 
@@ -387,9 +376,9 @@ public class WoverBlockModelGenerators {
                 ModelTemplates.WALL_POST,
                 ModelTemplates.WALL_LOW_SIDE,
                 ModelTemplates.WALL_TALL_SIDE
-        ).map(template -> template.create(wallBlock, mapping, vanillaGenerator.modelOutput())).toList();
+        ).map(template -> template.create(wallBlock, mapping, vanillaGenerator.modelOutput)).toList();
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createWall(wallBlock, locations.get(0), locations.get(1), locations.get(2)));
+        acceptBlockState(BlockModelGenerators.createWall(wallBlock, locations.get(0), locations.get(1), locations.get(2)));
         createInventoryModel(wallBlock, ModelTemplates.WALL_INVENTORY, mapping);
     }
 
@@ -406,9 +395,9 @@ public class WoverBlockModelGenerators {
         final List<ResourceLocation> locations = Stream.of(
                 ModelTemplates.SLAB_BOTTOM,
                 ModelTemplates.SLAB_TOP
-        ).map(template -> template.create(slabBlock, mapping, vanillaGenerator.modelOutput())).toList();
+        ).map(template -> template.create(slabBlock, mapping, vanillaGenerator.modelOutput)).toList();
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSlab(slabBlock, locations.get(0), locations.get(1), fullBlockLocation));
+        acceptBlockState(BlockModelGenerators.createSlab(slabBlock, locations.get(0), locations.get(1), fullBlockLocation));
         delegateItemModel(slabBlock, locations.get(0));
     }
 
@@ -420,25 +409,25 @@ public class WoverBlockModelGenerators {
     }
 
     public void createRotatedPillar(Block pillarBlock, TextureMapping mapping) {
-        final var model = ModelTemplates.CUBE_COLUMN.create(pillarBlock, mapping, vanillaGenerator.modelOutput());
+        final var model = ModelTemplates.CUBE_COLUMN.create(pillarBlock, mapping, vanillaGenerator.modelOutput);
 
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createAxisAlignedPillarBlock(pillarBlock, model));
+        acceptBlockState(BlockModelGenerators.createAxisAlignedPillarBlock(pillarBlock, model));
     }
 
     private void createInventoryModel(Block wallBlock, ModelTemplate inventoryModel, TextureMapping mapping) {
-        delegateItemModel(wallBlock, inventoryModel.create(wallBlock, mapping, vanillaGenerator.modelOutput()));
+        delegateItemModel(wallBlock, inventoryModel.create(wallBlock, mapping, vanillaGenerator.modelOutput));
     }
 
 
     public void createChest(Block materialBlock, Block chestBlock) {
         final var baseModel = particleOnlyModel(materialBlock);
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(chestBlock, baseModel));
+        acceptBlockState(BlockModelGenerators.createSimpleBlock(chestBlock, baseModel));
     }
 
     public final void createItemModel(Block block, ModelTemplate template, TextureMapping mapping) {
         Item item = block.asItem();
         if (item != Items.AIR) {
-            template.create(ModelLocationUtils.getModelLocation(item), mapping, vanillaGenerator.modelOutput());
+            template.create(ModelLocationUtils.getModelLocation(item), mapping, vanillaGenerator.modelOutput);
         }
         vanillaGenerator.skipAutoItemBlock(block);
     }
@@ -461,7 +450,7 @@ public class WoverBlockModelGenerators {
         }
         final var item = block.asItem();
         if (item != Items.AIR) {
-            ModelTemplates.FLAT_ITEM.create(ModelLocationUtils.getModelLocation(item), TextureMapping.layer0(itemLocation), vanillaGenerator.modelOutput());
+            ModelTemplates.FLAT_ITEM.create(ModelLocationUtils.getModelLocation(item), TextureMapping.layer0(itemLocation), vanillaGenerator.modelOutput);
         }
         vanillaGenerator.skipAutoItemBlock(block);
     }
@@ -498,7 +487,7 @@ public class WoverBlockModelGenerators {
     }
 
     public BiConsumer<ResourceLocation, Supplier<JsonElement>> modelOutput() {
-        return vanillaGenerator.modelOutput();
+        return vanillaGenerator.modelOutput;
     }
 
     public class Builder {
@@ -515,10 +504,10 @@ public class WoverBlockModelGenerators {
         public Builder createFullBlock(Block fullBlock) {
             this.fullBlockLocation = model
                     .getTemplate()
-                    .create(fullBlock, mapping, vanillaGenerator.modelOutput());
+                    .create(fullBlock, mapping, vanillaGenerator.modelOutput);
 
             acceptBlockState(
-                    WoverBlockModelGeneratorsAccess.createSimpleBlock(
+                    BlockModelGenerators.createSimpleBlock(
                             fullBlock,
                             fullBlockLocation
                     )
@@ -541,9 +530,9 @@ public class WoverBlockModelGenerators {
                     ModelTemplates.CUSTOM_FENCE_SIDE_EAST,
                     ModelTemplates.CUSTOM_FENCE_SIDE_SOUTH,
                     ModelTemplates.CUSTOM_FENCE_SIDE_WEST
-            ).map(template -> template.create(fenceBlock, particles, vanillaGenerator.modelOutput())).toList();
+            ).map(template -> template.create(fenceBlock, particles, vanillaGenerator.modelOutput)).toList();
 
-            acceptBlockState(WoverBlockModelGeneratorsAccess.createCustomFence(fenceBlock, locations.get(0), locations.get(1), locations.get(2), locations.get(3), locations.get(4)));
+            acceptBlockState(BlockModelGenerators.createCustomFence(fenceBlock, locations.get(0), locations.get(1), locations.get(2), locations.get(3), locations.get(4)));
             createInventoryModel(fenceBlock, ModelTemplates.CUSTOM_FENCE_INVENTORY, particles);
 
             return this;
@@ -557,9 +546,9 @@ public class WoverBlockModelGenerators {
                     ModelTemplates.CUSTOM_FENCE_GATE_CLOSED,
                     ModelTemplates.CUSTOM_FENCE_GATE_WALL_OPEN,
                     ModelTemplates.CUSTOM_FENCE_GATE_WALL_CLOSED
-            ).map(template -> template.create(gateBlock, particles, vanillaGenerator.modelOutput())).toList();
+            ).map(template -> template.create(gateBlock, particles, vanillaGenerator.modelOutput)).toList();
 
-            acceptBlockState(WoverBlockModelGeneratorsAccess.createFenceGate(gateBlock, locations.get(0), locations.get(1), locations.get(2), locations.get(3), false));
+            acceptBlockState(BlockModelGenerators.createFenceGate(gateBlock, locations.get(0), locations.get(1), locations.get(2), locations.get(3), false));
 
             return this;
         }
@@ -567,9 +556,9 @@ public class WoverBlockModelGenerators {
 
         private Builder createFullBlockVariant(Block block) {
             final TexturedModel texturedModel = getTextureModels(block, TexturedModel.CUBE.get(block));
-            final ResourceLocation resourceLocation = texturedModel.create(block, vanillaGenerator.modelOutput());
+            final ResourceLocation resourceLocation = texturedModel.create(block, vanillaGenerator.modelOutput);
 
-            acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(block, resourceLocation));
+            acceptBlockState(BlockModelGenerators.createSimpleBlock(block, resourceLocation));
 
             return this;
         }
@@ -591,7 +580,7 @@ public class WoverBlockModelGenerators {
                         ModelTemplates.SLAB_TOP
                 ).map(template -> this.computeModelIfAbsent(template, slabBlock)).toList();
 
-                acceptBlockState(WoverBlockModelGeneratorsAccess.createSlab(slabBlock, locations.get(0), locations.get(1), this.fullBlockLocation));
+                acceptBlockState(BlockModelGenerators.createSlab(slabBlock, locations.get(0), locations.get(1), this.fullBlockLocation));
                 delegateItemModel(slabBlock, locations.get(0));
 
                 return this;
@@ -599,11 +588,11 @@ public class WoverBlockModelGenerators {
         }
 
         private ResourceLocation computeModelIfAbsent(ModelTemplate modelTemplate, Block block) {
-            return this.models.computeIfAbsent(modelTemplate, (m) -> m.create(block, this.mapping, vanillaGenerator.modelOutput()));
+            return this.models.computeIfAbsent(modelTemplate, (m) -> m.create(block, this.mapping, vanillaGenerator.modelOutput));
         }
 
         private void createInventoryModel(Block wallBlock, ModelTemplate inventoryModel, TextureMapping mapping) {
-            delegateItemModel(wallBlock, inventoryModel.create(wallBlock, mapping, vanillaGenerator.modelOutput()));
+            delegateItemModel(wallBlock, inventoryModel.create(wallBlock, mapping, vanillaGenerator.modelOutput));
         }
     }
 

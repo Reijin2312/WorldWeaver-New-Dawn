@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "wover-recipe-testmod",
+  "version": "21.0.0",
+  "name": "WorldWeaver - Recipe (TestMod)",
+  "description": "",
+  "authors": [
+    "Quiqueck"
+  ],
+  "contact": {
+    "homepage": "https://github.com/quiqueck/WorldWeaver",
+    "sources": "https://github.com/quiqueck/WorldWeaver",
+    "issues": "https://github.com/quiqueck/WorldWeaver/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/wover-recipe-testmod/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "org.betterx.wover.testmod.entrypoint.TestModWoverRecipe"
+    ],
+    "fabric-datagen": [
+      "org.betterx.wover.testmod.recipe.datagen.TestModWoverRecipeDatagen"
+    ],
+    "client": [
+      "org.betterx.wover.testmod.entrypoint.client.TestModWoverRecipeClient"
+    ]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.15.3",
+    "minecraft": [
+      "1.21.0",
+      "1.21.1"
+    ],
+    "java": ">=17",
+    "fabric-api": ">=0.100.1"
+  },
+  "custom": {
+    "modmenu": {
+      "badges": [
+        "library"
+      ],
+      "parent": "wover"
+    }
+  }
+}

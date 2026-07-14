@@ -1,9 +1,9 @@
 package org.betterx.wover.block.api.model;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 
 public interface BlockModelProvider {
-    @OnlyIn(Dist.CLIENT)
+    @Environment(EnvType.CLIENT)
     void provideBlockModels(WoverBlockModelGenerators generator);
 }

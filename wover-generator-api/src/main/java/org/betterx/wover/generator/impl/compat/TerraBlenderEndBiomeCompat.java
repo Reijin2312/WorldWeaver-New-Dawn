@@ -15,8 +15,8 @@ import net.minecraft.world.level.biome.Biome;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public final class TerraBlenderEndBiomeCompat {
@@ -30,43 +30,14 @@ public final class TerraBlenderEndBiomeCompat {
     }
 
     public static int importRegisteredBiomes(Registry<Biome> biomes) {
-        final Map<ResourceKey<Biome>, BiomeData> imported = new LinkedHashMap<>();
-        final BiomeTagModificationWorker tagWorker = new BiomeTagModificationWorker();
-
+        Map<ResourceKey<Biome>, BiomeData> imported = new LinkedHashMap<>();
+        BiomeTagModificationWorker tagWorker = new BiomeTagModificationWorker();
         try {
-            final Class<?> registryClass = Class.forName("terrablender.api.EndBiomeRegistry");
-            importBiomeSet(
-                    registryClass,
-                    "getIslandBiomes",
-                    CommonBiomeTags.IS_SMALL_END_ISLAND,
-                    biomes,
-                    tagWorker,
-                    imported
-            );
-            importBiomeSet(
-                    registryClass,
-                    "getHighlandsBiomes",
-                    CommonBiomeTags.IS_END_HIGHLAND,
-                    biomes,
-                    tagWorker,
-                    imported
-            );
-            importBiomeSet(
-                    registryClass,
-                    "getMidlandsBiomes",
-                    CommonBiomeTags.IS_END_MIDLAND,
-                    biomes,
-                    tagWorker,
-                    imported
-            );
-            importBiomeSet(
-                    registryClass,
-                    "getEdgeBiomes",
-                    CommonBiomeTags.IS_END_BARRENS,
-                    biomes,
-                    tagWorker,
-                    imported
-            );
+            Class<?> registryClass = Class.forName("terrablender.api.EndBiomeRegistry");
+            importBiomeSet(registryClass, "getIslandBiomes", CommonBiomeTags.IS_SMALL_END_ISLAND, biomes, tagWorker, imported);
+            importBiomeSet(registryClass, "getHighlandsBiomes", CommonBiomeTags.IS_END_HIGHLAND, biomes, tagWorker, imported);
+            importBiomeSet(registryClass, "getMidlandsBiomes", CommonBiomeTags.IS_END_MIDLAND, biomes, tagWorker, imported);
+            importBiomeSet(registryClass, "getEdgeBiomes", CommonBiomeTags.IS_END_BARRENS, biomes, tagWorker, imported);
             tagWorker.finished();
         } catch (ClassNotFoundException ignored) {
             importedBiomeData = Map.of();
@@ -76,88 +47,50 @@ public final class TerraBlenderEndBiomeCompat {
             LibWoverWorldGenerator.C.log.warn("Unable to import TerraBlender End biomes", e);
             return 0;
         }
-
         importedBiomeData = Map.copyOf(imported);
         return imported.size();
     }
 
     @SuppressWarnings("unchecked")
-    private static void importBiomeSet(
-            Class<?> registryClass,
-            String getter,
-            TagKey<Biome> tag,
-            Registry<Biome> biomes,
-            BiomeTagModificationWorker tagWorker,
-            Map<ResourceKey<Biome>, BiomeData> imported
-    ) throws ReflectiveOperationException {
-        final Object value = registryClass.getMethod(getter).invoke(null);
-        if (!(value instanceof Iterable<?> entries)) {
-            return;
-        }
-
-        final List<BiomeEntry> importedEntries = new ArrayList<>();
+    private static void importBiomeSet(Class<?> registryClass, String getter, TagKey<Biome> tag, Registry<Biome> biomes, BiomeTagModificationWorker tagWorker, Map<ResourceKey<Biome>, BiomeData> imported) throws ReflectiveOperationException {
+        Object value = registryClass.getMethod(getter).invoke(null);
+        if (!(value instanceof Iterable<?> entries)) return;
+        List<BiomeEntry> importedEntries = new ArrayList<>();
         for (Object entry : entries) {
-            if (entry == null) {
-                continue;
-            }
-
-            final Object data = entry.getClass().getMethod("data").invoke(entry);
-            if (!(data instanceof ResourceKey<?> key)) {
-                continue;
-            }
-
-            final ResourceKey<Biome> biomeKey = (ResourceKey<Biome>) key;
-            if (!biomes.containsKey(biomeKey)) {
-                continue;
-            }
-
-            importedEntries.add(new BiomeEntry(biomeKey, weightOf(entry)));
+            if (entry == null) continue;
+            Object data = entry.getClass().getMethod("data").invoke(entry);
+            if (!(data instanceof ResourceKey<?> key)) continue;
+            ResourceKey<Biome> biomeKey = (ResourceKey<Biome>) key;
+            if (biomes.containsKey(biomeKey)) importedEntries.add(new BiomeEntry(biomeKey, weightOf(entry)));
         }
-
-        final Map<String, Float> normalizationFactors = normalizationFactors(importedEntries);
+        Map<String, Float> normalizationFactors = normalizationFactors(importedEntries);
         for (BiomeEntry entry : importedEntries) {
-            final ResourceKey<Biome> biomeKey = entry.biome();
+            ResourceKey<Biome> biomeKey = entry.biome();
             tagWorker.addBiomeToTag(tag, biomes, biomeKey, biomes.getHolderOrThrow(biomeKey));
-            imported.putIfAbsent(biomeKey, new WoverBiomeData(
-                    1.0F,
-                    biomeKey,
-                    BiomeGenerationDataContainer.EMPTY,
-                    0.1F,
-                    entry.weight() * normalizationFactors.get(biomeKey.location().getNamespace()),
-                    0,
-                    false,
-                    null,
-                    null
-            ));
+            imported.putIfAbsent(biomeKey, new WoverBiomeData(1.0F, biomeKey, BiomeGenerationDataContainer.EMPTY, 0.1F, entry.weight() * normalizationFactors.get(biomeKey.location().getNamespace()), 0, false, null, null));
         }
     }
 
     private static Map<String, Float> normalizationFactors(List<BiomeEntry> entries) {
-        final Map<String, Float> totalWeights = new HashMap<>();
-        final Map<String, Integer> biomeCounts = new HashMap<>();
+        Map<String, Float> totalWeights = new HashMap<>();
+        Map<String, Integer> biomeCounts = new HashMap<>();
         for (BiomeEntry entry : entries) {
-            final String namespace = entry.biome().location().getNamespace();
+            String namespace = entry.biome().location().getNamespace();
             totalWeights.merge(namespace, entry.weight(), Float::sum);
             biomeCounts.merge(namespace, 1, Integer::sum);
         }
-
-        final Map<String, Float> factors = new HashMap<>();
+        Map<String, Float> factors = new HashMap<>();
         for (Map.Entry<String, Float> entry : totalWeights.entrySet()) {
-            final float totalWeight = entry.getValue();
-            factors.put(entry.getKey(), totalWeight > 0.0F
-                    ? biomeCounts.get(entry.getKey()) / totalWeight
-                    : 1.0F);
+            factors.put(entry.getKey(), entry.getValue() > 0.0F ? biomeCounts.get(entry.getKey()) / entry.getValue() : 1.0F);
         }
         return factors;
     }
 
     private static float weightOf(Object entry) {
         try {
-            final Object weight = entry.getClass().getMethod("getWeight").invoke(entry);
-            final Object value = weight.getClass().getMethod("asInt").invoke(weight);
-            if (value instanceof Integer integer && integer > 0) {
-                return integer;
-            }
+            Object weight = entry.getClass().getMethod("getWeight").invoke(entry);
+            Object value = weight.getClass().getMethod("asInt").invoke(weight);
+            if (value instanceof Integer integer && integer > 0) return integer;
         } catch (ReflectiveOperationException ignored) {
         }
         return 1.0F;

@@ -19,10 +19,6 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.ModList;
-import net.neoforged.neoforgespi.locating.IModFile;
-
 import com.google.common.collect.Maps;
 
 import java.io.IOException;
@@ -35,7 +31,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.jetbrains.annotations.Nullable;
 
 public class StructureNBT {
@@ -116,43 +111,14 @@ public class StructureNBT {
     }
 
     private static StructureTemplate _readStructureFromJar(ResourceLocation resource) {
-        try (InputStream inputstream = openStructureStream(resource)) {
-            if (inputstream == null) {
-                LibWoverStructure.C.log.error("Missing structure template: " + resource);
-                return null;
-            }
+        try {
+            InputStream inputstream = MinecraftServer.class.getResourceAsStream("/" + getStructurePath(resource) + ".nbt");
             return readStructureFromStream(inputstream);
         } catch (IOException e) {
-            LibWoverStructure.C.log.error("Unable to read structure template: {}", resource, e);
+            e.printStackTrace();
         }
 
         return null;
-    }
-
-    @Nullable
-    private static InputStream openStructureStream(ResourceLocation resource) throws IOException {
-        final String path = getStructurePath(resource) + ".nbt";
-        ModList modList = ModList.get();
-        if (modList != null) {
-            Optional<? extends ModContainer> container = modList.getModContainerById(resource.getNamespace());
-            if (container.isPresent()) {
-                IModFile modFile = container.get().getModInfo().getOwningFile().getFile();
-                String[] parts = resource.getPath().split("/");
-                String[] segments = new String[3 + parts.length];
-                segments[0] = "data";
-                segments[1] = resource.getNamespace();
-                segments[2] = "structure";
-                for (int i = 0; i < parts.length; i++) {
-                    boolean last = i == parts.length - 1;
-                    segments[3 + i] = last ? (parts[i] + ".nbt") : parts[i];
-                }
-                Path filePath = modFile.findResource(segments);
-                if (filePath != null && Files.exists(filePath)) {
-                    return Files.newInputStream(filePath);
-                }
-            }
-        }
-        return MinecraftServer.class.getResourceAsStream("/" + path);
     }
 
     private static StructureTemplate readStructureFromStream(InputStream stream) throws IOException {

@@ -4,18 +4,18 @@ import org.betterx.wover.potions.impl.PotionManagerImpl;
 
 import net.minecraft.world.item.alchemy.PotionBrewing;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(PotionBrewing.class)
 public class PotionBrewingMixin {
-    @Inject(method = "addVanillaMixes", at = @At("TAIL"))
-    private static void wover_bootstrapPotions(
-            PotionBrewing.Builder builder,
-            CallbackInfo ci
+    @WrapOperation(method = "bootstrap", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/alchemy/PotionBrewing$Builder;build()Lnet/minecraft/world/item/alchemy/PotionBrewing;"))
+    private static PotionBrewing wover_bootstrapPotions(
+            PotionBrewing.Builder instance, Operation<PotionBrewing> original
     ) {
-        PotionManagerImpl.BOOTSTRAP_POTIONS.emit(c -> c.bootstrap(builder));
+        PotionManagerImpl.BOOTSTRAP_POTIONS.emit(c -> c.bootstrap(instance));
+        return original.call(instance);
     }
 }

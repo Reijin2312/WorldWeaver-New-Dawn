@@ -1,6 +1,6 @@
 ![](./public/img/header.png)
 
-**WorldWeaver**, or *WoVer* for short, is a NeoForge utility mod for Minecraft that aims to streamline common modding
+**WorldWeaver**, or *WoVer* for short, is a Fabric utility mod for Minecraft that aims to streamline common modding
 tasks, particularly those related to world creation. As a successor to BCLib, WoVer is intended to eventually take its
 place. Embracing Minecraft's data-driven world generation methodology, it aims to increase the value of data elements
 (i.e. ResourcePacks, DataPacks, etc.) in modding, and to provide a more flexible and powerful way to create and modify
@@ -31,21 +31,22 @@ repositories {
 ```
 dependencies {
     ...
-    implementation "org.betterx:worldweaver:${project.wover_version}"
+    modImplementation "org.betterx:worldweaver:${project.wover_version}"
 }
 ```
 
-You should also add a dependency to `META-INF/neoforge.mods.toml`. WorldWeaver uses Semantic versioning, so adding the dependency as
+You should also add a dependency to `fabirc.mod.json`. WorldWeaver uses Semantic versioning, so adding the dependcy as
 follows
 should respect that and ensure that your mod is not loaded with an incompatible version of WorldWeaver:
 
 ```
-[[dependencies.wover]]
-modId="wover"
-mandatory=true
-versionRange="[21.0.0,)"
-ordering="NONE"
-side="BOTH"
+"depends": {
+  ...
+  "worldweaver": "21.0.x"
+},
+"breaks": {
+  "worldweaver": "<21.0.13"
+}
 ```
 
 In this example `21.0.13` is the WorldWeaver Version you are building against.

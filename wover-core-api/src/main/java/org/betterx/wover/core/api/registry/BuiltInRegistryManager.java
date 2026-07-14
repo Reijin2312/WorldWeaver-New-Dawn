@@ -4,8 +4,8 @@ import org.betterx.wover.entrypoint.LibWoverCore;
 
 import com.mojang.serialization.Lifecycle;
 import net.minecraft.core.Holder;
-import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 
@@ -33,9 +33,7 @@ public class BuiltInRegistryManager {
             Function<Registry<T>, T> registryBootstrap
     ) {
         LibWoverCore.C.log.debug("Creating registry: " + resourceKey.location());
-        MappedRegistry<T> registry = new MappedRegistry<>(resourceKey, Lifecycle.stable(), false);
-        registryBootstrap.apply(registry);
-        return registry;
+        return BuiltInRegistries.registerSimple(resourceKey, registryBootstrap::apply);
     }
 
     @Deprecated
@@ -45,6 +43,6 @@ public class BuiltInRegistryManager {
             Function<Registry<T>, T> registryBootstrap
     ) {
         LibWoverCore.C.log.debug("Creating registry: " + resourceKey.location());
-        return createRegistry(resourceKey, registryBootstrap);
+        return BuiltInRegistries.registerSimple(resourceKey, registryBootstrap::apply);
     }
 }

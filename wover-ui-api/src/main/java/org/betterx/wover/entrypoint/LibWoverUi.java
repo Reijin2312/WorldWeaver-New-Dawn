@@ -3,12 +3,13 @@ package org.betterx.wover.entrypoint;
 import org.betterx.wover.config.impl.CachedConfig;
 import org.betterx.wover.core.api.ModCore;
 
-import net.neoforged.bus.api.IEventBus;
-public class LibWoverUi {
+import net.fabricmc.api.ModInitializer;
+
+public class LibWoverUi implements ModInitializer {
     public static final ModCore C = ModCore.create("wover-ui", "wover");
 
-    public LibWoverUi(IEventBus modEventBus) {
-        C.registerDatapackListener(modEventBus);
+    @Override
+    public void onInitialize() {
         CachedConfig.ensureStaticallyLoaded();
     }
 }

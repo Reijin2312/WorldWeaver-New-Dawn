@@ -1,8 +1,6 @@
 package org.betterx.wover.feature.api.placed.modifiers;
 
-import org.betterx.wover.entrypoint.LibWoverFeature;
 import org.betterx.wover.feature.impl.placed.modifiers.PlacementModifiersImpl;
-import org.betterx.wover.tag.api.predefined.CommonBlockTags;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -10,15 +8,12 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.blockpredicates.BlockPredicate;
 import net.minecraft.world.level.levelgen.placement.PlacementContext;
 import net.minecraft.world.level.levelgen.placement.PlacementFilter;
 import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
-import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
@@ -101,9 +96,7 @@ public class Is extends PlacementFilter {
     @Override
     protected boolean shouldPlace(PlacementContext ctx, RandomSource random, BlockPos pos) {
         WorldGenLevel level = ctx.getLevel();
-        BlockPos targetPos = offset.map(v -> pos.offset(v.getX(), v.getY(), v.getZ())).orElse(pos);
-        boolean result = predicate.test(level, targetPos);
-        return result;
+        return predicate.test(level, offset.map(v -> pos.offset(v.getX(), v.getY(), v.getZ())).orElse(pos));
     }
 
     /**
@@ -115,5 +108,4 @@ public class Is extends PlacementFilter {
     public @NotNull PlacementModifierType<Is> type() {
         return PlacementModifiersImpl.IS;
     }
-
 }

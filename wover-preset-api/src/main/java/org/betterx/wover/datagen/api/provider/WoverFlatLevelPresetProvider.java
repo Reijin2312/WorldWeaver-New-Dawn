@@ -10,12 +10,12 @@ import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.data.PackOutput;
-import net.minecraft.data.tags.TagsProvider;
+import net.minecraft.data.DataProvider;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorPreset;
 
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public abstract class WoverFlatLevelPresetProvider
         extends WoverRegistryContentProvider<FlatLevelGeneratorPreset>
-        implements WoverDataProvider.Secondary<TagsProvider<FlatLevelGeneratorPreset>> {
+        implements WoverDataProvider.Secondary<FabricTagProvider<FlatLevelGeneratorPreset>> {
 
     /**
      * Creates a new instance of {@link WoverRegistryContentProvider}.
@@ -44,17 +44,15 @@ public abstract class WoverFlatLevelPresetProvider
      * Called, when The Data needs to be serialized.
      *
      * @param output           The output to write the data to.
-     * @param registriesFuture A future sent from the data generator
-     * @param existingFileHelper The existing file helper from NeoForge datagen
-     * @return A new {@link TagsProvider}
+     * @param registriesFuture A future sent from the Fabric DataGen API
+     * @return A new {@link DataProvider}
      */
     @Override
-    public TagsProvider<FlatLevelGeneratorPreset> getSecondaryProvider(
-            PackOutput output,
-            CompletableFuture<HolderLookup.Provider> registriesFuture,
-            ExistingFileHelper existingFileHelper
+    public FabricTagProvider<FlatLevelGeneratorPreset> getSecondaryProvider(
+            FabricDataOutput output,
+            CompletableFuture<HolderLookup.Provider> registriesFuture
     ) {
-        return new FlatLevelTagProvider(modCore).getProvider(output, registriesFuture, existingFileHelper);
+        return new FlatLevelTagProvider(modCore).getProvider(output, registriesFuture);
     }
 
     /**

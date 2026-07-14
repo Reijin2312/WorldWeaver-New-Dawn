@@ -3,11 +3,12 @@ package org.betterx.wover.item.api;
 import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.item.api.smithing.SmithingTemplates;
 import org.betterx.wover.tag.api.event.context.ItemTagBootstrapContext;
+
 import net.minecraft.core.Direction;
+import net.minecraft.core.Registry;
 import net.minecraft.core.dispenser.BlockSource;
 import net.minecraft.core.dispenser.DefaultDispenseItemBehavior;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -16,25 +17,18 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.DispenserBlock;
+
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import net.neoforged.neoforge.registries.RegisterEvent;
-import net.neoforged.bus.api.IEventBus;
 
 public class ItemRegistry {
     private static final Map<ModCore, ItemRegistry> REGISTRIES = new HashMap<>();
-    private static final AtomicBoolean HOOKED = new AtomicBoolean(false);
     public final ModCore C;
-    private final Map<ResourceLocation, Item> items = new LinkedHashMap<>();
+    private final Map<ResourceLocation, Item> items = new HashMap<>();
     private Map<Item, TagKey<Item>[]> datagenTags;
-    private Runnable initializer;
-    private boolean initialized;
 
     private ItemRegistry(ModCore modeCore) {
         this.C = modeCore;
@@ -56,51 +50,16 @@ public class ItemRegistry {
         return items.values().stream();
     }
 
-    public void setInitializer(Runnable initializer) {
-        this.initializer = initializer;
-    }
-
-    private void ensureInitialized() {
-        if (!initialized && initializer != null) {
-            initialized = true;
-            initializer.run();
-        }
-    }
-
     public <T extends Item> T register(String path, T item, TagKey<Item>... tags) {
         if (item != null && item != Items.AIR) {
-            ensureIntrusiveHolder(item);
             ResourceLocation id = C.mk(path);
+            Registry.register(BuiltInRegistries.ITEM, id, item);
             items.put(id, item);
 
             if (datagenTags != null && tags != null && tags.length > 0) datagenTags.put(item, tags);
         }
 
         return item;
-    }
-
-    private void performRegistration(RegisterEvent.RegisterHelper<Item> helper) {
-        ensureInitialized();
-        items.forEach((id, item) -> {
-            ensureIntrusiveHolder(item);
-            helper.register(id, item);
-        });
-    }
-
-    private static void ensureIntrusiveHolder(Item item) {
-        BuiltInRegistries.ITEM.createIntrusiveHolder(item);
-    }
-
-    public static void onRegister(RegisterEvent event) {
-        if (event.getRegistryKey().equals(Registries.ITEM)) {
-            event.register(Registries.ITEM, helper -> REGISTRIES.values().forEach(reg -> reg.performRegistration(helper)));
-        }
-    }
-
-    public static void hook(IEventBus bus) {
-        if (HOOKED.compareAndSet(false, true)) {
-            bus.addListener(RegisterEvent.class, ItemRegistry::onRegister);
-        }
     }
 
     public <T extends Item> T registerAsTool(String path, T item, TagKey<Item>... tags) {

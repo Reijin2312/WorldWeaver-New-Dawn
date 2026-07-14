@@ -80,7 +80,7 @@ public class AutoItemTagProvider extends WoverTagProvider.ForItems implements Wo
     @Override
     public @Nullable <T extends DataProvider> WoverDataProvider<T> redirect(@Nullable WoverDataProvider<T> provider) {
         if (provider instanceof WoverTagProvider<?, ?> tagProvider) {
-            if (tagProvider.tagRegistry == this.tagRegistry) {
+            if (tagProvider.tagRegistry == this.tagRegistry && tagProvider.modCore.equals(this.modCore)) {
                 LibWoverTag.C.LOG.debug("Redirecting {} to {}", tagProvider.getClass().getName(), this
                         .getClass()
                         .getName());

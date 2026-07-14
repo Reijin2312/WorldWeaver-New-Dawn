@@ -6,17 +6,18 @@ import org.betterx.wover.datagen.api.WoverDataGenEntryPoint;
 import org.betterx.wover.datagen.api.provider.AutoBlockLootProvider;
 import org.betterx.wover.datagen.api.provider.AutoBlockRegistryTagProvider;
 import org.betterx.wover.poi.impl.PoiManagerImpl;
-import net.neoforged.bus.api.IEventBus;
 
-public class LibWoverBlock {
+import net.fabricmc.api.ModInitializer;
+
+public class LibWoverBlock implements ModInitializer {
     public static final ModCore C = ModCore.create("wover-block", "wover");
 
-    public LibWoverBlock(IEventBus modEventBus) {
-        C.registerDatapackListener(modEventBus);
+    @Override
+    public void onInitialize() {
         //make sure the Datagen will automatically include all Tags assigned to Blocks in the BlockRegistry
         WoverDataGenEntryPoint.registerAutoProvider(AutoBlockRegistryTagProvider::new);
+        WoverDataGenEntryPoint.registerAutoProvider(AutoBlockLootProvider::new);
 
-        modEventBus.addListener(BlockPredicatesImpl::register);
         BlockPredicatesImpl.ensureStaticInitialization();
         PoiManagerImpl.registerAll();
     }

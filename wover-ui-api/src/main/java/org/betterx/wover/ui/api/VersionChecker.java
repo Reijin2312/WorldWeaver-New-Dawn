@@ -5,7 +5,7 @@ import org.betterx.wover.config.impl.CachedConfig;
 import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.entrypoint.LibWoverUi;
 
-import net.neoforged.fml.ModList;
+import net.fabricmc.loader.api.FabricLoader;
 
 import com.google.gson.Gson;
 
@@ -70,7 +70,7 @@ public class VersionChecker implements Runnable {
                     Gson gson = new Gson();
                     String fakeVersions = "{\n" +
                             "    \"mc\":\"1.21-rc.1\",\n" +
-                            "    \"loader\":\"neoforge\",\n" +
+                            "    \"loader\":\"fabric\",\n" +
                             "    \"mods\":[\n" +
                             "      {\"n\":\"bclib\", \"v\":\"21.0.0\"},\n" +
                             "      {\"n\":\"wover\", \"v\":\"21.0.0\"},\n" +
@@ -123,7 +123,7 @@ public class VersionChecker implements Runnable {
         LibWoverUi.C.LOG.info("Check Versions for minecraft=" + minecraftVersion);
 
         try {
-            String fileName = "mc_neoforge_" + URLEncoder.encode(
+            String fileName = "mc_fabric_" + URLEncoder.encode(
                     minecraftVersion,
                     StandardCharsets.ISO_8859_1.toString()
             ) + ".json";
@@ -157,9 +157,8 @@ public class VersionChecker implements Runnable {
             if (json.mods != null) {
                 for (ModVersion mod : json.mods) {
                     if (!KNOWN_MODS.contains(mod.n)) {
-                        if (ModList.get().isLoaded(mod.n)) {
+                        if (FabricLoader.getInstance().getModContainer(mod.n).isPresent())
                             registerMod(mod.n);
-                        }
                     }
                     if (mod.n != null && mod.v != null && KNOWN_MODS.contains(mod.n)) {
                         final ModCore modCore = ModCore.create(mod.n);

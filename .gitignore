@@ -1,5 +1,4 @@
 .gradle/
-.gradle-local/
 build/
 out/
 classes/
@@ -37,9 +36,3 @@ generated/.cache/
 generated/
 /public/img/header_clean.png
 /public/img/icon.png
-
-# Project exclude paths
-/gradle/
-/javadoc/
-/public/
-/tools/

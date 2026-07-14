@@ -2,27 +2,21 @@ package org.betterx.wover.biome.impl.modification.predicates;
 
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicate;
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicateRegistry;
+import org.betterx.wover.core.api.registry.BuiltInRegistryManager;
 import org.betterx.wover.entrypoint.LibWoverBiome;
 
 import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.Lifecycle;
 import net.minecraft.core.Registry;
-import net.minecraft.core.MappedRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.KeyDispatchDataCodec;
 
 import org.jetbrains.annotations.ApiStatus;
 
 public class BiomePredicateRegistryImpl {
-    public static final Registry<MapCodec<? extends BiomePredicate>> BIOME_PREDICATES = new MappedRegistry<>(
+    public static final Registry<MapCodec<? extends BiomePredicate>> BIOME_PREDICATES = BuiltInRegistryManager.createRegistry(
             BiomePredicateRegistry.BIOME_PREDICATE_REGISTRY,
-            Lifecycle.stable(),
-            false
+            BiomePredicateRegistryImpl::onBootstrap
     );
-
-    static {
-        onBootstrap(BIOME_PREDICATES);
-    }
 
     public static MapCodec<? extends BiomePredicate> register(
             Registry<MapCodec<? extends BiomePredicate>> registry,

@@ -7,15 +7,15 @@ import org.betterx.wover.testmod.recipe.TestEquipmentSet;
 
 import net.minecraft.world.item.Items;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
-@Mod("wover-recipe-testmod")
-public class TestModWoverRecipe {
+public class TestModWoverRecipe implements ModInitializer {
     // ModCore for the TestMod. TestMod's do not share the wover namespace,
     // but (like other Mods that include Wover) have a unique one
     public static final ModCore C = ModCore.create("wover-recipe-testmod");
 
-    public TestModWoverRecipe() {
+    @Override
+    public void onInitialize() {
         TestEquipmentSet.ensureStaticInit();
 
         RecipeBuilder.BOOTSTRAP_RECIPES.subscribe(ctx -> {

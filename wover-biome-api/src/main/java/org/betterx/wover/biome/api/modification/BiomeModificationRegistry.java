@@ -27,7 +27,7 @@ public class BiomeModificationRegistry {
      * The key for the Biome Modification Registry.
      */
     public static final ResourceKey<Registry<BiomeModification>> BIOME_MODIFICATION_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverBiome.C.id("worldgen/biome_modifications"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverBiome.C.id("wover/worldgen/biome_modifications"));
 
     /**
      * Creates a  Key for a Biome Modification.

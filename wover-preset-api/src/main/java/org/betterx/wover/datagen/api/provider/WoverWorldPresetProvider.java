@@ -10,12 +10,11 @@ import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.data.PackOutput;
-import net.minecraft.data.tags.TagsProvider;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
+import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
+import net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -24,7 +23,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public abstract class WoverWorldPresetProvider
         extends WoverRegistryContentProvider<WorldPreset>
-        implements WoverDataProvider.Secondary<TagsProvider<WorldPreset>> {
+        implements WoverDataProvider.Secondary<FabricTagProvider<WorldPreset>> {
     /**
      * Creates a new instance of {@link WoverWorldPresetProvider}.
      *
@@ -67,19 +66,17 @@ public abstract class WoverWorldPresetProvider
     protected abstract void prepareTags(TagBootstrapContext<WorldPreset> provider);
 
     /**
-     * Returns the {@link TagsProvider} for the {@link WorldPreset}s.
+     * Returns the {@link FabricTagProvider} for the {@link WorldPreset}s.
      *
      * @param output           The output to write the data to.
-     * @param registriesFuture A future sent from the data generator
-     * @param existingFileHelper The existing file helper from NeoForge datagen
-     * @return A new {@link TagsProvider}
+     * @param registriesFuture A future sent from the Fabric DataGen API
+     * @return A new {@link FabricTagProvider}
      */
-    public TagsProvider<WorldPreset> getSecondaryProvider(
-            PackOutput output,
-            CompletableFuture<HolderLookup.Provider> registriesFuture,
-            ExistingFileHelper existingFileHelper
+    public FabricTagProvider<WorldPreset> getSecondaryProvider(
+            FabricDataOutput output,
+            CompletableFuture<HolderLookup.Provider> registriesFuture
     ) {
-        return new WorldPresetTagProvider(modCore).getProvider(output, registriesFuture, existingFileHelper);
+        return new WorldPresetTagProvider(modCore).getProvider(output, registriesFuture);
     }
 
     private class WorldPresetTagProvider extends WoverTagProvider<WorldPreset, TagBootstrapContext<WorldPreset>> {

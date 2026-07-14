@@ -10,7 +10,7 @@ import java.util.Map;
  * provides some additional functionality like caching loggers for a given mod id
  */
 public final class Logger extends de.ambertation.wunderlib.general.Logger {
-    private static final Map<String, Logger> cache = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, Logger> cache = new HashMap<>();
 
     private Logger(String modID) {
         super(modID);

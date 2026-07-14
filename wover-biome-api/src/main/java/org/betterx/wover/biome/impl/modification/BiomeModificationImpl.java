@@ -4,7 +4,6 @@ import org.betterx.wover.biome.api.modification.BiomeModification;
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicate;
 
 import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MobSpawnSettings;
@@ -31,17 +30,8 @@ public class BiomeModificationImpl implements BiomeModification {
             @Nullable List<TagKey<Biome>> biomeTags,
             @Nullable List<MobSpawnSettings.SpawnerData> spawns
     ) {
-        this(predicate, FeatureMap.of(features), biomeTags, spawns);
-    }
-
-    public BiomeModificationImpl(
-            @NotNull BiomePredicate predicate,
-            @NotNull FeatureMap features,
-            @Nullable List<TagKey<Biome>> biomeTags,
-            @Nullable List<MobSpawnSettings.SpawnerData> spawns
-    ) {
         this.predicate = predicate;
-        this.features = features;
+        this.features = FeatureMap.of(features);
         this.biomeTags = biomeTags;
         this.spawns = spawns;
     }
@@ -59,11 +49,6 @@ public class BiomeModificationImpl implements BiomeModification {
     @Override
     public final List<List<Holder<PlacedFeature>>> features() {
         return features.generic();
-    }
-
-    @Override
-    public List<List<ResourceKey<PlacedFeature>>> featureKeys() {
-        return features.keys();
     }
 
     @Override

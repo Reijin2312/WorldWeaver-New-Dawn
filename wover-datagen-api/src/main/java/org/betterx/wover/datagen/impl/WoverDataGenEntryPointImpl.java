@@ -10,17 +10,12 @@ import java.util.List;
 
 public class WoverDataGenEntryPointImpl {
     private static List<PackBuilder.ProviderFactory<?>> AUTO_PROVIDERS = new ArrayList<>(3);
-    private static boolean autoProvidersInitialized = false;
 
     public static <T extends DataProvider> void registerAutoProvider(PackBuilder.ProviderFactory<T> providerFactory) {
         AUTO_PROVIDERS.add(providerFactory);
     }
 
     public static void addDefaultGlobalProviders(PackBuilderImpl pack) {
-        if (autoProvidersInitialized) {
-            return;
-        }
-        autoProvidersInitialized = true;
         AUTO_PROVIDERS.stream()
                       .map(provider -> provider.create(pack.modCore()))
                       .map(provider -> {

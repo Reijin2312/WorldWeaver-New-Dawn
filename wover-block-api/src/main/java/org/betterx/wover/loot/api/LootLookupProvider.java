@@ -6,6 +6,7 @@ import net.minecraft.advancements.critereon.*;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.data.loot.packs.VanillaBlockLoot;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.StringRepresentable;
@@ -54,11 +55,11 @@ public class LootLookupProvider {
     }
 
     public final HolderLookup.Provider provider;
-    private final WoverVanillaBlockLoot vanillaBlockLoot;
+    private final VanillaBlockLoot vanillaBlockLoot;
     public final HolderLookup.RegistryLookup<Enchantment> enchantmentLookup;
 
     public LootLookupProvider(HolderLookup.Provider provider) {
-        this.vanillaBlockLoot = new WoverVanillaBlockLoot(provider);
+        this.vanillaBlockLoot = new VanillaBlockLoot(provider);
         this.provider = provider;
         this.enchantmentLookup = provider.lookupOrThrow(Registries.ENCHANTMENT);
     }

@@ -12,10 +12,9 @@ import net.minecraft.data.worldgen.placement.NetherPlacements;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.levelgen.GenerationStep;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
-@Mod("wover-biome-testmod")
-public class TestModWoverBiome {
+public class TestModWoverBiome implements ModInitializer {
     // ModCore for the TestMod. TestMod's do not share the wover namespace,
     // but (like other Mods that include Wover) have a unique one
     public static final ModCore C = ModCore.create("wover-biome-testmod");
@@ -23,7 +22,8 @@ public class TestModWoverBiome {
     public static final BiomeKey<BiomeBuilder.Vanilla> TEST_BIOME = BiomeManager.vanilla(C.id("test_biome"));
 
 
-    public TestModWoverBiome() {
+    @Override
+    public void onInitialize() {
         BiomeModificationRegistry.BOOTSTRAP_BIOME_MODIFICATION_REGISTRY.subscribe(context -> {
             var features = context.lookup(Registries.PLACED_FEATURE);
 

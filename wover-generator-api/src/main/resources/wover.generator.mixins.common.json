@@ -8,10 +8,10 @@
   },
   "mixins": [
     "biomesource.BiomeSourcePrintMixin",
-    "biomesource.MultiNoiseBiomeSourceParameterListAccessor",
-    "biomesource.MultiNoiseBiomeSourceParameterListMixin",
     "biomesource.ServerLevelMixin",
-    "biomesource.TheEndBiomeSourceMixin",
+    "biomesource.TheEndBiomesMixin",
+    "DSL.V2551Mixin",
+    "DSL.V2832Mixin",
     "generator.ChunkGeneratorMixin",
     "generator.ChunkGeneratorPrintMixin",
     "generator.NoiseBasedChunkGeneratorMixin"

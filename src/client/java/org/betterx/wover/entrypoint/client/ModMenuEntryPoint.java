@@ -2,24 +2,12 @@ package org.betterx.wover.entrypoint.client;
 
 import org.betterx.wover.screens.impl.MainMenu;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import com.terraformersmc.modmenu.api.ConfigScreenFactory;
+import com.terraformersmc.modmenu.api.ModMenuApi;
 
-@EventBusSubscriber(modid = "wover", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-public final class ModMenuEntryPoint {
-    private ModMenuEntryPoint() {
-    }
-
-    @SubscribeEvent
-    public static void onClientSetup(FMLClientSetupEvent event) {
-        IConfigScreenFactory factory = (modContainer, parent) -> new MainMenu(parent);
-        ModList.get()
-               .getModContainerById("wover")
-               .ifPresent(container -> container.registerExtensionPoint(IConfigScreenFactory.class, factory));
+public class ModMenuEntryPoint implements ModMenuApi {
+    @Override
+    public ConfigScreenFactory<?> getModConfigScreenFactory() {
+        return (parent) -> new MainMenu(parent);
     }
 }

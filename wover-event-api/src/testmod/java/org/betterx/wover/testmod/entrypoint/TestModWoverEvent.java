@@ -5,13 +5,13 @@ import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.events.api.WorldLifecycle;
 import org.betterx.wover.state.api.WorldDatapackConfig;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
-@Mod("wover-events-testmod")
-public class TestModWoverEvent {
+public class TestModWoverEvent implements ModInitializer {
     public static final ModCore C = ModCore.create("wover-events-testmod");
 
-    public TestModWoverEvent() {
+    @Override
+    public void onInitialize() {
         ConfigResource config = ConfigResource.create(C, "test");
         ConfigResource configB = ConfigResource.create(C, "test");
         WorldDatapackConfig.registerConfig(config);

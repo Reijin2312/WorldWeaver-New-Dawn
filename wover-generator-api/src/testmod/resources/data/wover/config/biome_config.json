@@ -3,5 +3,5 @@
     "minecraft:is_nether": ["minecraft:crimson_forest"],
     "*:is_end": ["minecraft:unknown_biome"]
   },
-  "no_loader_register": ["minecraft:*", "c:*"]
+  "no_fabric_register": ["minecraft:*", "c:*"]
 }

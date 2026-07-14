@@ -176,14 +176,10 @@ public abstract class WoverBiomeSource extends BiomeSource implements
     }
 
     private boolean isWoverManagedBiome(@Nullable Holder<Biome> biomeHolder) {
-        if (biomeHolder == null) {
-            return false;
-        }
-
+        if (biomeHolder == null) return false;
         if (biomeHolder.unwrapKey().isPresent()) {
             return managedPossibleBiomeKeys.contains(biomeHolder.unwrapKey().orElseThrow());
         }
-
         return ownedPossibleBiomes.contains(biomeHolder);
     }
 
@@ -192,29 +188,18 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         if (key == null || isWoverManagedBiome(biomeHolder) || disabledExternalBiomeKeys.contains(key)) {
             return false;
         }
-
         ResourceLocation id = key.location();
         String namespace = id.getNamespace();
         String path = id.getPath();
-
-        if ("minecraft".equals(namespace)
-                || "bclib".equals(namespace)
-                || "betternether".equals(namespace)
-                || "betterend".equals(namespace)
-                || "wover".equals(namespace)
-                || "worldweaver".equals(namespace)
+        if ("minecraft".equals(namespace) || "bclib".equals(namespace) || "betternether".equals(namespace)
+                || "betterend".equals(namespace) || "wover".equals(namespace) || "worldweaver".equals(namespace)
                 || namespace.startsWith("wover-")) {
             return false;
         }
-
         if ("terrablender".equals(namespace) && "deferred_placeholder".equals(path)) {
             return false;
         }
-
-        return !path.contains("placeholder")
-                && !path.contains("deferred")
-                && !path.contains("internal")
-                && !path.contains("technical");
+        return !path.contains("placeholder") && !path.contains("deferred") && !path.contains("internal") && !path.contains("technical");
     }
 
     protected final Holder<Biome> applyFallbackBiomeSource(
@@ -250,40 +235,30 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         }
         this.fallbackBiomeSource = source;
         try {
-            this.externalPossibleBiomes = Set.copyOf(source.possibleBiomes());
+            externalPossibleBiomes = Set.copyOf(source.possibleBiomes());
         } catch (RuntimeException e) {
             LibWoverWorldGenerator.C.log.warn("Unable to read external possible biomes for {}", toShortString(), e);
-            this.externalPossibleBiomes = Set.of();
+            externalPossibleBiomes = Set.of();
         }
     }
 
     private void updateCombinedPossibleBiomes() {
         if (externalPossibleBiomes.isEmpty()) {
-            this.dynamicPossibleBiomes = ownedPossibleBiomes;
+            dynamicPossibleBiomes = ownedPossibleBiomes;
         } else {
             HashSet<Holder<Biome>> combined = new HashSet<>(ownedPossibleBiomes);
             combined.addAll(externalPossibleBiomes);
-            this.dynamicPossibleBiomes = Set.copyOf(combined);
+            dynamicPossibleBiomes = Set.copyOf(combined);
         }
-
-        // BiomeSource keeps this supplier separately from collectPossibleBiomes(). Late external sources (for example
-        // MosaicBiomeSource) are initialized after the initial cache was read by Lithostitched and feature sorting.
         LithostitchedBiomeSourceCompat.replacePossibleBiomes(this, dynamicPossibleBiomes);
     }
 
     private void refreshDisabledExternalBiomeKeys() {
-        this.disabledExternalBiomeKeys = RegionsUnexploredBiomeConfigCompat.disabledBiomes();
+        disabledExternalBiomeKeys = RegionsUnexploredBiomeConfigCompat.disabledBiomes();
         if (!disabledExternalBiomeKeys.isEmpty()) {
-            this.externalPossibleBiomes = externalPossibleBiomes.stream()
-                                                               .filter(holder -> holder.unwrapKey()
-                                                                                       .map(key -> !disabledExternalBiomeKeys.contains(key))
-                                                                                       .orElse(true))
-                                                               .collect(java.util.stream.Collectors.toUnmodifiableSet());
-            LibWoverWorldGenerator.C.log.info(
-                    "Filtered {} disabled Regions Unexplored biome(s) from the external fallback for {}",
-                    disabledExternalBiomeKeys.size(),
-                    toShortString()
-            );
+            externalPossibleBiomes = externalPossibleBiomes.stream()
+                    .filter(holder -> holder.unwrapKey().map(key -> !disabledExternalBiomeKeys.contains(key)).orElse(true))
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
         }
     }
 
@@ -294,30 +269,17 @@ public abstract class WoverBiomeSource extends BiomeSource implements
             ResourceKey<LevelStem> dimensionKey,
             ChunkGenerator settingsOwner
     ) {
-        BiomeSource source = this.fallbackBiomeSource;
+        BiomeSource source = fallbackBiomeSource;
         if (source == null) {
             return false;
         }
-
         boolean initialized = ElysiumBiomeSourceCompat.initialize(source, seed, dimensionKey);
         initialized |= TerraBlenderBiomeSourceCompat.initialize(
-                source,
-                registryAccess,
-                dimensionType,
-                dimensionKey,
-                settingsOwner,
-                seed
+                source, registryAccess, dimensionType, dimensionKey, settingsOwner, seed
         );
-        this.externalPossibleBiomes = Set.copyOf(source.possibleBiomes());
+        externalPossibleBiomes = Set.copyOf(source.possibleBiomes());
         refreshDisabledExternalBiomeKeys();
         updateCombinedPossibleBiomes();
-        LibWoverWorldGenerator.C.log.info(
-                "External fallback for {}: source={}, initialized={}, possibleBiomes={}",
-                dimensionKey.location(),
-                source.getClass().getName(),
-                initialized,
-                externalPossibleBiomes.size()
-        );
         return initialized;
     }
 

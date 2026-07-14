@@ -46,6 +46,10 @@ public abstract class TagRegistryImpl<T, P extends TagBootstrapContext<T>> imple
         return makeTag(ResourceLocation.fromNamespaceAndPath("c", name));
     }
 
+    public TagKey<T> makeFabricTag(String name) {
+        return makeTag(ResourceLocation.fromNamespaceAndPath("fabric", name));
+    }
+
     public TagKey<T> makeTag(ModCore mod, String name) {
         return makeTag(mod.id(name));
     }

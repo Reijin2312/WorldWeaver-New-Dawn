@@ -28,7 +28,7 @@ public class BiomeDataRegistry {
      * The Key of the Registry. ({@code wover/worldgen/biome_data})
      */
     public static final ResourceKey<Registry<BiomeData>> BIOME_DATA_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverSurface.C.id("worldgen/biome_data"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverSurface.C.id("wover/worldgen/biome_data"));
 
     /**
      * Creates a ResourceKey for  {@link BiomeData}.

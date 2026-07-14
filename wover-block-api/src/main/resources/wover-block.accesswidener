@@ -1,0 +1,6 @@
+accessWidener   v1  named
+
+accessible field net/minecraft/data/models/BlockModelGenerators texturedModels Ljava/util/Map;
+
+accessible method net/minecraft/world/entity/ai/village/poi/PoiTypes register (Lnet/minecraft/core/Registry;Lnet/minecraft/resources/ResourceKey;Ljava/util/Set;II)Lnet/minecraft/world/entity/ai/village/poi/PoiType;
+accessible field net/minecraft/world/entity/ai/village/poi/PoiTypes TYPE_BY_STATE Ljava/util/Map;

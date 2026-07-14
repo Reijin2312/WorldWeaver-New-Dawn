@@ -12,16 +12,14 @@ import net.minecraft.client.gui.screens.worldselection.PresetEditor;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
 import net.minecraft.network.chat.Component;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 
-@EventBusSubscriber(modid = "wover-preset-testmod", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-public class TestModWoverWorldPresetClient {
-    @SubscribeEvent
-    public static void onClientSetup(FMLClientSetupEvent event) {
+@Environment(EnvType.CLIENT)
+public class TestModWoverWorldPresetClient implements ClientModInitializer {
+    @Override
+    public void onInitializeClient() {
         WorldPresetsUI.registerCustomUI(TestModWoverWorldPreset.END_START, new PresetEditor() {
             @Override
             public Screen createEditScreen(

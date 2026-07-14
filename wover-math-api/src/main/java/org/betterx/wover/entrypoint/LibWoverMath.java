@@ -2,11 +2,13 @@ package org.betterx.wover.entrypoint;
 
 import org.betterx.wover.core.api.ModCore;
 
-import net.neoforged.bus.api.IEventBus;
-public class LibWoverMath {
+import net.fabricmc.api.ModInitializer;
+
+public class LibWoverMath implements ModInitializer {
     public static final ModCore C = ModCore.create("wover-math", "wover");
 
-    public LibWoverMath(IEventBus modEventBus) {
-        C.registerDatapackListener(modEventBus);
+    @Override
+    public void onInitialize() {
+
     }
 }

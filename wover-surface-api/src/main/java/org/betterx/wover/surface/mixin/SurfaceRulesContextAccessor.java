@@ -7,12 +7,14 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.NoiseChunk;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.SurfaceRules;
+
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 import java.util.function.Supplier;
 
-@Mixin(targets = "net.minecraft.world.level.levelgen.SurfaceRules$Context")
+@Mixin(SurfaceRules.Context.class)
 public interface SurfaceRulesContextAccessor extends SurfaceRulesContext {
     @Accessor("blockX")
     int getBlockX();

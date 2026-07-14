@@ -5,4 +5,12 @@ ext {
     baseClass = "LibWoverItemApi"
 }
 
+dependencies {
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+loom {
+    accessWidenerPath = file('src/main/resources/wover-item.accesswidener')
+}
+
 moduleDependencies(project, ['wover-common-api', 'wover-core-api', 'wover-tag-api', 'wover-event-api', 'wover-datagen-api'])

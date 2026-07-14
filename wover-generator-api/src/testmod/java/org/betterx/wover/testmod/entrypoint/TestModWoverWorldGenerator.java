@@ -23,13 +23,12 @@ import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.GenerationStep;
 
-import net.neoforged.fml.common.Mod;
+import net.fabricmc.api.ModInitializer;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@Mod("wover-generator-testmod")
-public class TestModWoverWorldGenerator {
+public class TestModWoverWorldGenerator implements ModInitializer {
     // ModCore for the TestMod. TestMod's do not share the wover namespace,
     // but (like other Mods that include Wover) have a unique one
     public static final ModCore C = ModCore.create("wover-generator-testmod");
@@ -56,7 +55,8 @@ public class TestModWoverWorldGenerator {
             .createKey(C.id("test_scattered_placed"))
             .setDecoration(GenerationStep.Decoration.SURFACE_STRUCTURES);
 
-    public TestModWoverWorldGenerator() {
+    @Override
+    public void onInitialize() {
         WorldPresetManager.suggestDefault(WorldPresets.WOVER_WORLD, 2000);
 
         Map<ResourceKey<Biome>, Integer> testMap = new HashMap<>();

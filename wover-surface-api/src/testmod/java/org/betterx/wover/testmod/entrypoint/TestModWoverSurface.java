@@ -1,7 +1,6 @@
 package org.betterx.wover.testmod.entrypoint;
 
 import org.betterx.wover.core.api.ModCore;
-import org.betterx.wover.core.api.DatapackActivationType;
 import org.betterx.wover.events.api.WorldLifecycle;
 import org.betterx.wover.events.api.types.OnRegistryReady;
 import org.betterx.wover.surface.api.AssignedSurfaceRule;
@@ -17,19 +16,18 @@ import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.SingleThreadedRandomSource;
 
-import net.neoforged.fml.common.Mod;
-import net.neoforged.bus.api.IEventBus;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 
-@Mod("wover-surface-testmod")
-public class TestModWoverSurface {
+public class TestModWoverSurface implements ModInitializer {
     public static final ModCore C = ModCore.create("wover-surface-testmod");
     public static final ResourceLocation ADDON_PACK = C.addDatapack(
             "testpack",
-            DatapackActivationType.DEFAULT_ENABLED
+            ResourcePackActivationType.DEFAULT_ENABLED
     );
 
-    public TestModWoverSurface(IEventBus modEventBus) {
-        C.registerDatapackListener(modEventBus);
+    @Override
+    public void onInitialize() {
         RandomSource rSource = new SingleThreadedRandomSource(9324765982365L);
         WorldLifecycle.WORLD_REGISTRY_READY.subscribe((registry, stage) -> {
             Registry<AssignedSurfaceRule> surfaceRegistr = registry.registryOrThrow(SurfaceRuleRegistry.SURFACE_RULES_REGISTRY);
