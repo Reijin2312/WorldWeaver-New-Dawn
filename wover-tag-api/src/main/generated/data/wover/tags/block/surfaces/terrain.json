@@ -1,0 +1,29 @@
+{
+  "values": [
+    "minecraft:bone_block",
+    "#minecraft:base_stone_overworld",
+    "minecraft:dirt",
+    "#minecraft:dripstone_replaceable_blocks",
+    {
+      "id": "#wover:surfaces/end/stones",
+      "required": false
+    },
+    "minecraft:farmland",
+    "minecraft:glowstone",
+    "minecraft:grass_block",
+    "minecraft:gravel",
+    "minecraft:magma_block",
+    {
+      "id": "#wover:surfaces/mycelium",
+      "required": false
+    },
+    {
+      "id": "#wover:surfaces/nether/terrain",
+      "required": false
+    },
+    "#minecraft:nylium",
+    "minecraft:red_sand",
+    "minecraft:sand",
+    "minecraft:sculk"
+  ]
+}

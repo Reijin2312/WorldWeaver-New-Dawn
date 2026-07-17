@@ -34,6 +34,6 @@ CHANGES.md
 modrinth.json
 node_modules/
 generated/.cache/
-generated/
+/generated/
 /public/img/header_clean.png
 /public/img/icon.png
