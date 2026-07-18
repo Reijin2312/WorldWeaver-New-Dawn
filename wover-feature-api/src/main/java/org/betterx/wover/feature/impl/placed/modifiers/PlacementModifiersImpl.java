@@ -7,7 +7,7 @@ import org.betterx.wover.legacy.api.LegacyHelper;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.levelgen.placement.PlacementModifier;
 import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
 
@@ -101,7 +101,7 @@ public class PlacementModifiersImpl {
     }
 
     public static <P extends PlacementModifier> PlacementModifierType<P> register(
-            ResourceLocation location,
+            Identifier location,
             MapCodec<P> codec,
             boolean withLegacyBCLib
     ) {

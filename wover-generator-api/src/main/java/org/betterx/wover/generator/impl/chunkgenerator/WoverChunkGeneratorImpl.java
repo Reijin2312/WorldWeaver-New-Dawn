@@ -1,13 +1,10 @@
 package org.betterx.wover.generator.impl.chunkgenerator;
 
 import org.betterx.wover.common.generator.api.chunkgenerator.RestorableBiomeSource;
-import org.betterx.wover.common.generator.api.chunkgenerator.RebuildableFeaturesPerStep;
-import org.betterx.wover.common.generator.impl.compat.LithostitchedBiomeSourceCompat;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.events.api.WorldLifecycle;
 import org.betterx.wover.legacy.api.LegacyHelper;
 import org.betterx.wover.state.api.WorldState;
-import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 
 import com.mojang.serialization.Lifecycle;
 import net.minecraft.core.*;
@@ -20,7 +17,6 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
-import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.WorldData;
 
@@ -30,57 +26,14 @@ import org.jetbrains.annotations.ApiStatus;
 public class WoverChunkGeneratorImpl {
     public static final ResourceKey<NoiseGeneratorSettings> LEGACY_AMPLIFIED_NETHER = ResourceKey.create(
             Registries.NOISE_SETTINGS,
-            LegacyHelper.BCLIB_CORE.convertNamespace(WoverChunkGenerator.AMPLIFIED_NETHER.location())
+            LegacyHelper.BCLIB_CORE.convertNamespace(WoverChunkGenerator.AMPLIFIED_NETHER.identifier())
     );
 
     @ApiStatus.Internal
     public static void initialize() {
         WorldLifecycle.MINECRAFT_SERVER_READY.subscribe(WoverChunkGeneratorImpl::restoreInitialBiomeSourceInAllDimensions);
         WorldLifecycle.ON_DIMENSION_LOAD.subscribe(WoverChunkGeneratorImpl::repairBiomeSourceInAllDimensions);
-        WorldLifecycle.BEFORE_CREATING_LEVELS.subscribe(WoverChunkGeneratorImpl::initializeExternalBiomeSources);
         WorldLifecycle.BEFORE_CREATING_LEVELS.subscribe(WoverChunkGeneratorImpl::printInfo, -1000);
-    }
-
-    private static void initializeExternalBiomeSources(
-            LevelStorageSource.LevelStorageAccess ignoredStorageAccess,
-            PackRepository ignoredPackRepository,
-            LayeredRegistryAccess<RegistryLayer> registries,
-            WorldData worldData
-    ) {
-        long seed = worldData.worldGenOptions().seed();
-        RegistryAccess registryAccess = registries.compositeAccess();
-        Registry<LevelStem> dimensions = registryAccess.registryOrThrow(Registries.LEVEL_STEM);
-        LibWoverWorldGenerator.C.log.info(
-                "Initializing external biome sources from active dimensions registry ({} entries)",
-                dimensions.size()
-        );
-        for (var entry : dimensions.entrySet()) {
-            ChunkGenerator generator = entry.getValue().generator();
-            var loadedSource = generator.getBiomeSource();
-            var sourceForCompatibility = LithostitchedBiomeSourceCompat.unwrap(loadedSource);
-            if (sourceForCompatibility instanceof WoverBiomeSource source && source.initializeExternalBiomeSource(
-                    seed, registryAccess, entry.getValue().type(), entry.getKey(), generator
-            )) {
-                if (LithostitchedBiomeSourceCompat.refreshPossibleBiomes(loadedSource, source.possibleBiomes())) {
-                    LibWoverWorldGenerator.C.log.info(
-                            "Refreshed Lithostitched biome cache for {} with {} possible biomes",
-                            entry.getKey().location(),
-                            loadedSource.possibleBiomes().size()
-                    );
-                }
-                if (generator instanceof RebuildableFeaturesPerStep<?> rebuildable) {
-                    // Rebuild from the generator's effective source after refreshing the wrapper. The wrapper can
-                    // contribute additional injected biomes of its own, and omitting them makes FeatureSorter return
-                    // -1 for their placed features during biome decoration.
-                    rebuildable.wover_rebuildFeaturesPerStep();
-                    LibWoverWorldGenerator.C.log.info(
-                            "Rebuilt features for {} from effective source with {} possible biomes",
-                            entry.getKey().location(),
-                            generator.getBiomeSource().possibleBiomes().size()
-                    );
-                }
-            }
-        }
     }
 
     private static void printInfo(
@@ -91,7 +44,7 @@ public class WoverChunkGeneratorImpl {
     ) {
         if (WorldState.registryAccess() != null) {
             final Registry<LevelStem> dimensionsRegistry = WorldState.registryAccess()
-                                                                     .registryOrThrow(Registries.LEVEL_STEM);
+                                                                     .lookupOrThrow(Registries.LEVEL_STEM);
             ChunkGeneratorManagerImpl.printDimensionInfo(dimensionsRegistry);
         }
     }
@@ -111,7 +64,7 @@ public class WoverChunkGeneratorImpl {
             PackRepository packRepository,
             WorldStem worldStem
     ) {
-        for (var entry : WorldState.registryAccess().registryOrThrow(Registries.LEVEL_STEM).entrySet()) {
+        for (var entry : WorldState.registryAccess().lookupOrThrow(Registries.LEVEL_STEM).entrySet()) {
             ResourceKey<LevelStem> key = entry.getKey();
             LevelStem stem = entry.getValue();
 
@@ -123,7 +76,7 @@ public class WoverChunkGeneratorImpl {
 
     private static LayeredRegistryAccess<RegistryLayer> repairBiomeSourceInAllDimensions(LayeredRegistryAccess<RegistryLayer> registries) {
         final RegistryAccess.Frozen access = registries.compositeAccess();
-        final Registry<LevelStem> dimensions = access.registryOrThrow(Registries.LEVEL_STEM);
+        final Registry<LevelStem> dimensions = access.lookupOrThrow(Registries.LEVEL_STEM);
 
         WorldGeneratorConfigImpl.migrateGeneratorSettings(access, dimensions);
 
@@ -158,11 +111,11 @@ public class WoverChunkGeneratorImpl {
             StemGetter getter,
             RegisterHelper registerHelper
     ) {
-        final Registry<DimensionType> dimensionTypeRegistry = registryAccess.registryOrThrow(Registries.DIMENSION_TYPE);
+        final Registry<DimensionType> dimensionTypeRegistry = registryAccess.lookupOrThrow(Registries.DIMENSION_TYPE);
         final LevelStem levelStem = getter.get(dimensionKey);
 
         Holder<DimensionType> dimensionType = levelStem == null
-                ? dimensionTypeRegistry.getHolderOrThrow(dimensionTypeKey)
+                ? dimensionTypeRegistry.getOrThrow(dimensionTypeKey)
                 : levelStem.type();
 
         MappedRegistry<LevelStem> writableRegistry = new MappedRegistry<>(
@@ -179,7 +132,7 @@ public class WoverChunkGeneratorImpl {
         //copy all other dimensions
         for (Map.Entry<ResourceKey<LevelStem>, LevelStem> entry : dimensionRegistry) {
             final ResourceKey<LevelStem> resourceKey = entry.getKey();
-            if (dimensionKey.location().equals(resourceKey.location())) continue;
+            if (dimensionKey.identifier().equals(resourceKey.identifier())) continue;
 
             registerHelper.register(writableRegistry, resourceKey, entry.getValue());
         }

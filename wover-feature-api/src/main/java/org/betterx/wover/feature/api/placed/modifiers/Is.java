@@ -2,7 +2,6 @@ package org.betterx.wover.feature.api.placed.modifiers;
 
 import org.betterx.wover.feature.impl.placed.modifiers.PlacementModifiersImpl;
 
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
@@ -72,7 +71,7 @@ public class Is extends PlacementFilter {
      * @return a new instance
      */
     public static Is below(BlockPredicate predicate) {
-        return new Is(predicate, Optional.of(Direction.DOWN.getNormal()));
+        return new Is(predicate, Optional.of(Direction.DOWN.getUnitVec3i()));
     }
 
     /**
@@ -82,7 +81,7 @@ public class Is extends PlacementFilter {
      * @return a new instance
      */
     public static Is above(BlockPredicate predicate) {
-        return new Is(predicate, Optional.of(Direction.UP.getNormal()));
+        return new Is(predicate, Optional.of(Direction.UP.getUnitVec3i()));
     }
 
     /**
@@ -96,7 +95,9 @@ public class Is extends PlacementFilter {
     @Override
     protected boolean shouldPlace(PlacementContext ctx, RandomSource random, BlockPos pos) {
         WorldGenLevel level = ctx.getLevel();
-        return predicate.test(level, offset.map(v -> pos.offset(v.getX(), v.getY(), v.getZ())).orElse(pos));
+        BlockPos targetPos = offset.map(v -> pos.offset(v.getX(), v.getY(), v.getZ())).orElse(pos);
+        boolean result = predicate.test(level, targetPos);
+        return result;
     }
 
     /**
@@ -108,4 +109,5 @@ public class Is extends PlacementFilter {
     public @NotNull PlacementModifierType<Is> type() {
         return PlacementModifiersImpl.IS;
     }
+
 }

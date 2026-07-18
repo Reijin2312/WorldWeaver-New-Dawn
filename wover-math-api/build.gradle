@@ -1,4 +1,4 @@
-archivesBaseName = "wover-math-api"
+base { archivesName = "wover-math-api" }
 
 ext {
     baseNamespace = "math"

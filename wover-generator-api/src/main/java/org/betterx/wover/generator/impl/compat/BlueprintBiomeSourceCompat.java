@@ -12,7 +12,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -28,7 +28,7 @@ import java.util.Set;
 
 public final class BlueprintBiomeSourceCompat {
     private static final String MODDED_BIOME_SOURCE = "com.teamabnormals.blueprint.common.world.modification.ModdedBiomeSource";
-    private static final ResourceKey<? extends Registry<?>> SLICES_REGISTRY = ResourceKey.createRegistryKey(ResourceLocation.fromNamespaceAndPath("blueprint", "modded_biome_slices"));
+    private static final ResourceKey<? extends Registry<?>> SLICES_REGISTRY = ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath("blueprint", "modded_biome_slices"));
     private static volatile Map<ResourceKey<Biome>, BiomeData> importedBiomeData = Map.of();
     private static volatile boolean canReplaceEndWrapper;
 
@@ -60,7 +60,7 @@ public final class BlueprintBiomeSourceCompat {
         BiomeTagModificationWorker tagWorker = new BiomeTagModificationWorker();
         boolean importedEveryActiveSlice = true;
         try {
-            Registry<?> slices = (Registry<?>) access.registry((ResourceKey) SLICES_REGISTRY).orElse(null);
+            Registry<?> slices = (Registry<?>) access.lookup((ResourceKey) SLICES_REGISTRY).orElse(null);
             if (slices == null) {
                 importedBiomeData = Map.of();
                 canReplaceEndWrapper = false;
@@ -112,7 +112,7 @@ public final class BlueprintBiomeSourceCompat {
         boolean highlands = false, barrens = false, islands = false, center = false;
         for (Object match : matches) {
             if (!(match instanceof Holder<?> holder)) continue;
-            ResourceLocation id = holder.unwrapKey().map(ResourceKey::location).orElse(null);
+            Identifier id = holder.unwrapKey().map(ResourceKey::identifier).orElse(null);
             if (id == null || !"minecraft".equals(id.getNamespace())) continue;
             switch (id.getPath()) {
                 case "end_highlands", "end_midlands" -> highlands = true;

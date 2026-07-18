@@ -1,8 +1,8 @@
 package org.betterx.wover.surface.impl;
 
-import org.betterx.wover.common.generator.impl.compat.LithostitchedBiomeSourceCompat;
 import org.betterx.wover.common.surface.api.InjectableSurfaceRules;
 import org.betterx.wover.common.surface.api.SurfaceRuleProvider;
+import org.betterx.wover.core.api.IntegrationCore;
 import org.betterx.wover.entrypoint.LibWoverSurface;
 import org.betterx.wover.state.api.WorldState;
 import org.betterx.wover.surface.api.AssignedSurfaceRule;
@@ -13,31 +13,24 @@ import net.minecraft.core.LayeredRegistryAccess;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.SurfaceRules;
-import net.minecraft.world.level.levelgen.placement.CaveSurface;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.WorldData;
 
 import com.google.common.base.Stopwatch;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
+import java.lang.reflect.Method;
 import org.jetbrains.annotations.ApiStatus;
 
 public class SurfaceRuleUtil {
@@ -45,15 +38,15 @@ public class SurfaceRuleUtil {
         Registry<AssignedSurfaceRule> registry = null;
         if (WorldState.registryAccess() != null)
             registry = WorldState.registryAccess()
-                                 .registry(SurfaceRuleRegistry.SURFACE_RULES_REGISTRY).orElse(null);
+                                 .lookup(SurfaceRuleRegistry.SURFACE_RULES_REGISTRY).orElse(null);
 
         if (registry == null) {
-            LibWoverSurface.C.LOG.warn("No Surface Rule Registry found. Skipping Surface Rule Injection for Biome {}", biomeKey.location());
+            LibWoverSurface.C.LOG.warn("No Surface Rule Registry found. Skipping Surface Rule Injection for Biome {}", biomeKey.identifier());
             return List.of();
         }
 
         var list = registry.stream()
-                           .filter(a -> a != null && a.biomeID != null && a.biomeID.equals(biomeKey.location()))
+                           .filter(a -> a != null && a.biomeID != null && a.biomeID.equals(biomeKey.identifier()))
                            .sorted((a, b) -> b.priority - a.priority)
                            .map(a -> a.ruleSource)
                            .toList();
@@ -75,130 +68,6 @@ public class SurfaceRuleUtil {
                        .collect(Collectors.toCollection(LinkedList::new));
     }
 
-    private static List<SurfaceRules.RuleSource> getCompatRulesForDimension(
-            ResourceKey<LevelStem> dimensionKey,
-            BiomeSource source
-    ) {
-        if (LevelStem.NETHER.equals(dimensionKey)) {
-            SurfaceRules.RuleSource incisionRule = tryBuildIncisionSurfaceRule(source);
-            return incisionRule == null ? List.of() : List.of(incisionRule);
-        } else if (!LevelStem.END.equals(dimensionKey)) {
-            return List.of();
-        }
-
-        final boolean hasEnderscapeBiome = source.possibleBiomes()
-                                              .stream()
-                                              .map(Holder::unwrapKey)
-                                              .flatMap(Optional::stream)
-                                              .map(ResourceKey::location)
-                                              .map(ResourceLocation::getNamespace)
-                                              .anyMatch("enderscape"::equals);
-        if (!hasEnderscapeBiome) {
-            return List.of();
-        }
-
-        final SurfaceRules.RuleSource enderscapeRules = tryBuildEnderscapeSurfaceRules();
-        return enderscapeRules == null ? List.of() : List.of(enderscapeRules);
-    }
-
-    private static SurfaceRules.RuleSource tryBuildEnderscapeSurfaceRules() {
-        try {
-            final Class<?> rulesClass = Class.forName("net.bunten.enderscape.registry.EnderscapeSurfaceRuleData");
-            final Object result = rulesClass.getMethod("makeRules").invoke(null);
-            if (result instanceof SurfaceRules.RuleSource ruleSource) {
-                return ruleSource;
-            }
-        } catch (ReflectiveOperationException e) {
-            LibWoverSurface.C.LOG.verbose("Unable to import Enderscape surface rules: {}", e.getMessage());
-        }
-        return null;
-    }
-
-    private static SurfaceRules.RuleSource tryBuildIncisionSurfaceRule(BiomeSource source) {
-        final ResourceKey<Biome> biomeKey = ResourceKey.create(
-                Registries.BIOME,
-                ResourceLocation.fromNamespaceAndPath("incision", "eroded_yard")
-        );
-        if (source.possibleBiomes().stream().noneMatch(holder -> holder.is(biomeKey))) {
-            return null;
-        }
-
-        try {
-            Class.forName("net.incision.init.IncisionModBiomes");
-        } catch (ClassNotFoundException ignored) {
-            return null;
-        }
-
-        Registry<Block> blocks = WorldState.registryAccess() == null
-                ? null
-                : WorldState.registryAccess().registryOrThrow(Registries.BLOCK);
-        if (blocks == null) {
-            return null;
-        }
-
-        Block block = blocks.get(ResourceLocation.fromNamespaceAndPath("incision", "weatherrack"));
-        if (block == null) {
-            return null;
-        }
-
-        BlockState state = block.defaultBlockState();
-        return SurfaceRules.ifTrue(
-                SurfaceRules.isBiome(biomeKey),
-                SurfaceRules.sequence(
-                        SurfaceRules.ifTrue(
-                                SurfaceRules.stoneDepthCheck(0, false, 0, CaveSurface.FLOOR),
-                                SurfaceRules.sequence(
-                                        SurfaceRules.ifTrue(SurfaceRules.waterBlockCheck(-1, 0), SurfaceRules.state(state)),
-                                        SurfaceRules.state(state)
-                                )
-                        ),
-                        SurfaceRules.ifTrue(
-                                SurfaceRules.stoneDepthCheck(0, true, 0, CaveSurface.FLOOR),
-                                SurfaceRules.state(state)
-                        )
-                )
-        );
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Collection<Holder<Biome>> getBiomesWithWoverSurfaceRules(BiomeSource source) {
-        final BiomeSource unwrappedSource = LithostitchedBiomeSourceCompat.unwrap(source);
-        Collection<Holder<Biome>> ownedBiomes = null;
-        try {
-            final var method = unwrappedSource.getClass().getMethod("ownedPossibleBiomes");
-            final Object result = method.invoke(unwrappedSource);
-            if (result instanceof Collection<?> collection) {
-                ownedBiomes = (Collection<Holder<Biome>>) collection;
-            }
-        } catch (ReflectiveOperationException ignored) {
-        }
-
-        if (ownedBiomes == null || ownedBiomes.isEmpty() || source == unwrappedSource) {
-            return ownedBiomes == null ? source.possibleBiomes() : ownedBiomes;
-        }
-
-        Set<String> ownedNamespaces = ownedBiomes.stream()
-                                                  .map(Holder::unwrapKey)
-                                                  .flatMap(Optional::stream)
-                                                  .map(ResourceKey::location)
-                                                  .map(ResourceLocation::getNamespace)
-                                                  .collect(Collectors.toSet());
-        if (ownedNamespaces.isEmpty()) {
-            return ownedBiomes;
-        }
-
-        Set<Holder<Biome>> result = new HashSet<>(ownedBiomes);
-        source.possibleBiomes()
-              .stream()
-              .filter(holder -> holder.unwrapKey()
-                                      .map(ResourceKey::location)
-                                      .map(ResourceLocation::getNamespace)
-                                      .filter(ownedNamespaces::contains)
-                                      .isPresent())
-              .forEach(result::add);
-        return result;
-    }
-
     private static SurfaceRules.RuleSource mergeSurfaceRules(
             ResourceKey<LevelStem> dimensionKey,
             SurfaceRules.RuleSource org,
@@ -217,21 +86,26 @@ public class SurfaceRuleUtil {
             if (additionalRules.isEmpty()) return null;
 
             // when we are in the nether, we want to keep the nether roof and floor rules in the beginning of the sequence
-            // we will add our rules whne the first biome test sequence is found
+            // we will add our rules when the first biome test sequence is found.
+            // 1.21.11 changed nether surface rule structure in some setups, so the anchor may become nested.
             if (dimensionKey.equals(LevelStem.NETHER)) {
                 final List<SurfaceRules.RuleSource> combined = new ArrayList<>(existingSequence.size() + additionalRules.size());
                 boolean inserted = false;
                 for (SurfaceRules.RuleSource rule : existingSequence) {
-                    if (!inserted
-                            && rule instanceof SurfaceRules.TestRuleSource testRule
-                            && testRule.ifTrue() instanceof SurfaceRules.BiomeConditionSource) {
+                    if (!inserted && containsBiomeCondition(rule)) {
                         combined.addAll(additionalRules);
                         inserted = true;
                     }
                     combined.add(rule);
                 }
                 if (!inserted) {
-                    combined.addAll(additionalRules);
+                    // Fallback for alternate nether rule layouts: prepend biome-scoped rules.
+                    combined.addAll(0, additionalRules);
+                    LibWoverSurface.C.LOG.warn(
+                            "Unable to locate nether biome-rule anchor for {}; prepending {} additional rules.",
+                            source.getClass().getName(),
+                            additionalRules.size()
+                    );
                 }
                 additionalRules = combined;
             } else {
@@ -245,7 +119,7 @@ public class SurfaceRuleUtil {
         LibWoverSurface.C.LOG.verbose(
                 "Merged {} additional Surface Rules for Dimension {} => {} ({}) using {}",
                 count,
-                dimensionKey.location(),
+                dimensionKey.identifier(),
                 additionalRules.size(),
                 sw.stop(),
                 source
@@ -254,42 +128,77 @@ public class SurfaceRuleUtil {
         return new SurfaceRules.SequenceRuleSource(additionalRules);
     }
 
+    private static boolean containsBiomeCondition(SurfaceRules.RuleSource rule) {
+        if (rule instanceof SurfaceRules.TestRuleSource testRule) {
+            if (testRule.ifTrue() instanceof SurfaceRules.BiomeConditionSource) {
+                return true;
+            }
+            return containsBiomeCondition(testRule.thenRun());
+        }
+
+        if (rule instanceof SurfaceRules.SequenceRuleSource sequenceRule) {
+            for (SurfaceRules.RuleSource nestedRule : sequenceRule.sequence()) {
+                if (containsBiomeCondition(nestedRule)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void tryApplyTerraBlenderRuleCategory(
+            Holder<NoiseGeneratorSettings> holder,
+            ResourceKey<LevelStem> dimensionKey,
+            BiomeSource source
+    ) {
+        if (!IntegrationCore.RUNS_TERRABLENDER || dimensionKey == null || holder == null || !holder.isBound()) {
+            return;
+        }
+
+        final String categoryName;
+        if (dimensionKey.equals(LevelStem.NETHER)) {
+            categoryName = "NETHER";
+        } else if (dimensionKey.equals(LevelStem.END)) {
+            categoryName = "END";
+        } else if (dimensionKey.equals(LevelStem.OVERWORLD)) {
+            categoryName = "OVERWORLD";
+        } else {
+            return;
+        }
+
+        try {
+            final Class<?> ruleCategoryClass = Class.forName("terrablender.api.SurfaceRuleManager$RuleCategory");
+            final Enum ruleCategory = Enum.valueOf((Class<Enum>) ruleCategoryClass.asSubclass(Enum.class), categoryName);
+            final Method setRuleCategory = holder.value().getClass().getMethod("setRuleCategory", ruleCategoryClass);
+            setRuleCategory.invoke(holder.value(), ruleCategory);
+        } catch (ReflectiveOperationException e) {
+            LibWoverSurface.C.LOG.verbose(
+                    "Unable to set TerraBlender surface rule category {} for {}: {}",
+                    categoryName,
+                    source.getClass().getName(),
+                    e.getMessage()
+            );
+        }
+    }
+
     @ApiStatus.Internal
     public static void injectNoiseBasedSurfaceRules(
             ResourceKey<LevelStem> dimensionKey,
             Holder<NoiseGeneratorSettings> noiseSettings,
             BiomeSource loadedBiomeSource
     ) {
+        tryApplyTerraBlenderRuleCategory(noiseSettings, dimensionKey, loadedBiomeSource);
         Object o = noiseSettings.value();
         if (o instanceof SurfaceRuleProvider srp) {
             SurfaceRules.RuleSource originalRules = srp.wover_getOriginalSurfaceRules();
-            final Collection<Holder<Biome>> biomesWithWoverRules = getBiomesWithWoverSurfaceRules(loadedBiomeSource);
-            final List<SurfaceRules.RuleSource> additionalRules = new LinkedList<>(getRulesForBiomes(
-                    biomesWithWoverRules.stream().map(Holder::unwrapKey).toList()
-            ));
-            final Collection<SurfaceRules.RuleSource> compatRules = getCompatRulesForDimension(dimensionKey, loadedBiomeSource);
-            if (!compatRules.isEmpty()) {
-                additionalRules.addAll(0, compatRules);
-            }
             srp.wover_overwriteSurfaceRules(mergeSurfaceRules(
                     dimensionKey,
                     originalRules,
                     loadedBiomeSource,
-                    additionalRules
+                    getRulesForBiomes(loadedBiomeSource.possibleBiomes().stream().map(Holder::unwrapKey).toList())
             ));
-            invalidateTerraBlenderSurfaceRuleCache(noiseSettings.value());
-        }
-    }
-
-    private static void invalidateTerraBlenderSurfaceRuleCache(NoiseGeneratorSettings noiseSettings) {
-        try {
-            Field cache = noiseSettings.getClass().getDeclaredField("namespacedSurfaceRuleSource");
-            cache.setAccessible(true);
-            cache.set(noiseSettings, null);
-        } catch (NoSuchFieldException ignored) {
-            // TerraBlender is optional.
-        } catch (ReflectiveOperationException e) {
-            LibWoverSurface.C.LOG.warn("Unable to invalidate TerraBlender surface-rule cache", e);
         }
     }
 
@@ -299,19 +208,16 @@ public class SurfaceRuleUtil {
             LayeredRegistryAccess<RegistryLayer> registries,
             WorldData ignoredWorldData
     ) {
-        final var registryAccess = registries.compositeAccess();
-        final Registry<LevelStem> dimensionRegistry = registryAccess.registryOrThrow(Registries.LEVEL_STEM);
-        LibWoverSurface.C.LOG.info(
-                "Injecting surface rules into {} dimensions",
-                dimensionRegistry.size()
-        );
+        final Registry<LevelStem> dimensionRegistry = registries
+                .compositeAccess()
+                .lookupOrThrow(Registries.LEVEL_STEM);
 
         for (var entry : dimensionRegistry.entrySet()) {
             ResourceKey<LevelStem> dimensionKey = entry.getKey();
             LevelStem stem = entry.getValue();
 
             if (stem.generator() instanceof InjectableSurfaceRules<?> generator) {
-                generator.wover_injectSurfaceRules(dimensionRegistry, dimensionKey);
+                generator.wover_injectSurfaceRules(dimensionRegistry, dimensionKey.identifier().toString());
             }
         }
     }

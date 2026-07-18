@@ -11,7 +11,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.util.random.WeightedEntry;
+import net.minecraft.util.random.Weighted;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,8 +57,8 @@ public final class TerraBlenderEndBiomeCompat {
         if (!(value instanceof Iterable<?> entries)) return;
         List<BiomeEntry> importedEntries = new ArrayList<>();
         for (Object entry : entries) {
-            if (!(entry instanceof WeightedEntry.Wrapper<?> wrapper)) continue;
-            Object data = wrapper.data();
+            if (!(entry instanceof Weighted<?> wrapper)) continue;
+            Object data = wrapper.value();
             if (!(data instanceof ResourceKey<?> key)) continue;
             ResourceKey<Biome> biomeKey = (ResourceKey<Biome>) key;
             if (biomes.containsKey(biomeKey)) {
@@ -68,8 +68,8 @@ public final class TerraBlenderEndBiomeCompat {
         Map<String, Float> normalizationFactors = normalizationFactors(importedEntries);
         for (BiomeEntry entry : importedEntries) {
             ResourceKey<Biome> biomeKey = entry.biome();
-            tagWorker.addBiomeToTag(tag, biomes, biomeKey, biomes.getHolderOrThrow(biomeKey));
-            imported.putIfAbsent(biomeKey, new WoverBiomeData(1.0F, biomeKey, BiomeGenerationDataContainer.EMPTY, 0.1F, entry.weight() * normalizationFactors.get(biomeKey.location().getNamespace()), 0, false, null, null));
+            tagWorker.addBiomeToTag(tag, biomes, biomeKey, biomes.getOrThrow(biomeKey));
+            imported.putIfAbsent(biomeKey, new WoverBiomeData(1.0F, biomeKey, BiomeGenerationDataContainer.EMPTY, 0.1F, entry.weight() * normalizationFactors.get(biomeKey.identifier().getNamespace()), 0, false, null, null));
         }
     }
 
@@ -77,7 +77,7 @@ public final class TerraBlenderEndBiomeCompat {
         Map<String, Float> totalWeights = new HashMap<>();
         Map<String, Integer> biomeCounts = new HashMap<>();
         for (BiomeEntry entry : entries) {
-            String namespace = entry.biome().location().getNamespace();
+            String namespace = entry.biome().identifier().getNamespace();
             totalWeights.merge(namespace, entry.weight(), Float::sum);
             biomeCounts.merge(namespace, 1, Integer::sum);
         }
@@ -88,8 +88,8 @@ public final class TerraBlenderEndBiomeCompat {
         return factors;
     }
 
-    private static float weightOf(WeightedEntry.Wrapper<?> entry) {
-        int weight = entry.getWeight().asInt();
+    private static float weightOf(Weighted<?> entry) {
+        int weight = entry.weight();
         return weight > 0 ? weight : 1.0F;
     }
 

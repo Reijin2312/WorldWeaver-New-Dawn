@@ -61,11 +61,11 @@ public abstract class WoverRegistryProvider<T> implements WoverDataProvider<Fabr
 
     /**
      * Called, when the Registry needs to be serialized. The returned provider
-     * basically lists all elements from the registry that need to be serialized.
+     * should list all elements from the registry that need to be serialized.
      *
-     * @param output           The output to write the data to.
-     * @param registriesFuture A future sent from the Fabric DataGen API
-     * @return A new {@link FabricDynamicRegistryProvider} that lists all elements
+     * @param output             The output to write the data to.
+     * @param registriesFuture   A future sent from the data generator
+     * @return A new {@link DataProvider} that serializes registry entries
      */
     public abstract FabricDynamicRegistryProvider getProvider(
             FabricDataOutput output,
@@ -78,4 +78,5 @@ public abstract class WoverRegistryProvider<T> implements WoverDataProvider<Fabr
      * @param registryBuilder The builder to add the registry to.
      */
     public abstract void buildRegistry(RegistrySetBuilder registryBuilder);
+
 }

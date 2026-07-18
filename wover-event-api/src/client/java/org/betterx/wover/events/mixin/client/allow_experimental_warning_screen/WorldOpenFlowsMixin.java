@@ -5,14 +5,11 @@ import org.betterx.wover.events.impl.client.ClientWorldLifecycleImpl;
 import com.mojang.serialization.Lifecycle;
 import net.minecraft.client.gui.screens.worldselection.WorldOpenFlows;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-@Environment(EnvType.CLIENT)
 @Mixin(value = WorldOpenFlows.class)
 public class WorldOpenFlowsMixin {
     @ModifyExpressionValue(

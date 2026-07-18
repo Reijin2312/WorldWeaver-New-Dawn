@@ -5,5 +5,5 @@ import net.fabricmc.api.Environment;
 
 public interface BlockModelProvider {
     @Environment(EnvType.CLIENT)
-    void provideBlockModels(WoverBlockModelGenerators generator);
+    void provideBlockModels(Object generator);
 }

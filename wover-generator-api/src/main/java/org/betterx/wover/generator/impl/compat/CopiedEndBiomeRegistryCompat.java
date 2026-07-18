@@ -92,13 +92,13 @@ public final class CopiedEndBiomeRegistryCompat {
 
         final Map<String, Float> normalizationFactors = normalizationFactors(importedEntries);
         for (BiomeEntry entry : importedEntries) {
-            tagWorker.addBiomeToTag(entry.tag(), biomes, entry.biome(), biomes.getHolderOrThrow(entry.biome()));
+            tagWorker.addBiomeToTag(entry.tag(), biomes, entry.biome(), biomes.getOrThrow(entry.biome()));
             imported.putIfAbsent(entry.biome(), new WoverBiomeData(
                     1.0F,
                     entry.biome(),
                     BiomeGenerationDataContainer.EMPTY,
                     0.1F,
-                    entry.weight() * normalizationFactors.get(entry.biome().location().getNamespace()),
+                    entry.weight() * normalizationFactors.get(entry.biome().identifier().getNamespace()),
                     0,
                     false,
                     null,
@@ -118,7 +118,7 @@ public final class CopiedEndBiomeRegistryCompat {
         final Map<String, Float> totalWeights = new HashMap<>();
         final Map<String, Integer> biomeCounts = new HashMap<>();
         for (BiomeEntry entry : entries) {
-            final String namespace = entry.biome().location().getNamespace();
+            final String namespace = entry.biome().identifier().getNamespace();
             totalWeights.merge(namespace, entry.weight(), Float::sum);
             biomeCounts.merge(namespace, 1, Integer::sum);
         }

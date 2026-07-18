@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "wover-math-testmod",
-  "version": "21.0.0",
+  "version": "${version}",
   "name": "WorldWeaver - Math (TestMod)",
   "description": "",
   "authors": [
@@ -16,10 +16,10 @@
   "icon": "assets/wover-math-testmod/icon.png",
   "environment": "server",
   "depends": {
-    "fabricloader": ">=0.15.3",
+    "fabricloader": ">=0.18.1",
     "minecraft": [
       "1.21.0",
-      "1.21.1"
+      "1.21.11"
     ],
     "java": ">=17",
     "fabric-api": ">=0.100.1"

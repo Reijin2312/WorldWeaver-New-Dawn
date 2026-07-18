@@ -9,8 +9,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.Services;
 import net.minecraft.server.WorldStem;
-import net.minecraft.server.level.progress.ChunkProgressListener;
-import net.minecraft.server.level.progress.ChunkProgressListenerFactory;
+import net.minecraft.server.level.progress.LevelLoadListener;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.WorldData;
@@ -24,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.net.Proxy;
 
-//priority needs to be low, to ensure that our modifications are applied before fabric
+//priority needs to be low, to ensure that our modifications are applied before other biome hooks
 //otherwise other mods, that for example modify all nether biomes will generate a feature order cycle
 //as those modification will be added after our features in custom nether biomes, but might be added to
 //the vanilla biomes before our features are added.
@@ -55,7 +54,7 @@ public class MinecraftServerMixin {
             Proxy proxy,
             DataFixer dataFixer,
             Services services,
-            ChunkProgressListenerFactory chunkProgressListenerFactory,
+            LevelLoadListener levelLoadListener,
             CallbackInfo ci
     ) {
         //in most cases this call is redundant, as we already captured the registries from the
@@ -76,11 +75,10 @@ public class MinecraftServerMixin {
     }
 
     /**
-     * We need a hook here to alter surface rules after Fabric did add its biomes
-     * in {@link net.fabricmc.fabric.mixin.biome.modification.MinecraftServerMixin}
+     * We need a hook here to alter surface rules after biome modifications have been applied.
      */
     @Inject(method = "createLevels", at = @At(value = "HEAD"))
-    private void wover_biomesReady(ChunkProgressListener worldGenerationProgressListener, CallbackInfo ci) {
+    private void wover_biomesReady(CallbackInfo ci) {
         //in most cases this call is redundant, as we already captured the registries from the
         // world stem, but just in case...
         WorldLifecycleImpl.WORLD_REGISTRY_READY.emit(registries.compositeAccess(), OnRegistryReady.Stage.FINAL);

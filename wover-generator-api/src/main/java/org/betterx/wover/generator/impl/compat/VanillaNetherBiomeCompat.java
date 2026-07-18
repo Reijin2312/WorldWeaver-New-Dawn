@@ -47,7 +47,7 @@ public final class VanillaNetherBiomeCompat {
                 continue;
             }
 
-            tagWorker.addBiomeToTag(BiomeTags.IS_NETHER, biomes, biome, biomes.getHolderOrThrow(biome));
+            tagWorker.addBiomeToTag(BiomeTags.IS_NETHER, biomes, biome, biomes.getOrThrow(biome));
             imported.put(biome, WoverBiomeData.of(biome));
         }
 

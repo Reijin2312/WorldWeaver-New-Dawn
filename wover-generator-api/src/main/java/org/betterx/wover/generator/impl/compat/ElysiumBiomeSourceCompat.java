@@ -23,12 +23,12 @@ public final class ElysiumBiomeSourceCompat {
         try {
             Method initialize = source.getClass().getMethod("initialize", long.class, ResourceKey.class);
             initialize.invoke(source, seed, dimensionKey);
-            LibWoverWorldGenerator.C.log.info("Initialized Elysium mosaic fallback for {} with {} possible biomes", dimensionKey.location(), source.possibleBiomes().size());
+            LibWoverWorldGenerator.C.log.info("Initialized Elysium mosaic fallback for {} with {} possible biomes", dimensionKey.identifier(), source.possibleBiomes().size());
             return true;
         } catch (InvocationTargetException e) {
-            LibWoverWorldGenerator.C.log.warn("Elysium mosaic fallback failed to initialize for {}", dimensionKey.location(), e.getCause());
+            LibWoverWorldGenerator.C.log.warn("Elysium mosaic fallback failed to initialize for {}", dimensionKey.identifier(), e.getCause());
         } catch (ReflectiveOperationException | RuntimeException e) {
-            LibWoverWorldGenerator.C.log.warn("Unable to initialize Elysium mosaic fallback for {}", dimensionKey.location(), e);
+            LibWoverWorldGenerator.C.log.warn("Unable to initialize Elysium mosaic fallback for {}", dimensionKey.identifier(), e);
         }
         return false;
     }

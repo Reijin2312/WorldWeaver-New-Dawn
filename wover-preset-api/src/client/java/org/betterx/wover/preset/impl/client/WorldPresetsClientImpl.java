@@ -7,13 +7,10 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Environment(EnvType.CLIENT)
 public class WorldPresetsClientImpl {
 
     private static final List<WorldPresetsUI.PresetEditorGetter> EDITORS = new ArrayList<>(4);

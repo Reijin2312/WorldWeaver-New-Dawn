@@ -9,7 +9,7 @@ import org.betterx.wover.events.api.types.OnBootstrapRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.Biome;
 
 public class BiomeDataRegistry {
@@ -28,7 +28,7 @@ public class BiomeDataRegistry {
      * The Key of the Registry. ({@code wover/worldgen/biome_data})
      */
     public static final ResourceKey<Registry<BiomeData>> BIOME_DATA_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverSurface.C.id("wover/worldgen/biome_data"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverSurface.C.id("worldgen/biome_data"));
 
     /**
      * Creates a ResourceKey for  {@link BiomeData}.
@@ -37,7 +37,7 @@ public class BiomeDataRegistry {
      * @return The ResourceKey
      */
     public static ResourceKey<BiomeData> createKey(
-            ResourceLocation dataID
+            Identifier dataID
     ) {
         return BiomeDataRegistryImpl.createKey(dataID);
     }
@@ -51,7 +51,7 @@ public class BiomeDataRegistry {
     public static ResourceKey<BiomeData> createKey(
             ResourceKey<Biome> biomeKey
     ) {
-        return BiomeDataRegistryImpl.createKey(biomeKey.location());
+        return BiomeDataRegistryImpl.createKey(biomeKey.identifier());
     }
 
 
@@ -64,6 +64,6 @@ public class BiomeDataRegistry {
     public static ResourceKey<Biome> createBiomeKey(
             ResourceKey<BiomeData> biomeDataKey
     ) {
-        return ResourceKey.create(Registries.BIOME, biomeDataKey.location());
+        return ResourceKey.create(Registries.BIOME, biomeDataKey.identifier());
     }
 }

@@ -131,19 +131,20 @@ public abstract class WoverFullRegistryProvider<T> extends WoverRegistryProvider
                 final var registry = registries.lookupOrThrow(registryKey);
                 final long countAll = registry.listElementIds().count();
                 var filtered = registry.listElementIds()
-                                       .filter(key -> validNamespace.test(key.location().getNamespace()))
+                                       .filter(key -> validNamespace.test(key.identifier().getNamespace()))
                                        .map(registry::getOrThrow)
                                        .filter(Holder.Reference::isBound)
                                        .toList();
                 final long filteredCount = filtered.size();
                 filtered.forEach(holder -> entries.add(holder.key(), holder.value()));
-                modCore.log.info("[" + filteredCount + " / " + countAll + "] " + registryKey.location());
+                modCore.log.info("[" + filteredCount + " / " + countAll + "] " + registryKey.identifier());
             }
 
             @Override
             public String getName() {
                 return title;
             }
+
         };
     }
 }

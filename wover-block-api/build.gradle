@@ -1,4 +1,4 @@
-archivesBaseName = "wover-block-api"
+base { archivesName = "wover-block-api" }
 
 ext {
     baseNamespace = "block"

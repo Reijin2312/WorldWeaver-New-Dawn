@@ -41,14 +41,14 @@ public final class TerraBlenderBiomeSourceCompat {
             }
             Method initialize = levelUtils.getMethod("initializeBiomes", RegistryAccess.class, Holder.class, ResourceKey.class, ChunkGenerator.class, long.class);
             initialize.invoke(null, registryAccess, dimensionType, dimensionKey, externalGenerator, seed);
-            LibWoverWorldGenerator.C.log.info("Initialized TerraBlender fallback for {} with {} possible biomes", dimensionKey.location(), source.possibleBiomes().size());
+            LibWoverWorldGenerator.C.log.info("Initialized TerraBlender fallback for {} with {} possible biomes", dimensionKey.identifier(), source.possibleBiomes().size());
             return true;
         } catch (ClassNotFoundException ignored) {
             return false;
         } catch (InvocationTargetException e) {
-            LibWoverWorldGenerator.C.log.warn("TerraBlender fallback failed to initialize for {}", dimensionKey.location(), e.getCause());
+            LibWoverWorldGenerator.C.log.warn("TerraBlender fallback failed to initialize for {}", dimensionKey.identifier(), e.getCause());
         } catch (ReflectiveOperationException | RuntimeException e) {
-            LibWoverWorldGenerator.C.log.warn("Unable to initialize TerraBlender fallback for {}", dimensionKey.location(), e);
+            LibWoverWorldGenerator.C.log.warn("Unable to initialize TerraBlender fallback for {}", dimensionKey.identifier(), e);
         }
         return false;
     }
@@ -70,7 +70,7 @@ public final class TerraBlenderBiomeSourceCompat {
             return Set.of();
         }
 
-        final Registry<Biome> biomes = registryAccess.registryOrThrow(Registries.BIOME);
+        final Registry<Biome> biomes = registryAccess.lookupOrThrow(Registries.BIOME);
         final Set<Holder<Biome>> result = new HashSet<>();
         try {
             final Class<?> regionTypeClass = Class.forName("terrablender.api.RegionType");
@@ -94,7 +94,7 @@ public final class TerraBlenderBiomeSourceCompat {
                         if (keyObject instanceof ResourceKey<?> key) {
                             @SuppressWarnings("unchecked")
                             final ResourceKey<Biome> biomeKey = (ResourceKey<Biome>) key;
-                            biomes.getHolder(biomeKey).ifPresent(result::add);
+                            biomes.get(biomeKey).ifPresent(result::add);
                         }
                     } catch (ReflectiveOperationException ignored) {
                     }
@@ -105,7 +105,7 @@ public final class TerraBlenderBiomeSourceCompat {
         } catch (ReflectiveOperationException | RuntimeException e) {
             LibWoverWorldGenerator.C.log.warn(
                     "Unable to collect TerraBlender region biomes for {}",
-                    dimensionKey.location(),
+                    dimensionKey.identifier(),
                     e
             );
         }

@@ -13,29 +13,29 @@ import org.jetbrains.annotations.ApiStatus;
  */
 public class ToolTags {
     /**
-     * {@code fabric:axes}
+     * {@code c:axes}
      */
-    public static final TagKey<Item> FABRIC_AXES = TagManager.ITEMS.makeFabricTag("axes");
+    public static final TagKey<Item> COMMON_AXES = TagManager.ITEMS.makeCommonTag("axes");
     /**
-     * {@code fabric:hoes}
+     * {@code c:hoes}
      */
-    public static final TagKey<Item> FABRIC_HOES = TagManager.ITEMS.makeFabricTag("hoes");
+    public static final TagKey<Item> COMMON_HOES = TagManager.ITEMS.makeCommonTag("hoes");
     /**
-     * {@code fabric:pickaxes}
+     * {@code c:pickaxes}
      */
-    public static final TagKey<Item> FABRIC_PICKAXES = TagManager.ITEMS.makeFabricTag("pickaxes");
+    public static final TagKey<Item> COMMON_PICKAXES = TagManager.ITEMS.makeCommonTag("pickaxes");
     /**
-     * {@code fabric:shears}
+     * {@code c:shears}
      */
-    public static final TagKey<Item> FABRIC_SHEARS = TagManager.ITEMS.makeFabricTag("shears");
+    public static final TagKey<Item> COMMON_SHEARS = TagManager.ITEMS.makeCommonTag("shears");
     /**
-     * {@code fabric:shovels}
+     * {@code c:shovels}
      */
-    public static final TagKey<Item> FABRIC_SHOVELS = TagManager.ITEMS.makeFabricTag("shovels");
+    public static final TagKey<Item> COMMON_SHOVELS = TagManager.ITEMS.makeCommonTag("shovels");
     /**
-     * {@code fabric:swords}
+     * {@code c:swords}
      */
-    public static final TagKey<Item> FABRIC_SWORDS = TagManager.ITEMS.makeFabricTag("swords");
+    public static final TagKey<Item> COMMON_SWORDS = TagManager.ITEMS.makeCommonTag("swords");
 
     /**
      * Called internally to ensure that the tags are created.

@@ -66,11 +66,11 @@ public abstract class WoverWorldPresetProvider
     protected abstract void prepareTags(TagBootstrapContext<WorldPreset> provider);
 
     /**
-     * Returns the {@link FabricTagProvider} for the {@link WorldPreset}s.
+     * Returns the {@link TagsProvider} for the {@link WorldPreset}s.
      *
      * @param output           The output to write the data to.
-     * @param registriesFuture A future sent from the Fabric DataGen API
-     * @return A new {@link FabricTagProvider}
+     * @param registriesFuture A future sent from the data generator
+     * @return A new {@link TagsProvider}
      */
     public FabricTagProvider<WorldPreset> getSecondaryProvider(
             FabricDataOutput output,

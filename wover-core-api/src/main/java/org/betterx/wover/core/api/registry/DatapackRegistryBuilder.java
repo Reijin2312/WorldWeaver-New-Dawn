@@ -9,7 +9,7 @@ import net.minecraft.core.*;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -54,6 +54,28 @@ public class DatapackRegistryBuilder {
      *
      * @param key          The ResourceKey of the Registry
      * @param elementCodec The Codec used to serialize the Registry
+     * @param networkCodec The Codec used for network sync, or {@code null} to disable syncing
+     * @param bootstrap    The bootstrap function, which is called when the Registry is loaded from a DataPack
+     * @param <T>          The type of the Registry-Elements
+     */
+    public static <T> void register(
+            ResourceKey<? extends Registry<T>> key,
+            Codec<T> elementCodec,
+            @Nullable Codec<T> networkCodec,
+            Consumer<BootstrapContext<T>> bootstrap
+    ) {
+        DatapackRegistryBuilderImpl.register(key, elementCodec, networkCodec, bootstrap);
+    }
+
+    /**
+     * Register a new, custom Registry.
+     * <p>
+     * In order to ensure that the Registry is loaded correctly, you need to call this method from
+     * the <code>wover.datapack.registry</code> Entrypoint. The Entrypoint must implement the
+     * {@link DatapackRegistryEntrypoint} interface.
+     *
+     * @param key          The ResourceKey of the Registry
+     * @param elementCodec The Codec used to serialize the Registry
      * @param priority     The priority of the bootstrap function. The higher the priority, the earlier the bootstrap
      * @param bootstrap    The bootstrap function, which is called when the Registry is loaded from a DataPack
      * @param <T>          The type of the Registry-Elements
@@ -65,6 +87,30 @@ public class DatapackRegistryBuilder {
             int priority
     ) {
         DatapackRegistryBuilderImpl.register(key, elementCodec, priority, bootstrap);
+    }
+
+    /**
+     * Register a new, custom Registry.
+     * <p>
+     * In order to ensure that the Registry is loaded correctly, you need to call this method from
+     * the <code>wover.datapack.registry</code> Entrypoint. The Entrypoint must implement the
+     * {@link DatapackRegistryEntrypoint} interface.
+     *
+     * @param key          The ResourceKey of the Registry
+     * @param elementCodec The Codec used to serialize the Registry
+     * @param networkCodec The Codec used for network sync, or {@code null} to disable syncing
+     * @param priority     The priority of the bootstrap function. The higher the priority, the earlier the bootstrap
+     * @param bootstrap    The bootstrap function, which is called when the Registry is loaded from a DataPack
+     * @param <T>          The type of the Registry-Elements
+     */
+    public static <T> void register(
+            ResourceKey<? extends Registry<T>> key,
+            Codec<T> elementCodec,
+            @Nullable Codec<T> networkCodec,
+            Consumer<BootstrapContext<T>> bootstrap,
+            int priority
+    ) {
+        DatapackRegistryBuilderImpl.register(key, elementCodec, networkCodec, priority, bootstrap);
     }
 
     /**
@@ -156,13 +202,13 @@ public class DatapackRegistryBuilder {
     }
 
     /**
-     * Checks if a Registry with the given {@link ResourceLocation} was created with our
+     * Checks if a Registry with the given {@link Identifier} was created with our
      * {@link DatapackRegistryBuilder}.
      *
-     * @param registryId The {@link ResourceLocation} of the Registry
+     * @param registryId The {@link Identifier} of the Registry
      * @return {@code true} if the Registry is registered, {@code false} otherwise
      */
-    public static boolean isRegistered(ResourceLocation registryId) {
+    public static boolean isRegistered(Identifier registryId) {
         return DatapackRegistryBuilderImpl.isRegistered(registryId);
     }
 
@@ -189,7 +235,8 @@ public class DatapackRegistryBuilder {
                     //TODO: 1.21 creating a new instance of RegistrationInfo might be expensive...
                     return registry.register(resourceKey, object, new RegistrationInfo(Optional.empty(), lifecycle));
                 } else {
-                    return registry.getHolderOrThrow(resourceKey);
+                    return registry.get(resourceKey)
+                            .orElseThrow(() -> new IllegalStateException("Missing key in " + registry.key() + ": " + resourceKey));
                 }
             }
 
@@ -201,7 +248,8 @@ public class DatapackRegistryBuilder {
                 if (!registry.containsKey(resourceKey)) {
                     return registry.register(resourceKey, object, RegistrationInfo.BUILT_IN);
                 } else {
-                    return registry.getHolderOrThrow(resourceKey);
+                    return registry.get(resourceKey)
+                            .orElseThrow(() -> new IllegalStateException("Missing key in " + registry.key() + ": " + resourceKey));
                 }
             }
 
@@ -237,7 +285,8 @@ public class DatapackRegistryBuilder {
                     //TODO: 1.21 creating a new instance of RegistrationInfo might be expensive...
                     return registry.register(resourceKey, object, new RegistrationInfo(Optional.empty(), lifecycle));
                 } else {
-                    return registry.getHolderOrThrow(resourceKey);
+                    return registry.get(resourceKey)
+                            .orElseThrow(() -> new IllegalStateException("Missing key in " + registry.key() + ": " + resourceKey));
                 }
             }
 
@@ -250,7 +299,8 @@ public class DatapackRegistryBuilder {
                 if (!registry.containsKey(resourceKey)) {
                     return registry.register(resourceKey, object, RegistrationInfo.BUILT_IN);
                 } else {
-                    return registry.getHolderOrThrow(resourceKey);
+                    return registry.get(resourceKey)
+                            .orElseThrow(() -> new IllegalStateException("Missing key in " + registry.key() + ": " + resourceKey));
                 }
             }
 
@@ -274,7 +324,7 @@ public class DatapackRegistryBuilder {
      * @param <T>      The type of the Elements stored in the Registry
      * @return A new ResourceKey for a Registry
      */
-    public static <T> ResourceKey<Registry<T>> createRegistryKey(ResourceLocation location) {
+    public static <T> ResourceKey<Registry<T>> createRegistryKey(Identifier location) {
         return ResourceKey.createRegistryKey(location);
     }
 

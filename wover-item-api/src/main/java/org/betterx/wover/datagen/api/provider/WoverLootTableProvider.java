@@ -2,28 +2,24 @@ package org.betterx.wover.datagen.api.provider;
 
 import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.datagen.api.WoverDataProvider;
+import org.betterx.wover.datagen.api.WoverLootProvider;
 
-import com.mojang.serialization.JsonOps;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.data.CachedOutput;
-import net.minecraft.data.DataProvider;
-import net.minecraft.resources.RegistryOps;
+import net.minecraft.data.loot.LootTableProvider;
+import net.minecraft.data.loot.LootTableSubProvider;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSet;
+import net.minecraft.util.context.ContextKeySet;
 
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
 
-import com.google.gson.JsonElement;
-
-import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class WoverLootTableProvider implements WoverDataProvider<DataProvider> {
+public abstract class WoverLootTableProvider implements WoverDataProvider<LootTableProvider>, WoverLootProvider {
     /**
      * The title of the provider. Mainly used for logging.
      */
@@ -34,11 +30,11 @@ public abstract class WoverLootTableProvider implements WoverDataProvider<DataPr
      */
     protected final ModCore modCore;
 
-    protected final LootContextParamSet lootContextType;
+    protected final ContextKeySet lootContextType;
 
     public WoverLootTableProvider(
             ModCore modCore,
-            LootContextParamSet lootContextType
+            ContextKeySet lootContextType
     ) {
         this(modCore, modCore.namespace, lootContextType);
     }
@@ -46,7 +42,7 @@ public abstract class WoverLootTableProvider implements WoverDataProvider<DataPr
     public WoverLootTableProvider(
             ModCore modCore,
             String title,
-            LootContextParamSet lootContextType
+            ContextKeySet lootContextType
     ) {
         this.modCore = modCore;
         this.title = title;
@@ -59,64 +55,28 @@ public abstract class WoverLootTableProvider implements WoverDataProvider<DataPr
     );
 
     @Override
-    public DataProvider getProvider(
+    public LootTableProvider getProvider(
             FabricDataOutput output,
             CompletableFuture<HolderLookup.Provider> registriesFuture
     ) {
-        return new LootTableProvider(output, registriesFuture);
-    }
-
-    //Based on Fabrics SimpleLootTableProvider. The generate method in that class does not provide access
-    //to a HolderLookup.Provider, which is required to get enchantments from the registry.
-    private class LootTableProvider implements DataProvider {
-        protected final FabricDataOutput output;
-        private final CompletableFuture<HolderLookup.Provider> registryLookup;
-
-        public LootTableProvider(
-                FabricDataOutput output,
-                CompletableFuture<HolderLookup.Provider> registryLookup
+        return new LootTableProvider(
+                output,
+                Set.of(),
+                List.of(toSubProviderEntry()),
+                registriesFuture
         ) {
-            this.output = output;
-            this.registryLookup = registryLookup;
-        }
-
-        @Override
-        public @NotNull CompletableFuture<?> run(@NotNull CachedOutput writer) {
-            final HashMap<ResourceLocation, LootTable> builders = new HashMap<>();
-
-            return registryLookup.thenCompose(lookup -> {
-                boostrap(lookup, (registryKey, builder) -> {
-                    if (builders.containsKey(registryKey.location()))
-                        throw new IllegalStateException("Duplicate loot table for " + registryKey.location());
-
-                    builders.put(registryKey.location(), builder.setParamSet(lootContextType).build());
-                });
-
-                final RegistryOps<JsonElement> ops = lookup.createSerializationContext(JsonOps.INSTANCE);
-                return CompletableFuture.allOf(
-                        builders
-                                .entrySet()
-                                .stream()
-                                .map(entry -> DataProvider
-                                        .saveStable(
-                                                writer,
-                                                LootTable.DIRECT_CODEC
-                                                        .encodeStart(ops, entry.getValue())
-                                                        .getOrThrow(IllegalStateException::new),
-                                                output.createRegistryElementsPathProvider(Registries.LOOT_TABLE)
-                                                      .json(entry.getKey())
-                                        )
-                                )
-                                .toArray(CompletableFuture[]::new)
-                );
-            });
-        }
-
-        @Override
-        public @NotNull String getName() {
-            return title;
-        }
+            @Override
+            public @NotNull String getName() {
+                return title;
+            }
+        };
     }
 
-
+    @Override
+    public LootTableProvider.SubProviderEntry toSubProviderEntry() {
+        return new LootTableProvider.SubProviderEntry(
+                (lookup) -> (LootTableSubProvider) (biConsumer) -> boostrap(lookup, biConsumer),
+                lootContextType
+        );
+    }
 }

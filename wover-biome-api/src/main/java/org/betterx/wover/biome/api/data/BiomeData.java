@@ -287,17 +287,21 @@ public class BiomeData {
         return KEY_CODEC;
     }
 
+    public KeyDispatchDataCodec<? extends BiomeData> networkCodec() {
+        return codec();
+    }
+
     public @Nullable Holder<Biome> biomeHolder() {
         if (WorldState.registryAccess() == null) {
             if (WorldState.allStageRegistryAccess() == null) return null;
             if (preFinalAccessWarning++ < 5)
                 LibWoverBiome.C.log.verboseWarning("Accessing biome holder for " + biomeKey + " before registry is ready!");
             return WorldState.allStageRegistryAccess()
-                             .registryOrThrow(Registries.BIOME)
-                             .getHolder(biomeKey)
+                             .lookupOrThrow(Registries.BIOME)
+                             .get(biomeKey)
                              .orElse(null);
         }
-        return WorldState.registryAccess().registryOrThrow(Registries.BIOME).getHolder(biomeKey).orElse(null);
+        return WorldState.registryAccess().lookupOrThrow(Registries.BIOME).get(biomeKey).orElse(null);
     }
 
     public @Nullable Biome biome() {
@@ -306,11 +310,11 @@ public class BiomeData {
             if (preFinalAccessWarning++ < 5)
                 LibWoverBiome.C.log.verboseWarning("Accessing biome for " + biomeKey + " before registry is ready!");
             return WorldState.allStageRegistryAccess()
-                             .registryOrThrow(Registries.BIOME)
+                             .lookupOrThrow(Registries.BIOME)
                              .getOptional(biomeKey)
                              .orElse(null);
         }
-        return WorldState.registryAccess().registryOrThrow(Registries.BIOME).getOptional(biomeKey).orElse(null);
+        return WorldState.registryAccess().lookupOrThrow(Registries.BIOME).getOptional(biomeKey).orElse(null);
     }
 
     /**
@@ -323,9 +327,9 @@ public class BiomeData {
     }
 
     /**
-     * Used to determine whether a biome is enabled for world generation.
+     * Used to determine whether a Biome is enabled for world generation.
      *
-     * @return {@code true} if the biome is enabled, {@code false} otherwise.
+     * @return true if the Biome is enabled, false otherwise.
      */
     public boolean isEnabled() {
         return true;
@@ -367,7 +371,7 @@ public class BiomeData {
         if (biomeA == null || biomeB == null) return false;
 
 
-        return biomeA.location().equals(biomeB.location());
+        return biomeA.identifier().equals(biomeB.identifier());
     }
 
     /**

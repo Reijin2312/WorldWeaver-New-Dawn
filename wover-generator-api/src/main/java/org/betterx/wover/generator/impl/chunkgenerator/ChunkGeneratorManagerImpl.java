@@ -21,7 +21,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.FeatureSorter;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -40,7 +40,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ChunkGeneratorManagerImpl {
-    private static final ResourceLocation LEGACY_ID = LegacyHelper.BCLIB_CORE.convertNamespace(WoverChunkGenerator.ID);
+    private static final Identifier LEGACY_ID = LegacyHelper.BCLIB_CORE.convertNamespace(WoverChunkGenerator.ID);
 
     private static final List<String> GENERATOR_IDS = new ArrayList<>(1);
 
@@ -106,7 +106,7 @@ public class ChunkGeneratorManagerImpl {
         }
     }
 
-    public static void register(ResourceLocation location, MapCodec<? extends ChunkGenerator> codec) {
+    public static void register(Identifier location, MapCodec<? extends ChunkGenerator> codec) {
         final String idString = location.toString();
         if (GENERATOR_IDS.contains(idString)) {
             throw new IllegalStateException("Duplicate generator id: " + idString);
@@ -129,8 +129,8 @@ public class ChunkGeneratorManagerImpl {
                                     if (feature != null) {
                                         String namespace = null;
                                         if (WorldState.registryAccess() != null) {
-                                            final ResourceLocation location = WorldState.registryAccess()
-                                                                                        .registryOrThrow(Registries.PLACED_FEATURE)
+                                            final Identifier location = WorldState.registryAccess()
+                                                                                        .lookupOrThrow(Registries.PLACED_FEATURE)
                                                                                         .getKey(feature);
                                             if (location != null) {
                                                 namespace = location.getNamespace();
@@ -143,7 +143,7 @@ public class ChunkGeneratorManagerImpl {
                                                     .feature()
                                                     .unwrapKey()
                                                     .get()
-                                                    .location()
+                                                    .identifier()
                                                     .getNamespace();
                                         }
 
@@ -178,12 +178,12 @@ public class ChunkGeneratorManagerImpl {
 
         if (generator instanceof ConfiguredChunkGenerator cfg) {
             final var preset = cfg.wover_getConfiguredWorldPreset();
-            sb.append("\n    preset     = ").append(preset == null ? "none" : preset.location());
+            sb.append("\n    preset     = ").append(preset == null ? "none" : preset.identifier());
         }
 
         if (generator instanceof NoiseBasedChunkGenerator noise) {
             final var key = noise.generatorSettings().unwrapKey();
-            sb.append("\n    noise      = ").append(key.isEmpty() ? "custom" : key.get().location());
+            sb.append("\n    noise      = ").append(key.isEmpty() ? "custom" : key.get().identifier());
         }
 
         if (generator instanceof ChunkGeneratorAccessor) {
@@ -212,7 +212,7 @@ public class ChunkGeneratorManagerImpl {
     public static void printDimensionInfo(String title, Set<Map.Entry<ResourceKey<LevelStem>, LevelStem>> levels) {
         StringBuilder output = new StringBuilder(title + ": ");
         for (Map.Entry<ResourceKey<LevelStem>, LevelStem> entry : levels) {
-            output.append("\n - ").append(entry.getKey().location()).append(": ")
+            output.append("\n - ").append(entry.getKey().identifier()).append(": ")
                   .append("\n     ").append(
                           entry.getValue()
                                .generator()

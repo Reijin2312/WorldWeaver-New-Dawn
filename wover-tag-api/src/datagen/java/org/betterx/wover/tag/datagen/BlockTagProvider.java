@@ -89,11 +89,11 @@ public class BlockTagProvider extends WoverTagProvider.ForBlocks {
 
     public static void prepareBlockTags(TagBootstrapContext<Block> ctx) {
 
-        ctx.add(MineableTags.HAMMER, net.minecraft.tags.BlockTags.MINEABLE_WITH_PICKAXE);
+        ctx.addOptional(MineableTags.HAMMER, net.minecraft.tags.BlockTags.MINEABLE_WITH_PICKAXE);
         ctx.add(CommonBlockTags.SCULK_LIKE, Blocks.SCULK);
 
         ctx.add(CommonBlockTags.END_STONES, Blocks.END_STONE);
-        ctx.add(CommonBlockTags.NETHER_STONES, net.minecraft.tags.BlockTags.BASE_STONE_NETHER);
+        ctx.addOptional(CommonBlockTags.NETHER_STONES, net.minecraft.tags.BlockTags.BASE_STONE_NETHER);
 
         ctx.add(
                 CommonBlockTags.NETHERRACK,
@@ -127,7 +127,7 @@ public class BlockTagProvider extends WoverTagProvider.ForBlocks {
                 Blocks.GRASS_BLOCK
         );
 
-        ctx.add(
+        ctx.addOptional(
                 CommonBlockTags.TERRAIN,
                 net.minecraft.tags.BlockTags.DRIPSTONE_REPLACEABLE,
                 net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD,
@@ -149,7 +149,7 @@ public class BlockTagProvider extends WoverTagProvider.ForBlocks {
                 Blocks.BONE_BLOCK,
                 Blocks.BLACKSTONE
         );
-        ctx.add(
+        ctx.addOptional(
                 CommonBlockTags.NETHER_TERRAIN,
                 net.minecraft.tags.BlockTags.NYLIUM
         );
@@ -260,7 +260,10 @@ public class BlockTagProvider extends WoverTagProvider.ForBlocks {
         );
 
 
-        ctx.add(CommonBlockTags.SOIL_OR_LOGS, BlockTags.DIRT, BlockTags.LOGS, BlockTags.PLANKS);
+        // Vanilla tags are supplied by Minecraft rather than this Fabric datagen run.
+        // Marking the references optional avoids Fabric validating them as missing
+        // local providers while preserving the same runtime contents.
+        ctx.addOptional(CommonBlockTags.SOIL_OR_LOGS, BlockTags.DIRT, BlockTags.LOGS, BlockTags.PLANKS);
         ctx.addOptional(CommonBlockTags.SOIL_OR_LOGS, CommonBlockTags.TERRAIN);
 
         ctx.addOptional(BlockTags.INCORRECT_FOR_DIAMOND_TOOL, MineableTags.NEEDS_NETHERITE_TOOL);

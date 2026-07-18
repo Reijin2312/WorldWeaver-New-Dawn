@@ -9,7 +9,7 @@ import net.minecraft.data.DataProvider;
 import net.minecraft.data.metadata.PackMetadataGenerator;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
@@ -166,7 +166,7 @@ public abstract class WoverDataGenEntryPoint implements DataGeneratorEntrypoint 
      * @param location The {@link ResourceLocation} of the Datapack
      * @return The new {@link PackBuilder} for the Datapack
      */
-    protected PackBuilder addDatapack(ResourceLocation location) {
+    protected PackBuilder addDatapack(Identifier location) {
         PackBuilder res = new PackBuilder(modCore(), location);
         builders.add(res);
         return res;
@@ -210,7 +210,7 @@ public abstract class WoverDataGenEntryPoint implements DataGeneratorEntrypoint 
 
     private FabricDataGenerator.Pack createBuiltinDatapack(
             FabricDataGenerator generator,
-            ResourceLocation location
+            Identifier location
     ) {
         FabricDataGenerator.Pack pack = generator.createBuiltinResourcePack(location);
 

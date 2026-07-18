@@ -112,6 +112,7 @@ public class WorldPresetProvider extends WoverWorldPresetProvider {
     }
 
     private static WorldPreset createNormal(WorldPresetBootstrapContext ctx) {
+
         return buildPreset(
                 ctx.overworldStem,
                 ctx.netherContext, WoverNetherConfig.DEFAULT,

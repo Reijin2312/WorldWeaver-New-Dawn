@@ -8,21 +8,46 @@ import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.datagen.api.WoverDataProvider;
 
 import net.minecraft.core.HolderLookup;
-import net.minecraft.data.models.BlockModelGenerators;
-import net.minecraft.data.models.ItemModelGenerators;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.client.data.models.ItemModelGenerators;
+import net.minecraft.client.data.models.ItemModelOutput;
+import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
+import net.minecraft.client.data.models.model.DelegatedModel;
+import net.minecraft.client.data.models.model.ItemModelUtils;
+import net.minecraft.client.data.models.model.ModelInstance;
+import net.minecraft.client.data.models.model.ModelLocationUtils;
+import net.minecraft.client.renderer.block.model.BlockModelDefinition;
+import net.minecraft.client.renderer.item.ClientItem;
+import net.minecraft.data.CachedOutput;
+import net.minecraft.data.DataProvider;
+import net.minecraft.data.PackOutput;
+import org.betterx.wover.block.api.model.WoverBlockModelGeneratorsAccess;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
-import net.fabricmc.fabric.api.datagen.v1.provider.FabricModelProvider;
 
+import com.google.common.collect.Maps;
+import com.google.gson.JsonElement;
+import com.mojang.serialization.JsonOps;
+
+import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public abstract class WoverModelProvider implements WoverDataProvider<FabricModelProvider> {
+public abstract class WoverModelProvider implements WoverDataProvider<DataProvider> {
     /**
      * The title of the provider. Mainly used for logging.
      */
@@ -107,9 +132,16 @@ public abstract class WoverModelProvider implements WoverDataProvider<FabricMode
             boolean validateMissing,
             ModelOverides overrides
     ) {
+        final Set<Block> processedBlocks = new HashSet<>();
         registry
                 .allBlocks()
                 .forEach(block -> {
+                    // Some registries may expose the same Block instance under multiple ids.
+                    // Datagen must only emit models once per concrete Block instance.
+                    if (!processedBlocks.add(block)) {
+                        return;
+                    }
+
                     // If the block is not in the overrides, and it is a BlockModelProvider, provide the models.
                     if (!overrides.provideBlockModel(block) && block instanceof BlockModelProvider bmp) {
                         bmp.provideBlockModels(generator);
@@ -128,24 +160,194 @@ public abstract class WoverModelProvider implements WoverDataProvider<FabricMode
     protected abstract void bootstrapItemModels(ItemModelGenerators itemModelGenerator);
 
     @Override
-    public FabricModelProvider getProvider(
+    public DataProvider getProvider(
             FabricDataOutput output,
             CompletableFuture<HolderLookup.Provider> registriesFuture
     ) {
-        return new FabricModelProvider(output) {
+        return new DataProvider() {
+            private final PackOutput.PathProvider blockStatePathProvider =
+                    output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "blockstates");
+            private final PackOutput.PathProvider itemInfoPathProvider =
+                    output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "items");
+            private final PackOutput.PathProvider modelPathProvider =
+                    output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "models");
+
+            @Override
+            public CompletableFuture<?> run(CachedOutput cache) {
+                Map<Block, BlockModelDefinitionGenerator> blockStates = Maps.newHashMap();
+                Consumer<BlockModelDefinitionGenerator> blockStateConsumer = generator -> {
+                    Block block = generator.block();
+                    if (blockStates.put(block, generator) != null) {
+                        throw new IllegalStateException("Duplicate blockstate definition for " + block);
+                    }
+                };
+
+                Map<Identifier, ModelInstance> models = new HashMap<>();
+                BiConsumer<Identifier, ModelInstance> modelOutput = (id, supplier) -> {
+                    if (models.put(id, supplier) != null) {
+                        throw new IllegalStateException("Duplicate model definition for " + id);
+                    }
+                };
+
+                Set<Item> skippedItems = new HashSet<>();
+                Map<Item, ClientItem> itemInfos = new HashMap<>();
+                Map<Item, Item> copiedItemInfos = new HashMap<>();
+                ItemModelOutput itemModelOutput = new ItemModelOutput() {
+                    @Override
+                    public void accept(Item item, net.minecraft.client.renderer.item.ItemModel.Unbaked model, ClientItem.Properties properties) {
+                        ClientItem prev = itemInfos.put(item, new ClientItem(model, properties));
+                        if (prev != null) {
+                            throw new IllegalStateException("Duplicate item model definition for " + item);
+                        }
+                    }
+
+                    @Override
+                    public void copy(Item target, Item source) {
+                        copiedItemInfos.put(target, source);
+                    }
+
+                };
+
+                WoverBlockModelGeneratorsAccess blockModelGenerators = new WoverBlockModelGeneratorsAccess(
+                        (Consumer<Object>) (Consumer<?>) blockStateConsumer, itemModelOutput, modelOutput, skippedItems
+                );
+                bootstrapBlockStateModels(new WoverBlockModelGenerators(blockModelGenerators));
+
+                ItemModelGenerators itemModelGenerators = new ItemModelGenerators(itemModelOutput, modelOutput);
+                bootstrapItemModels(itemModelGenerators);
+
+                validateBlockStates(blockStates);
+                addItemModelDelegates(models, skippedItems);
+                finalizeItemModels(itemInfos, copiedItemInfos, skippedItems, models);
+
+                return CompletableFuture.allOf(
+                        DataProvider.saveAll(
+                                cache,
+                                generator -> BlockModelDefinition.CODEC.encodeStart(JsonOps.INSTANCE, generator.create()).getOrThrow(),
+                                b -> blockStatePathProvider.json(
+                                        b.builtInRegistryHolder().key().identifier()
+                                ),
+                                blockStates
+                        ),
+                        DataProvider.saveAll(cache, ClientItem.CODEC, item -> itemInfoPathProvider.json(item.builtInRegistryHolder().key().identifier()), itemInfos),
+                        saveCollection(cache, models, modelPathProvider::json)
+                );
+            }
+
+            private void validateBlockStates(Map<Block, BlockModelDefinitionGenerator> blockStates) {
+                for (Block block : BuiltInRegistries.BLOCK) {
+                    if (ModelProviderExclusions.isExcluded(block)) {
+                        continue;
+                    }
+                    Identifier id = BuiltInRegistries.BLOCK.getKey(block);
+                    if (id == null || !id.getNamespace().equals(modCore.namespace)) {
+                        continue;
+                    }
+                    if (!blockStates.containsKey(block)) {
+                        throw new IllegalStateException("Missing blockstate definition for " + block);
+                    }
+                }
+            }
+
+            private void finalizeItemModels(
+                    Map<Item, ClientItem> itemInfos,
+                    Map<Item, Item> copiedItemInfos,
+                    Set<Item> skippedItems,
+                    Map<Identifier, ModelInstance> models
+            ) {
+                copiedItemInfos.forEach((target, source) -> {
+                    ClientItem donor = itemInfos.get(source);
+                    if (donor == null) {
+                        throw new IllegalStateException("Missing donor item model: " + source + " -> " + target);
+                    }
+                    ClientItem prev = itemInfos.put(target, donor);
+                    if (prev != null && prev != donor) {
+                        throw new IllegalStateException("Duplicate copied item model definition for " + target);
+                    }
+                });
+
+                for (Item item : BuiltInRegistries.ITEM) {
+                    Identifier id = BuiltInRegistries.ITEM.getKey(item);
+                    if (id == null || !id.getNamespace().equals(modCore.namespace)) {
+                        continue;
+                    }
+                    if (itemInfos.containsKey(item)) {
+                        continue;
+                    }
+
+                    // If an explicit item model exists (generated or static), use it directly.
+                    Identifier itemModelId = ModelLocationUtils.getModelLocation(item);
+                    if (hasModel(itemModelId, models)) {
+                        itemInfos.put(item, new ClientItem(ItemModelUtils.plainModel(itemModelId), ClientItem.Properties.DEFAULT));
+                        continue;
+                    }
+
+                    if (item instanceof BlockItem blockItem && !skippedItems.contains(item)) {
+                        Identifier blockModelId = ModelLocationUtils.getModelLocation(blockItem.getBlock());
+                        if (hasModel(blockModelId, models)) {
+                            itemInfos.put(item, new ClientItem(ItemModelUtils.plainModel(blockModelId), ClientItem.Properties.DEFAULT));
+                            continue;
+                        }
+                    }
+
+                    throw new IllegalStateException("Missing item model definition for " + item);
+                }
+            }
+
+            private void addItemModelDelegates(
+                    Map<Identifier, ModelInstance> models,
+                    Set<Item> skippedItems
+            ) {
+                BuiltInRegistries.BLOCK.forEach(block -> {
+                    Identifier blockId = BuiltInRegistries.BLOCK.getKey(block);
+                    if (blockId == null || !blockId.getNamespace().equals(modCore.namespace)) {
+                        return;
+                    }
+                    Item item = Item.BY_BLOCK.get(block);
+                    if (item == null || skippedItems.contains(item)) {
+                        return;
+                    }
+                    Identifier modelId = ModelLocationUtils.getModelLocation(item);
+                    if (hasModel(modelId, models)) {
+                        return;
+                    }
+                    Identifier blockModelId = ModelLocationUtils.getModelLocation(block);
+                    if (!hasModel(blockModelId, models)) {
+                        return;
+                    }
+                    models.put(modelId, new DelegatedModel(blockModelId));
+                });
+            }
+
+            private boolean hasModel(
+                    Identifier modelId,
+                    Map<Identifier, ModelInstance> models
+            ) {
+                if (models.containsKey(modelId)) {
+                    return true;
+                }
+                if (modCore.modContainer == null) {
+                    return false;
+                }
+                var path = "assets/" + modelId.getNamespace() + "/models/" + modelId.getPath() + ".json";
+                return modCore.modContainer.findPath(path).isPresent();
+            }
+
+            private <T> CompletableFuture<?> saveCollection(
+                    CachedOutput cache,
+                    Map<T, ? extends Supplier<JsonElement>> objectToJsonMap,
+                    Function<T, Path> resolveObjectPath
+            ) {
+                return CompletableFuture.allOf(objectToJsonMap.entrySet().stream().map(entry -> {
+                    Path path = resolveObjectPath.apply(entry.getKey());
+                    JsonElement element = entry.getValue().get();
+                    return DataProvider.saveStable(cache, element, path);
+                }).toArray(CompletableFuture[]::new));
+            }
+
             @Override
             public String getName() {
-                return super.getName() + " - " + title;
-            }
-
-            @Override
-            public void generateBlockStateModels(BlockModelGenerators blockStateModelGenerator) {
-                bootstrapBlockStateModels(new WoverBlockModelGenerators(blockStateModelGenerator));
-            }
-
-            @Override
-            public void generateItemModels(ItemModelGenerators itemModelGenerator) {
-                bootstrapItemModels(itemModelGenerator);
+                return "Model Definitions - " + title;
             }
         };
     }

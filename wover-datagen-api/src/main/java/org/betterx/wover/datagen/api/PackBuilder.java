@@ -4,7 +4,7 @@ import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.datagen.impl.PackBuilderImpl;
 
 import net.minecraft.data.DataProvider;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricDynamicRegistryProvider;
@@ -32,13 +32,13 @@ public class PackBuilder extends PackBuilderImpl {
      * Datapack.
      */
     @Nullable
-    public final ResourceLocation location;
+    public final Identifier location;
 
     FabricDataGenerator.Pack pack;
     DatapackBootstrap datapackBootstrap;
 
 
-    PackBuilder(@NotNull ModCore modCore, @Nullable ResourceLocation location) {
+    PackBuilder(@NotNull ModCore modCore, @Nullable Identifier location) {
         super();
         this.location = location;
         this.modCore = modCore;
@@ -155,7 +155,7 @@ public class PackBuilder extends PackBuilderImpl {
         void bootstrap(
                 FabricDataGenerator fabricDataGenerator,
                 FabricDataGenerator.Pack pack,
-                ResourceLocation location
+                Identifier location
         );
     }
 

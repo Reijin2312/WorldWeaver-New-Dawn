@@ -1,4 +1,4 @@
-archivesBaseName = "wover-preset-api"
+base { archivesName = "wover-preset-api" }
 ext {
     baseNamespace = "preset"
     baseClass = "WoverWorldPreset"

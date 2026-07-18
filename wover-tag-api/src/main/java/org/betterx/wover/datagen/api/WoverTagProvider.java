@@ -10,7 +10,8 @@ import org.betterx.wover.tag.api.event.context.TagElementWrapper;
 import org.betterx.wover.tag.impl.TagManagerImpl;
 
 import net.minecraft.core.HolderLookup;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -161,16 +162,16 @@ public abstract class WoverTagProvider<T, P extends TagBootstrapContext<T>> impl
     }
 
     /**
-     * Tests whether the given {@link ResourceLocation} should be added to the tag.
+     * Tests whether the given {@link Identifier} should be added to the tag.
      * <p>
-     * The default implementation will return true if the {@link ResourceLocation}
+     * The default implementation will return true if the {@link Identifier}
      * is included in the {@link #modIDs} list, or if the {@link #modIDs} list is
      * {@code null}.
      *
-     * @param loc the {@link ResourceLocation} to test
-     * @return {@code true} if the {@link ResourceLocation} is allowed
+     * @param loc the {@link Identifier} to test
+     * @return {@code true} if the {@link Identifier} is allowed
      */
-    protected boolean shouldAdd(ResourceLocation loc) {
+    protected boolean shouldAdd(Identifier loc) {
         return modIDs == null || modIDs.contains(loc.getNamespace());
     }
 
@@ -252,15 +253,15 @@ public abstract class WoverTagProvider<T, P extends TagBootstrapContext<T>> impl
                     if (!force && elements.isEmpty()) {
                         return;
                     }
-                    final FabricTagProvider<T>.FabricTagBuilder builder = getOrCreateTagBuilder(tag).setReplace(replaceOriginalTags());
+                    final var builder = builder(tag);
                     //write all elements that passed the above filtering...
                     for (var element : elements) {
                         if (element.tag()) {
-                            if (element.required()) builder.forceAddTag(TagKey.create(registryKey, element.id()));
-                            else builder.addOptionalTag(element.id());
+                            if (element.required()) builder.addTag(TagKey.create(tagRegistry.registryKey(), element.id()));
+                            else builder.addOptionalTag(TagKey.create(tagRegistry.registryKey(), element.id()));
                         } else {
-                            if (element.required()) builder.add(element.id());
-                            else builder.addOptional(element.id());
+                            if (element.required()) builder.add(ResourceKey.create(tagRegistry.registryKey(), element.id()));
+                            else builder.addOptional(ResourceKey.create(tagRegistry.registryKey(), element.id()));
                         }
                     }
                 });

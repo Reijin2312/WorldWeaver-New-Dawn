@@ -1,4 +1,4 @@
-archivesBaseName = "wover-surface-api"
+base { archivesName = "wover-surface-api" }
 
 ext {
     baseNamespace = "surface"

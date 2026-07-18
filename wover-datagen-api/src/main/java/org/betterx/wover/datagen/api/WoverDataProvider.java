@@ -2,7 +2,6 @@ package org.betterx.wover.datagen.api;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataProvider;
-
 import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
 
 import java.util.concurrent.CompletableFuture;
@@ -17,7 +16,7 @@ public interface WoverDataProvider<T extends DataProvider> {
      * Called, when The Data needs to be serialized.
      *
      * @param output           The output to write the data to.
-     * @param registriesFuture A future sent from the Fabric DataGen API
+     * @param registriesFuture A future sent from the data generator
      * @return A new {@link DataProvider}
      */
     T getProvider(
@@ -35,7 +34,7 @@ public interface WoverDataProvider<T extends DataProvider> {
          * Called, when The Data needs to be serialized.
          *
          * @param output           The output to write the data to.
-         * @param registriesFuture A future sent from the Fabric DataGen API
+         * @param registriesFuture A future sent from the data generator
          * @return A new {@link DataProvider}
          */
         T getSecondaryProvider(
@@ -54,7 +53,7 @@ public interface WoverDataProvider<T extends DataProvider> {
          * Called, when The Data needs to be serialized.
          *
          * @param output           The output to write the data to.
-         * @param registriesFuture A future sent from the Fabric DataGen API
+         * @param registriesFuture A future sent from the data generator
          * @return A new {@link DataProvider}
          */
         T getTertiaryProvider(

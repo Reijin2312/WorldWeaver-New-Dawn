@@ -1,20 +1,18 @@
 package org.betterx.wover.surface.impl.rules;
 
-import org.betterx.wover.surface.api.conditions.SurfaceRulesContext;
 import org.betterx.wover.surface.api.noise.NumericProvider;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.KeyDispatchDataCodec;
-import net.minecraft.world.level.levelgen.SurfaceRules.Context;
 import net.minecraft.world.level.levelgen.SurfaceRules.RuleSource;
-import net.minecraft.world.level.levelgen.SurfaceRules.SurfaceRule;
 
 import java.util.List;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
 //
-public record SwitchRuleSource(NumericProvider selector, List<RuleSource> collection) implements RuleSource {
+public final class SwitchRuleSource extends WoverSwitchRuleSource implements RuleSource {
     public static final MapCodec<SwitchRuleSource> CODEC = RecordCodecBuilder
             .mapCodec(instance -> instance
                     .group(
@@ -28,18 +26,44 @@ public record SwitchRuleSource(NumericProvider selector, List<RuleSource> collec
 
     private static final KeyDispatchDataCodec<? extends RuleSource> KEY_CODEC = KeyDispatchDataCodec.of(SwitchRuleSource.CODEC);
 
+    private final NumericProvider selector;
+    private final List<RuleSource> collection;
+
+    public SwitchRuleSource(NumericProvider selector, List<RuleSource> collection) {
+        this.selector = selector;
+        this.collection = collection;
+    }
+
+    @Override
+    public NumericProvider selector() {
+        return selector;
+    }
+
+    @Override
+    public List<RuleSource> collection() {
+        return collection;
+    }
+
     @Override
     public @NotNull KeyDispatchDataCodec<? extends RuleSource> codec() {
         return KEY_CODEC;
     }
 
     @Override
-    public SurfaceRule apply(Context context) {
-        return (x, y, z) -> {
-            final SurfaceRulesContext ctx = SurfaceRulesContext.class.cast(context);
-            int nr = Math.max(0, selector.getNumber(ctx)) % collection.size();
-
-            return collection.get(nr).apply(context).tryApply(x, y, z);
-        };
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!(other instanceof SwitchRuleSource that)) return false;
+        return Objects.equals(selector, that.selector) && Objects.equals(collection, that.collection);
     }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(selector, collection);
+    }
+
+    @Override
+    public String toString() {
+        return "SwitchRuleSource[selector=" + selector + ", collection=" + collection + "]";
+    }
+
 }

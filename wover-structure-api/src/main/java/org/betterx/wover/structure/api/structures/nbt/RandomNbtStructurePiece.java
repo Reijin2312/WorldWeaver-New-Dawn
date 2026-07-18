@@ -1,17 +1,15 @@
 package org.betterx.wover.structure.api.structures.nbt;
 
-import org.betterx.wover.block.api.BlockHelper;
 import org.betterx.wover.structure.impl.StructureManagerImpl;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.chunk.ChunkGenerator;
@@ -22,16 +20,12 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.BlockIgnorePr
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 
-import com.google.common.collect.ImmutableList;
-
-import java.util.List;
-
 public class RandomNbtStructurePiece extends TemplateStructurePiece {
     private final boolean keepAir;
 
     public RandomNbtStructurePiece(
             StructureTemplateManager manager,
-            ResourceLocation nbtLocation,
+            Identifier nbtLocation,
             StructurePlaceSettings placeSettings,
             BlockPos templatePosition,
             boolean keepAir
@@ -47,7 +41,7 @@ public class RandomNbtStructurePiece extends TemplateStructurePiece {
     public RandomNbtStructurePiece(StructurePieceSerializationContext context, CompoundTag compoundTag) {
         this(
                 context, compoundTag,
-                compoundTag.contains("A") && compoundTag.getBoolean("A")
+                compoundTag.getBooleanOr("A", false)
         );
 
     }
@@ -69,9 +63,13 @@ public class RandomNbtStructurePiece extends TemplateStructurePiece {
 
     private static StructurePlaceSettings fromNbt(CompoundTag compoundTag, boolean keepAir) {
         return settings(
-                Rotation.valueOf(compoundTag.getString("R")),
-                Mirror.valueOf(compoundTag.getString("M")),
-                new BlockPos(compoundTag.getInt("RX"), compoundTag.getInt("RY"), compoundTag.getInt("RZ")),
+                Rotation.valueOf(compoundTag.getString("R").orElse("")),
+                Mirror.valueOf(compoundTag.getString("M").orElse("")),
+                new BlockPos(
+                        compoundTag.getIntOr("RX", 0),
+                        compoundTag.getIntOr("RY", 0),
+                        compoundTag.getIntOr("RZ", 0)
+                ),
                 keepAir
         );
 
@@ -136,25 +134,6 @@ public class RandomNbtStructurePiece extends TemplateStructurePiece {
                 writableBounds,
                 chunkPos,
                 blockPos
-        );
-        List<BlockPos> list2 = ImmutableList.of(
-                new BlockPos(writableBounds.minX(), blockPos.getY(), writableBounds.minZ()),
-                new BlockPos(writableBounds.maxX(), blockPos.getY(), writableBounds.minZ()),
-                new BlockPos(writableBounds.minX(), blockPos.getY(), writableBounds.maxZ()),
-                new BlockPos(writableBounds.maxX(), blockPos.getY(), writableBounds.maxZ())
-        );
-
-        list2.forEach(pos -> worldGenLevel.setBlock(
-                pos,
-                Blocks.OXIDIZED_COPPER.defaultBlockState(),
-                BlockHelper.SET_SILENT
-        ));
-
-        worldGenLevel.setBlock(templatePosition, Blocks.AMETHYST_BLOCK.defaultBlockState(), BlockHelper.SET_SILENT);
-        worldGenLevel.setBlock(
-                templatePosition.offset(this.placeSettings.getRotationPivot()),
-                Blocks.NETHERITE_BLOCK.defaultBlockState(),
-                BlockHelper.SET_SILENT
         );
     }
 }

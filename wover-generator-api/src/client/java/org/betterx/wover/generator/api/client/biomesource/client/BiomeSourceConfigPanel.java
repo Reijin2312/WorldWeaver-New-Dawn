@@ -9,8 +9,6 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 public interface BiomeSourceConfigPanel<B extends BiomeSource, C extends BiomeSourceConfig<B>> {
     @FunctionalInterface
@@ -22,7 +20,6 @@ public interface BiomeSourceConfigPanel<B extends BiomeSource, C extends BiomeSo
         );
     }
 
-    @Environment(EnvType.CLIENT)
     LayoutComponent<?, ?> getPanel();
 
 

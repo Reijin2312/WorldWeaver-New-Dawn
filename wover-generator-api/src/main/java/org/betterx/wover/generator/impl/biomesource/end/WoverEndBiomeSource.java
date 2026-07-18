@@ -31,11 +31,12 @@ import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 import java.awt.*;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 
 public class WoverEndBiomeSource extends WoverBiomeSource implements
@@ -83,6 +84,17 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
     private List<BiomeDecider> deciders;
 
     private WoverEndConfig config;
+
+    @Override
+    protected @NotNull Stream<Holder<Biome>> collectPossibleBiomes() {
+        // The feature sorter only sees biomes returned here. Keep every registered End biome,
+        // especially the five vanilla biomes that provide spikes and gateways, even when biome
+        // tags have not been rebuilt yet during early world-preset loading.
+        final LinkedHashSet<Holder<Biome>> biomes = super.collectPossibleBiomes()
+                                                          .collect(Collectors.toCollection(LinkedHashSet::new));
+        TheEndBiomesHelper.addAllPossibleBiomes(biomes);
+        return biomes.stream();
+    }
 
     private WoverEndBiomeSource(
             long seed,
@@ -223,9 +235,7 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
             if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
                 LibWoverWorldGenerator.C.log.verbose("No Barrens Biomes found. Disabling by using land Biomes");
             endBarrensBiomePicker = endLandBiomePicker;
-            if (endVoidBiomePicker.isEmpty()) {
-                endVoidBiomePicker = endLandBiomePicker;
-            }
+            endVoidBiomePicker = endLandBiomePicker;
         }
         if (endCenterBiomePicker.isEmpty()) {
             if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
@@ -335,7 +345,6 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
     }
 
     @Override
-    @Environment(EnvType.CLIENT)
     public BiomeSourceConfigPanel<WoverEndBiomeSource, WoverEndConfig> biomeSourceConfigPanel(@NotNull Screen parent) {
         return new EndConfigPage(config);
     }

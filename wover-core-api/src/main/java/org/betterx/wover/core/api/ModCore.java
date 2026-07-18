@@ -3,7 +3,7 @@ package org.betterx.wover.core.api;
 import de.ambertation.wunderlib.utils.Version;
 
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 public final class ModCore implements Version.ModVersionProvider {
     private static final HashMap<String, ModCore> cache = new HashMap<>();
 
-    private final List<ResourceLocation> providedDatapacks = new LinkedList<>();
+    private final List<Identifier> providedDatapacks = new LinkedList<>();
     /**
      * This logger is used to write text to the console and the log file.
      * The mod id is used as the logger's name, making it clear which mod wrote info,
@@ -103,8 +103,8 @@ public final class ModCore implements Version.ModVersionProvider {
      * @param name The name or path of the resource.
      * @return The {@link ResourceLocation} for the given name.
      */
-    public ResourceLocation id(String name) {
-        return ResourceLocation.fromNamespaceAndPath(namespace, name);
+    public Identifier id(String name) {
+        return Identifier.fromNamespaceAndPath(namespace, name);
     }
 
 
@@ -114,7 +114,7 @@ public final class ModCore implements Version.ModVersionProvider {
      * @param location The {@link ResourceLocation} to convert.
      * @return The {@link ResourceLocation} for the given path in the namespace of this Mod.
      */
-    public ResourceLocation convertNamespace(ResourceLocation location) {
+    public Identifier convertNamespace(Identifier location) {
         return id(location.getPath());
     }
 
@@ -124,8 +124,8 @@ public final class ModCore implements Version.ModVersionProvider {
      * @param key The {@link ResourceKey} to convert.
      * @return The {@link ResourceLocation} for the given path in the namespace of this Mod.
      */
-    public <T> ResourceLocation convertNamespace(ResourceKey<T> key) {
-        return convertNamespace(key.location());
+    public <T> Identifier convertNamespace(ResourceKey<T> key) {
+        return convertNamespace(key.identifier());
     }
 
     /**
@@ -135,8 +135,8 @@ public final class ModCore implements Version.ModVersionProvider {
      * @return The {@link ResourceLocation} for the given name.
      */
     @Override
-    public ResourceLocation mk(String key) {
-        return ResourceLocation.fromNamespaceAndPath(namespace, key);
+    public Identifier mk(String key) {
+        return Identifier.fromNamespaceAndPath(namespace, key);
     }
 
     /**
@@ -153,7 +153,7 @@ public final class ModCore implements Version.ModVersionProvider {
      *
      * @return a stream of all Datapacks {@link ResourceLocation}s that are provided by this mod.
      */
-    public Stream<ResourceLocation> providedDatapacks() {
+    public Stream<Identifier> providedDatapacks() {
         return providedDatapacks.stream();
     }
 
@@ -164,8 +164,8 @@ public final class ModCore implements Version.ModVersionProvider {
      * @param activationType The {@link ResourcePackActivationType} of the Datapack.
      * @return The {@link ResourceLocation} of the Datapack.
      */
-    public ResourceLocation addDatapack(String name, ResourcePackActivationType activationType) {
-        final ResourceLocation id = id(name);
+    public Identifier addDatapack(String name, ResourcePackActivationType activationType) {
+        final Identifier id = id(name);
         providedDatapacks.add(id);
 
         ResourceManagerHelper.registerBuiltinResourcePack(
@@ -185,7 +185,7 @@ public final class ModCore implements Version.ModVersionProvider {
      * @param dependency The dependency mod.
      * @return The {@link ResourceLocation} of the Datapack.
      */
-    public ResourceLocation addDatapack(ModCore dependency) {
+    public Identifier addDatapack(ModCore dependency) {
         return this.addDatapack(dependency.namespace + "_extensions", dependency.isLoaded()
                 ? ResourcePackActivationType.DEFAULT_ENABLED
                 : ResourcePackActivationType.NORMAL);

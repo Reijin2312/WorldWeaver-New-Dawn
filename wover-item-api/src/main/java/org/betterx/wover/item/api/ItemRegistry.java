@@ -9,26 +9,33 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.dispenser.BlockSource;
 import net.minecraft.core.dispenser.DefaultDispenseItemBehavior;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.component.Consumable;
+import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 import net.minecraft.world.level.block.DispenserBlock;
 
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class ItemRegistry {
     private static final Map<ModCore, ItemRegistry> REGISTRIES = new HashMap<>();
+    private static final ThreadLocal<ArrayDeque<ResourceKey<Item>>> CONSTRUCTION_IDS = ThreadLocal.withInitial(ArrayDeque::new);
     public final ModCore C;
-    private final Map<ResourceLocation, Item> items = new LinkedHashMap<>();
+    private final Map<Identifier, Item> items = new LinkedHashMap<>();
     private Map<Item, TagKey<Item>[]> datagenTags;
 
     private ItemRegistry(ModCore modeCore) {
@@ -53,7 +60,7 @@ public class ItemRegistry {
 
     public <T extends Item> T register(String path, T item, TagKey<Item>... tags) {
         if (item != null && item != Items.AIR) {
-            ResourceLocation id = C.mk(path);
+            Identifier id = C.mk(path);
             Registry.register(BuiltInRegistries.ITEM, id, item);
             items.put(id, item);
 
@@ -63,6 +70,49 @@ public class ItemRegistry {
         return item;
     }
 
+    public String prepareConstructionPath(String path) {
+        pushConstructionId(C.mk(path));
+        return path;
+    }
+
+    public void finishConstructionPath() {
+        popConstructionId();
+    }
+
+    public static void pushConstructionId(Identifier id) {
+        CONSTRUCTION_IDS.get().push(ResourceKey.create(Registries.ITEM, id));
+    }
+
+    public static void popConstructionId() {
+        ArrayDeque<ResourceKey<Item>> stack = CONSTRUCTION_IDS.get();
+        if (!stack.isEmpty()) stack.pop();
+    }
+
+    public static ResourceKey<Item> peekConstructionId() {
+        return CONSTRUCTION_IDS.get().peek();
+    }
+
+    public static ResourceKey<Item> takeConstructionId() {
+        ArrayDeque<ResourceKey<Item>> stack = CONSTRUCTION_IDS.get();
+        return stack.isEmpty() ? null : stack.pop();
+    }
+
+    public static String takeConstructionIdString() {
+        ResourceKey<Item> key = takeConstructionId();
+        return key == null ? null : key.identifier().toString();
+    }
+
+    public static <T> T withConstructionId(Identifier id, Supplier<T> factory) {
+        ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, id);
+        ArrayDeque<ResourceKey<Item>> stack = CONSTRUCTION_IDS.get();
+        stack.push(key);
+        try {
+            return factory.get();
+        } finally {
+            if (!stack.isEmpty() && key.equals(stack.peek())) stack.pop();
+        }
+    }
+
     public <T extends Item> T registerAsTool(String path, T item, TagKey<Item>... tags) {
         register(path, item, tags);
 
@@ -70,11 +120,7 @@ public class ItemRegistry {
     }
 
     public FoodProperties.Builder foodPropertiesOf(int hunger, float saturation, MobEffectInstance... effects) {
-        FoodProperties.Builder builder = new FoodProperties.Builder().nutrition(hunger).saturationModifier(saturation);
-        for (MobEffectInstance effect : effects) {
-            builder.effect(effect, 1F);
-        }
-        return builder;
+        return new FoodProperties.Builder().nutrition(hunger).saturationModifier(saturation);
     }
 
     public FoodProperties.Builder drinkPropertiesOf(int hunger, float saturation) {
@@ -95,9 +141,8 @@ public class ItemRegistry {
             int hunger, float saturation,
             MobEffectInstance... effects
     ) {
-        return this.register(name, factory.apply(properties.food(this
-                .foodPropertiesOf(hunger, saturation, effects)
-                .build())));
+        return this.register(name, withConstructionId(C.mk(name), () -> factory.apply(
+                applyFoodProperties(properties, hunger, saturation, effects))));
     }
     
     public <T extends Item> T registerDrink(
@@ -114,9 +159,8 @@ public class ItemRegistry {
             int hunger, float saturation,
             MobEffectInstance... effects
     ) {
-        return this.register(name, factory.apply(properties.food(this
-                .drinkPropertiesOf(hunger, saturation)
-                .build())));
+        return this.register(name, withConstructionId(C.mk(name), () -> factory.apply(
+                applyFoodProperties(properties, hunger, saturation, effects))));
     }
 
 
@@ -130,7 +174,7 @@ public class ItemRegistry {
                         stack,
                         null,
                         pointer.pos().relative(direction),
-                        MobSpawnType.DISPENSER,
+                        EntitySpawnReason.DISPENSER,
                         direction != Direction.UP,
                         false
                 );
@@ -144,16 +188,17 @@ public class ItemRegistry {
 
     public SmithingTemplateItem registerSmithingTemplateItem(
             String path,
-            List<ResourceLocation> baseSlotEmptyIcons,
-            List<ResourceLocation> additionalSlotEmptyIcons
+            List<Identifier> baseSlotEmptyIcons,
+            List<Identifier> additionalSlotEmptyIcons
     ) {
-        final SmithingTemplateItem item = SmithingTemplates
+        final String itemPath = path + "_smithing_template";
+        final SmithingTemplateItem item = withConstructionId(C.mk(itemPath), () -> SmithingTemplates
                 .create(C, path)
                 .setBaseSlotEmptyIcons(baseSlotEmptyIcons)
                 .setAdditionalSlotEmptyIcons(additionalSlotEmptyIcons)
-                .build();
+                .build());
 
-        return registerSmithingTemplateItem(path + "_smithing_template", item);
+        return registerSmithingTemplateItem(itemPath, item);
     }
 
     public <T extends SmithingTemplateItem> T registerSmithingTemplateItem(
@@ -166,6 +211,29 @@ public class ItemRegistry {
 
     public Item.Properties createDefaultItemSettings() {
         return new Item.Properties();
+    }
+
+    private static Item.Properties applyFoodProperties(
+            Item.Properties properties,
+            int hunger,
+            float saturation,
+            MobEffectInstance... effects
+    ) {
+        FoodProperties food = new FoodProperties.Builder()
+                .nutrition(hunger)
+                .saturationModifier(saturation)
+                .build();
+        Consumable consumable = buildConsumable(effects);
+        return consumable == null ? properties.food(food) : properties.food(food, consumable);
+    }
+
+    private static Consumable buildConsumable(MobEffectInstance... effects) {
+        if (effects == null || effects.length == 0) return null;
+        Consumable.Builder builder = Consumable.builder();
+        for (MobEffectInstance effect : effects) {
+            builder.onConsume(new ApplyStatusEffectsConsumeEffect(effect, 1.0F));
+        }
+        return builder.build();
     }
 
     public void bootstrapItemTags(ItemTagBootstrapContext ctx) {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "wover-item-testmod",
-  "version": "21.0.0",
+  "version": "${version}",
   "name": "WorldWeaver - Item (TestMod)",
   "description": "",
   "authors": [
@@ -30,10 +30,10 @@
     "wover.item.testmod.mixins.common.json"
   ],
   "depends": {
-    "fabricloader": ">=0.15.3",
+    "fabricloader": ">=0.18.1",
     "minecraft": [
       "1.21.0",
-      "1.21.1"
+      "1.21.11"
     ],
     "java": ">=17",
     "fabric-api": ">=0.100.1"

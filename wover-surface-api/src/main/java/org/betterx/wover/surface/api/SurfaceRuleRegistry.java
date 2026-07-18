@@ -11,7 +11,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.SurfaceRules;
 
@@ -49,7 +49,7 @@ public class SurfaceRuleRegistry {
      * The Key of the Registry. ({@code wover/worldgen/surface_rules})
      */
     public static final ResourceKey<Registry<AssignedSurfaceRule>> SURFACE_RULES_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverSurface.C.id("wover/worldgen/surface_rules"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverSurface.C.id("worldgen/surface_rules"));
 
     /**
      * Creates a ResourceKey for a SurfaceRule.
@@ -58,7 +58,7 @@ public class SurfaceRuleRegistry {
      * @return The ResourceKey
      */
     public static ResourceKey<AssignedSurfaceRule> createKey(
-            ResourceLocation ruleID
+            Identifier ruleID
     ) {
         return SurfaceRuleRegistryImpl.createKey(ruleID);
     }

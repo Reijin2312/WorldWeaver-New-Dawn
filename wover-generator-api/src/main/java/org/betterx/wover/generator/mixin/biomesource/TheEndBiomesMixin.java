@@ -24,7 +24,7 @@ public class TheEndBiomesMixin {
             double weight,
             CallbackInfo ci
     ) {
-        TheEndBiomesHelper.add(CommonBiomeTags.IS_END_BARRENS, barrens);
+        TheEndBiomesHelper.addBarrensBiome(highlands, barrens, weight);
     }
 
     @Inject(method = "addMidlandsBiome", at = @At("HEAD"))
@@ -39,27 +39,27 @@ public class TheEndBiomesMixin {
                 (key) -> WoverBiomeData.tempWithEdge(key, midlands)
         );
 
-        TheEndBiomesHelper.add(CommonBiomeTags.IS_END_MIDLAND, midlands);
+        TheEndBiomesHelper.addMidlandsBiome(highlands, midlands, weight);
     }
 
     @Inject(method = "addSmallIslandsBiome", at = @At("HEAD"))
     private static void bcl_registerSmallIslands(
             ResourceKey<Biome> biome, double weight, CallbackInfo ci
     ) {
-        TheEndBiomesHelper.add(CommonBiomeTags.IS_SMALL_END_ISLAND, biome);
+        TheEndBiomesHelper.addSmallIslandsBiome(biome, weight);
     }
 
     @Inject(method = "addHighlandsBiome", at = @At("HEAD"))
     private static void bcl_registerHighlands(
             ResourceKey<Biome> biome, double weight, CallbackInfo ci
     ) {
-        TheEndBiomesHelper.add(CommonBiomeTags.IS_END_HIGHLAND, biome);
+        TheEndBiomesHelper.addHighlandsBiome(biome, weight);
     }
 
     @Inject(method = "addMainIslandBiome", at = @At("HEAD"))
     private static void bcl_registerMainIsnalnd(
             ResourceKey<Biome> biome, double weight, CallbackInfo ci
     ) {
-        TheEndBiomesHelper.add(CommonBiomeTags.IS_END_CENTER, biome);
+        TheEndBiomesHelper.addMainIslandBiome(biome, weight);
     }
 }

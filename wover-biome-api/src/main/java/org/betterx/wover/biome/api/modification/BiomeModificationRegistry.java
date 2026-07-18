@@ -8,7 +8,7 @@ import org.betterx.wover.events.api.types.OnBootstrapRegistry;
 
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * Provides a Datapack backed registry for Biome Modifications.
@@ -27,7 +27,7 @@ public class BiomeModificationRegistry {
      * The key for the Biome Modification Registry.
      */
     public static final ResourceKey<Registry<BiomeModification>> BIOME_MODIFICATION_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverBiome.C.id("wover/worldgen/biome_modifications"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverBiome.C.id("worldgen/biome_modifications"));
 
     /**
      * Creates a  Key for a Biome Modification.
@@ -36,7 +36,7 @@ public class BiomeModificationRegistry {
      * @return The Key for the Modification in this Registry
      */
     public static ResourceKey<BiomeModification> createKey(
-            ResourceLocation modificationID
+            Identifier modificationID
     ) {
         return BiomeModificationRegistryImpl.createKey(modificationID);
     }

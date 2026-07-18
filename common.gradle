@@ -197,6 +197,7 @@ allprojects { projIt ->
     processResources {
         println "Version: ${project.mod_version}"
         inputs.property "version", project.mod_version
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
         filesMatching("fabric.mod.json") {
             expand "version": project.mod_version
@@ -248,6 +249,12 @@ allprojects.each { p ->
     }
 }
 
+allprojects {
+    tasks.withType(Jar).configureEach {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
+}
+
 subprojects.each {
     remapJar.dependsOn("${it.path}:remapJar")
 }
@@ -273,7 +280,6 @@ dependencies {
         include project("${it.path}")
     }
     modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
-    modLocalRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 
     if (local_wunderlib) {
         implementation project(path: ":wunderlib", configuration: 'dev')

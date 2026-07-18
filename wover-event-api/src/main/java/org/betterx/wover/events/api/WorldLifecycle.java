@@ -76,8 +76,8 @@ public class WorldLifecycle {
     public static final Event<OnMinecraftServerReady> MINECRAFT_SERVER_READY = WorldLifecycleImpl.MINECRAFT_SERVER_READY;
 
     /**
-     * This event is fired before the game starts creating the levels for the world. At this point, Fabric is
-     * guaranteed to have loaded all biomes, features, structures, etc. that are required for the world.
+     * This event is fired before the game starts creating the levels for the world. At this point, the loader
+     * has loaded all biomes, features, structures, etc. that are required for the world.
      * <p>
      * You can subscribe to this Event with methods that adhere to {@link BeforeCreatingLevels}.
      */

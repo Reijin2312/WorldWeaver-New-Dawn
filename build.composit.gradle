@@ -5,9 +5,11 @@ plugins {
     id 'eclipse'
     id 'fabric-loom' version "${loom_version}"
 }
-archivesBaseName = project.archives_base_name
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+base { archivesName = project.archives_base_name }
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
 
 
 def getDependencies(project, List<String> depNames, configuration) {

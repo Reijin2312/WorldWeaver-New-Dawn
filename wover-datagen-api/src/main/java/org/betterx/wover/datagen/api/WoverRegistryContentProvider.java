@@ -115,13 +115,14 @@ public abstract class WoverRegistryContentProvider<T> extends WoverRegistryProvi
                         count++;
                     }
                 }
-                modCore.log.info("[" + count + " / " + content.size() + "] " + registryKey.location());
+                modCore.log.info("[" + count + " / " + content.size() + "] " + registryKey.identifier());
             }
 
             @Override
             public String getName() {
                 return title;
             }
+
         };
     }
 }

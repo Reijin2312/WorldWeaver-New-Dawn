@@ -24,9 +24,17 @@ tasks.withType(JavaCompile).configureEach {
     dependsOn(tasks.named("spotlessApply"))
 }
 
-archivesBaseName = project.archives_base_name
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+base { archivesName = project.archives_base_name }
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+// The legacy aggregated Javadoc task passes source-set labels as package
+// names on Gradle 9 (for example "allPre,"). It is not a runtime artifact.
+tasks.withType(Javadoc).configureEach {
+    enabled = false
+}
 
 
 def getDependencies(project, List<String> depNames, configuration) {

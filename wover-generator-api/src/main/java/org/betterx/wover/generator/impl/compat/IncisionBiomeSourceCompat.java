@@ -8,7 +8,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class IncisionBiomeSourceCompat {
-    private static final ResourceKey<Biome> ERODED_YARD = ResourceKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("incision", "eroded_yard"));
+    private static final ResourceKey<Biome> ERODED_YARD = ResourceKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("incision", "eroded_yard"));
 
     private IncisionBiomeSourceCompat() {
     }
@@ -28,11 +28,11 @@ public final class IncisionBiomeSourceCompat {
         if (!(source instanceof MultiNoiseBiomeSource multiNoise)) return source;
         RegistryAccess access = WorldState.registryAccess();
         if (access == null) access = WorldState.allStageRegistryAccess();
-        if (access == null || access.registryOrThrow(Registries.BIOME).getHolder(ERODED_YARD).isEmpty()) return source;
+        if (access == null || access.lookupOrThrow(Registries.BIOME).get(ERODED_YARD).isEmpty()) return source;
 
         try {
             Class.forName("net.incision.init.IncisionModBiomes");
-            Holder<Biome> biome = access.registryOrThrow(Registries.BIOME).getHolderOrThrow(ERODED_YARD);
+            Holder<Biome> biome = access.lookupOrThrow(Registries.BIOME).getOrThrow(ERODED_YARD);
             Climate.ParameterList<Holder<Biome>> original = getParameters(multiNoise);
             List<Pair<Climate.ParameterPoint, Holder<Biome>>> parameters = new ArrayList<>(original.values());
             add(parameters, biome, parameter(Climate.Parameter.point(0.0F)));

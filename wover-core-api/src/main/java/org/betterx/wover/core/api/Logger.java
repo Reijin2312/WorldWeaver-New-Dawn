@@ -2,7 +2,6 @@ package org.betterx.wover.core.api;
 
 import org.betterx.wover.config.api.Configs;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -10,7 +9,7 @@ import java.util.Map;
  * provides some additional functionality like caching loggers for a given mod id
  */
 public final class Logger extends de.ambertation.wunderlib.general.Logger {
-    private static final Map<String, Logger> cache = new HashMap<>();
+    private static final Map<String, Logger> cache = new java.util.concurrent.ConcurrentHashMap<>();
 
     private Logger(String modID) {
         super(modID);

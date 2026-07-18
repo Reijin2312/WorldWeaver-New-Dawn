@@ -10,7 +10,6 @@ import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.data.DataProvider;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorPreset;
 
@@ -44,8 +43,8 @@ public abstract class WoverFlatLevelPresetProvider
      * Called, when The Data needs to be serialized.
      *
      * @param output           The output to write the data to.
-     * @param registriesFuture A future sent from the Fabric DataGen API
-     * @return A new {@link DataProvider}
+     * @param registriesFuture A future sent from the data generator
+     * @return A new {@link TagsProvider}
      */
     @Override
     public FabricTagProvider<FlatLevelGeneratorPreset> getSecondaryProvider(

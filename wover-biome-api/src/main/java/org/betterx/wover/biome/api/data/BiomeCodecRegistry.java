@@ -5,12 +5,13 @@ import org.betterx.wover.core.api.registry.BuiltInRegistryManager;
 import org.betterx.wover.core.api.registry.DatapackRegistryBuilder;
 import org.betterx.wover.entrypoint.LibWoverSurface;
 
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.KeyDispatchDataCodec;
+
+import org.jetbrains.annotations.Nullable;
 
 public class BiomeCodecRegistry {
     public static final ResourceKey<Registry<MapCodec<? extends BiomeData>>> BIOME_CODEC_REGISTRY =
@@ -22,9 +23,22 @@ public class BiomeCodecRegistry {
     );
 
     public static MapCodec<? extends BiomeData> register(
-            ResourceLocation location,
+            Identifier location,
             KeyDispatchDataCodec<? extends BiomeData> keyDispatchDataCodec
     ) {
         return BiomeCodecRegistryImpl.register(BIOME_CODECS, location, keyDispatchDataCodec);
+    }
+
+    public static MapCodec<? extends BiomeData> register(
+            Identifier location,
+            KeyDispatchDataCodec<? extends BiomeData> keyDispatchDataCodec,
+            @Nullable KeyDispatchDataCodec<? extends BiomeData> networkKeyDispatchDataCodec
+    ) {
+        return BiomeCodecRegistryImpl.register(
+                BIOME_CODECS,
+                location,
+                keyDispatchDataCodec,
+                networkKeyDispatchDataCodec
+        );
     }
 }

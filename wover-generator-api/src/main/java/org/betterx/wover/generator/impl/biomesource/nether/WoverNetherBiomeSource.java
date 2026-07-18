@@ -9,7 +9,6 @@ import org.betterx.wover.generator.api.client.biomesource.client.BiomeSourceWith
 import org.betterx.wover.generator.api.map.BiomeMap;
 import org.betterx.wover.generator.api.map.MapBuilderFunction;
 import org.betterx.wover.generator.impl.client.NetherConfigPage;
-import org.betterx.wover.generator.impl.compat.VanillaNetherBiomeCompat;
 import org.betterx.wover.generator.impl.map.MapStack;
 
 import com.mojang.serialization.Codec;
@@ -25,8 +24,6 @@ import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.Climate;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -164,11 +161,6 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements
             biomeMap.clearCache();
         }
         WoverBiomePicker.PickableBiome bb = biomeMap.getBiome(biomeX << 2, biomeY << 2, biomeZ << 2);
-        // Keep Wover/BetterNether biomes authoritative. Compatibility biome
-        // sources may replace vanilla Nether slots, not consume Wover's share.
-        if (!VanillaNetherBiomeCompat.isVanillaNetherBiome(bb.biome)) {
-            return bb.biome;
-        }
         return applyFallbackBiomeSource(bb.biome, biomeX, biomeY, biomeZ, var4);
     }
 
@@ -185,7 +177,6 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements
     }
 
     @Override
-    @Environment(EnvType.CLIENT)
     public BiomeSourceConfigPanel<WoverNetherBiomeSource, WoverNetherConfig> biomeSourceConfigPanel(
             @NotNull Screen parent
     ) {

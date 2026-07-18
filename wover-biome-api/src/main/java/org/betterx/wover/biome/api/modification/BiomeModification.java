@@ -18,8 +18,9 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.random.Weighted;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.biome.Biome;
@@ -63,10 +64,34 @@ public interface BiomeModification {
                           .listOf()
                           .optionalFieldOf("biome_tags", List.of())
                           .forGetter(BiomeModification::biomeTags),
-                    Codec.list(MobSpawnSettings.SpawnerData.CODEC)
+                    Weighted.codec(MobSpawnSettings.SpawnerData.CODEC).listOf()
                          .optionalFieldOf("spawns", List.of())
                          .forGetter(BiomeModification::spawns)
             ).apply(instance, BiomeModificationImpl::new)
+    );
+
+    /**
+     * A network-safe codec that avoids resolving PlacedFeatures during sync.
+     */
+    Codec<BiomeModification> NETWORK_CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                    BiomePredicate.CODEC.fieldOf("predicate").forGetter(BiomeModification::predicate),
+                    FeatureMap.NETWORK_CODEC
+                            .optionalFieldOf("features", List.of())
+                            .forGetter(BiomeModification::featureKeys),
+                    TagKey.codec(Registries.BIOME)
+                          .listOf()
+                          .optionalFieldOf("biome_tags", List.of())
+                          .forGetter(BiomeModification::biomeTags),
+                    Weighted.codec(MobSpawnSettings.SpawnerData.CODEC).listOf()
+                         .optionalFieldOf("spawns", List.of())
+                         .forGetter(BiomeModification::spawns)
+            ).apply(instance, (predicate, features, tags, spawns) -> new BiomeModificationImpl(
+                    predicate,
+                    FeatureMap.ofKeys(features),
+                    tags,
+                    spawns
+            ))
     );
 
     /**
@@ -87,11 +112,29 @@ public interface BiomeModification {
     List<List<Holder<PlacedFeature>>> features();
 
     /**
+     * Internal feature-key view used for network sync.
+     *
+     * @return feature keys grouped by generation step.
+     */
+    @ApiStatus.Internal
+    default List<List<ResourceKey<PlacedFeature>>> featureKeys() {
+        List<List<ResourceKey<PlacedFeature>>> keyLists = new ArrayList<>(features().size());
+        for (List<Holder<PlacedFeature>> list : features()) {
+            List<ResourceKey<PlacedFeature>> keys = new ArrayList<>(list.size());
+            for (Holder<PlacedFeature> holder : list) {
+                holder.unwrapKey().ifPresent(keys::add);
+            }
+            keyLists.add(keys);
+        }
+        return keyLists;
+    }
+
+    /**
      * The spawns that should be added to the biome.
      *
      * @return all spawns
      */
-    List<MobSpawnSettings.SpawnerData> spawns();
+    List<Weighted<MobSpawnSettings.SpawnerData>> spawns();
 
     /**
      * The biome tags the biome should be added to
@@ -116,7 +159,7 @@ public interface BiomeModification {
      * @param location The location of the modification.
      * @return The builder.
      */
-    static Builder build(@NotNull BootstrapContext<BiomeModification> context, @NotNull ResourceLocation location) {
+    static Builder build(@NotNull BootstrapContext<BiomeModification> context, @NotNull Identifier location) {
         return new Builder(
                 context,
                 ResourceKey.create(BiomeModificationRegistry.BIOME_MODIFICATION_REGISTRY, location)
@@ -148,7 +191,7 @@ public interface BiomeModification {
         private final BootstrapContext<BiomeModification> bootstrapContext;
         private BiomePredicate predicate;
         private final FeatureMap features;
-        private final List<MobSpawnSettings.SpawnerData> spawns;
+        private final List<Weighted<MobSpawnSettings.SpawnerData>> spawns;
         private final Set<TagKey<Biome>> tags = new HashSet<>();
 
         private final ResourceKey<BiomeModification> key;
@@ -518,7 +561,10 @@ public interface BiomeModification {
                 int minGroupCount,
                 int maxGroupCount
         ) {
-            return addSpawn(new MobSpawnSettings.SpawnerData(entityType, weight, minGroupCount, maxGroupCount));
+            return addSpawn(new Weighted<>(
+                    new MobSpawnSettings.SpawnerData(entityType, minGroupCount, maxGroupCount),
+                    weight
+            ));
         }
 
         /**
@@ -530,6 +576,13 @@ public interface BiomeModification {
          */
         public <M extends Mob> Builder addSpawn(
                 MobSpawnSettings.SpawnerData spawnerData
+        ) {
+            this.spawns.add(new Weighted<>(spawnerData, 1));
+            return this;
+        }
+
+        public <M extends Mob> Builder addSpawn(
+                Weighted<MobSpawnSettings.SpawnerData> spawnerData
         ) {
             this.spawns.add(spawnerData);
             return this;

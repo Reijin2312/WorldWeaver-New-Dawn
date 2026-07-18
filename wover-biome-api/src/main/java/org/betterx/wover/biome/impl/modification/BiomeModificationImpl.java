@@ -4,7 +4,9 @@ import org.betterx.wover.biome.api.modification.BiomeModification;
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicate;
 
 import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.random.Weighted;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
@@ -22,18 +24,27 @@ public class BiomeModificationImpl implements BiomeModification {
     private final List<TagKey<Biome>> biomeTags;
 
     @NotNull
-    private final List<MobSpawnSettings.SpawnerData> spawns;
+    private final List<Weighted<MobSpawnSettings.SpawnerData>> spawns;
 
     public BiomeModificationImpl(
             @NotNull BiomePredicate predicate,
             @NotNull List<List<Holder<PlacedFeature>>> features,
             @Nullable List<TagKey<Biome>> biomeTags,
-            @Nullable List<MobSpawnSettings.SpawnerData> spawns
+            @Nullable List<Weighted<MobSpawnSettings.SpawnerData>> spawns
+    ) {
+        this(predicate, FeatureMap.of(features), biomeTags, spawns);
+    }
+
+    public BiomeModificationImpl(
+            @NotNull BiomePredicate predicate,
+            @NotNull FeatureMap features,
+            @Nullable List<TagKey<Biome>> biomeTags,
+            @Nullable List<Weighted<MobSpawnSettings.SpawnerData>> spawns
     ) {
         this.predicate = predicate;
-        this.features = FeatureMap.of(features);
+        this.features = features;
         this.biomeTags = biomeTags;
-        this.spawns = spawns;
+        this.spawns = spawns == null ? List.of() : spawns;
     }
 
     @Override
@@ -52,7 +63,12 @@ public class BiomeModificationImpl implements BiomeModification {
     }
 
     @Override
-    public List<MobSpawnSettings.SpawnerData> spawns() {
+    public List<List<ResourceKey<PlacedFeature>>> featureKeys() {
+        return features.keys();
+    }
+
+    @Override
+    public List<Weighted<MobSpawnSettings.SpawnerData>> spawns() {
         return this.spawns;
     }
 
