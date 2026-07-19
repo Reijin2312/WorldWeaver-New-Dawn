@@ -1,7 +1,7 @@
 {
     "schemaVersion": 1,
     "id": "wover-item",
-    "version": "21.0.13",
+    "version": "21.0.15",
     "name": "WorldWeaver - Item API",
     "description": "",
     "authors": [

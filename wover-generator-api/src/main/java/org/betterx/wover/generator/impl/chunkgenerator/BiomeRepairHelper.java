@@ -27,6 +27,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterLists;
+import net.minecraft.world.level.biome.TheEndBiomeSource;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
@@ -144,6 +145,22 @@ class BiomeRepairHelper {
                     loadedGenerator.getBiomeSource().getClass().getName()
             );
             return loadedGenerator;
+        }
+
+        if (LevelStem.END.equals(dimensionKey)) {
+            Holder<NoiseGeneratorSettings> settings = registryAccess
+                    .registryOrThrow(Registries.NOISE_SETTINGS)
+                    .getHolderOrThrow(NoiseGeneratorSettings.END);
+            ChunkGenerator externalGenerator = new NoiseBasedChunkGenerator(
+                    TheEndBiomeSource.create(registryAccess.registryOrThrow(Registries.BIOME).asLookup()),
+                    settings
+            );
+            LibWoverWorldGenerator.C.log.info(
+                    "Created vanilla End biome fallback for {}: source={}",
+                    dimensionKey.location(),
+                    externalGenerator.getBiomeSource().getClass().getName()
+            );
+            return externalGenerator;
         }
 
         if (!LevelStem.NETHER.equals(dimensionKey)) {

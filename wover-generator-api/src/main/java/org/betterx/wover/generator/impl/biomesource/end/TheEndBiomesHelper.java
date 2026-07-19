@@ -5,6 +5,7 @@ import org.betterx.wover.tag.api.predefined.CommonBiomeTags;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Biomes;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,6 +19,14 @@ import org.jetbrains.annotations.ApiStatus;
 public class TheEndBiomesHelper {
     @ApiStatus.Internal
     private static Map<TagKey, Set<ResourceKey<Biome>>> END_BIOMES = new HashMap<>();
+
+    static {
+        add(CommonBiomeTags.IS_END_CENTER, Biomes.THE_END);
+        add(CommonBiomeTags.IS_END_HIGHLAND, Biomes.END_HIGHLANDS);
+        add(CommonBiomeTags.IS_END_MIDLAND, Biomes.END_MIDLANDS);
+        add(CommonBiomeTags.IS_SMALL_END_ISLAND, Biomes.SMALL_END_ISLANDS);
+        add(CommonBiomeTags.IS_END_BARRENS, Biomes.END_BARRENS);
+    }
 
     @ApiStatus.Internal
     public static void add(TagKey<Biome> type, ResourceKey<Biome> biome) {
