@@ -5,6 +5,8 @@ import org.betterx.wover.core.api.registry.DatapackRegistryBuilder;
 import org.betterx.wover.entrypoint.LibWoverBiome;
 
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.Lifecycle;
+import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
@@ -23,7 +25,11 @@ public class BiomePredicateRegistry {
     /**
      * The Registry itself.
      */
-    public static final Registry<MapCodec<? extends BiomePredicate>> BIOME_PREDICATES = BiomePredicateRegistryImpl.BIOME_PREDICATES;
+    public static final Registry<MapCodec<? extends BiomePredicate>> BIOME_PREDICATES = new MappedRegistry<>(
+            BIOME_PREDICATE_REGISTRY,
+            Lifecycle.stable(),
+            false
+    );
 
     /**
      * Registers a new {@link BiomePredicate} with the given {@link Identifier} and {@link KeyDispatchDataCodec}.

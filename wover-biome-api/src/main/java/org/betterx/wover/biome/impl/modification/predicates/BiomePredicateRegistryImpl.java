@@ -5,21 +5,16 @@ import org.betterx.wover.biome.api.modification.predicates.BiomePredicateRegistr
 import org.betterx.wover.entrypoint.LibWoverBiome;
 
 import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.Lifecycle;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
-import net.minecraft.core.MappedRegistry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.KeyDispatchDataCodec;
 
 import org.jetbrains.annotations.ApiStatus;
 
 public class BiomePredicateRegistryImpl {
-    public static final Registry<MapCodec<? extends BiomePredicate>> BIOME_PREDICATES = new MappedRegistry<>(
-            BiomePredicateRegistry.BIOME_PREDICATE_REGISTRY,
-            Lifecycle.stable(),
-            false
-    );
+    public static final Registry<MapCodec<? extends BiomePredicate>> BIOME_PREDICATES =
+            BiomePredicateRegistry.BIOME_PREDICATES;
 
     static {
         onBootstrap(BIOME_PREDICATES);

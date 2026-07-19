@@ -420,12 +420,14 @@ public interface BiomePredicate {
      * Codec for a BiomePredicate that delegates to the
      * Codec returned by {@link #codec()}.
      */
-    Codec<BiomePredicate> CODEC = BiomePredicateRegistryImpl
-            .BIOME_PREDICATES.byNameCodec()
-                             .dispatch(
-                                     p -> p.codec().codec(),
-                                     Function.identity()
-                             );
+    Codec<BiomePredicate> CODEC = Codec.lazyInitialized(() ->
+            BiomePredicateRegistryImpl
+                    .BIOME_PREDICATES.byNameCodec()
+                                     .dispatch(
+                                             p -> p.codec().codec(),
+                                             Function.identity()
+                                     )
+    );
     /**
      * The codec for a predicate class.
      *
