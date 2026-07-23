@@ -183,7 +183,7 @@ public class WoverChunkGenerator extends NoiseBasedChunkGenerator implements
                 Blocks.NETHERRACK.defaultBlockState(),
                 Blocks.LAVA.defaultBlockState(),
                 amplifiedNetherRouter(densityGetter, bootstapContext.lookup(Registries.NOISE)),
-                SurfaceRuleData.nether(),
+                SurfaceRuleData.nether(bootstapContext.lookup(Registries.BIOME)),
                 List.of(),
                 32,
                 false,
@@ -272,5 +272,4 @@ public class WoverChunkGenerator extends NoiseBasedChunkGenerator implements
         );
     }
 }
-
 
