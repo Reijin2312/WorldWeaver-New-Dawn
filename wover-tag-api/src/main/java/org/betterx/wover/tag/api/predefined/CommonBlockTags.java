@@ -130,6 +130,11 @@ public class CommonBlockTags {
     public static final TagKey<Block> TERRAIN = TagManager.BLOCKS.makeWorldWeaverTag("surfaces/terrain");
 
     /**
+     * {@code wover:surfaces/soil}
+     */
+    public static final TagKey<Block> SOIL = TagManager.BLOCKS.makeWorldWeaverTag("surfaces/soil");
+
+    /**
      * {@code wover:surfaces/soil_or_logs}
      */
     public static final TagKey<Block> SOIL_OR_LOGS = TagManager.BLOCKS.makeWorldWeaverTag("surfaces/soil_or_logs");
