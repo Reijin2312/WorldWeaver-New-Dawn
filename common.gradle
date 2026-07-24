@@ -404,7 +404,6 @@ tasks.named("processResources") {
 tasks.named("jar") {
     dependsOn(woverProjects.collect { it.tasks.named("classes") })
     dependsOn("mergeWoverAccessTransformers", "mergeWoverServices")
-    dependsOn(tasks.matching { it.name == "runClientData" })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from(woverProjects.collect { it.sourceSets.main.output }) {
         exclude("META-INF/neoforge.mods.toml", "META-INF/accesstransformer.cfg", "META-INF/services/**")
