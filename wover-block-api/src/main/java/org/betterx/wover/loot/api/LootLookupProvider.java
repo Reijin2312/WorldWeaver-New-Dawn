@@ -462,6 +462,18 @@ public class LootLookupProvider {
         return vanillaBlockLoot.createDoublePlantShearsDrop(block);
     }
 
+    public LootTable.Builder dropDoublePlant(Block block) {
+        return LootTable.lootTable().withPool(
+                LootPool.lootPool()
+                        .setRolls(ConstantValue.exactly(1.0F))
+                        .add(vanillaBlockLoot.applyExplosionCondition(
+                                block,
+                                LootItem.lootTableItem(block)
+                                        .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                        ))
+        );
+    }
+
     public LootTable.Builder dropDoublePlantShears(Block block, Block seed) {
         return vanillaBlockLoot.createDoublePlantWithSeedDrops(block, seed);
     }
