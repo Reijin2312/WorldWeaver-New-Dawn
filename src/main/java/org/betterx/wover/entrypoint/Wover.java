@@ -33,5 +33,6 @@ public class Wover {
         new LibWoverFeature(modEventBus);
         new LibWoverBiome(modEventBus);
         new LibWoverWorldGenerator(modEventBus);
+        new LibWoverPottable(modEventBus);
     }
 }
