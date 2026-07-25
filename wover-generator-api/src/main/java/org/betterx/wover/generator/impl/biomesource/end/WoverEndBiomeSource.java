@@ -31,11 +31,12 @@ import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import java.awt.*;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 
 public class WoverEndBiomeSource extends WoverBiomeSource implements
@@ -83,6 +84,17 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
     private List<BiomeDecider> deciders;
 
     private WoverEndConfig config;
+
+    @Override
+    protected @NotNull Stream<Holder<Biome>> collectPossibleBiomes() {
+        // The feature sorter only sees biomes returned here. Keep every registered End biome,
+        // especially the five vanilla biomes that provide spikes and gateways, even when biome
+        // tags have not been rebuilt yet during early world-preset loading.
+        final LinkedHashSet<Holder<Biome>> biomes = super.collectPossibleBiomes()
+                                                          .collect(Collectors.toCollection(LinkedHashSet::new));
+        TheEndBiomesHelper.addAllPossibleBiomes(biomes);
+        return biomes.stream();
+    }
 
     private WoverEndBiomeSource(
             long seed,
@@ -174,7 +186,7 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
                     newSeed,
                     size <= 0 ? config.landBiomesSize : size,
                     picker
-            ));
+            ), newSeed);
         }
         this.mapLand = config.mapVersion.mapBuilder.create(
                 newSeed,
@@ -223,11 +235,7 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
             if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
                 LibWoverWorldGenerator.C.log.verbose("No Barrens Biomes found. Disabling by using land Biomes");
             endBarrensBiomePicker = endLandBiomePicker;
-            // Void biomes are selected independently from barrens. Keeping a populated void picker is required for
-            // Blueprint overlays such as Unusual End's warped reef, even when no barrens biome is registered.
-            if (endVoidBiomePicker.isEmpty()) {
-                endVoidBiomePicker = endLandBiomePicker;
-            }
+            endVoidBiomePicker = endLandBiomePicker;
         }
         if (endCenterBiomePicker.isEmpty()) {
             if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
@@ -329,6 +337,10 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
         return config;
     }
 
+    public WoverBiomePicker.PickableBiome landBiomeAt(int blockX, int blockZ) {
+        return mapLand == null ? null : mapLand.getBiome(blockX, 0, blockZ);
+    }
+
     @Override
     public void setBiomeSourceConfig(WoverEndConfig newConfig) {
         this.config = newConfig;
@@ -337,7 +349,6 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public BiomeSourceConfigPanel<WoverEndBiomeSource, WoverEndConfig> biomeSourceConfigPanel(@NotNull Screen parent) {
         return new EndConfigPage(config);
     }
