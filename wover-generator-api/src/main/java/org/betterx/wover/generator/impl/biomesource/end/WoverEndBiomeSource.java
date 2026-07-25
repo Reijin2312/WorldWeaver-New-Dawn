@@ -186,7 +186,7 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
                     newSeed,
                     size <= 0 ? config.landBiomesSize : size,
                     picker
-            ));
+            ), newSeed);
         }
         this.mapLand = config.mapVersion.mapBuilder.create(
                 newSeed,
@@ -335,6 +335,10 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
     @Override
     public WoverEndConfig getBiomeSourceConfig() {
         return config;
+    }
+
+    public WoverBiomePicker.PickableBiome landBiomeAt(int blockX, int blockZ) {
+        return mapLand == null ? null : mapLand.getBiome(blockX, 0, blockZ);
     }
 
     @Override
