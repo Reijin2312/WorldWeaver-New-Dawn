@@ -125,6 +125,14 @@ public abstract class BiomeDecider {
         this.map = mapBuilder.create(picker, -1);
     }
 
+    public void createMap(BiomeMapBuilderFunction mapBuilder, long seed) {
+        createMap(mapBuilder);
+    }
+
+    public TagKey<Biome> pickerTag() {
+        return null;
+    }
+
     /**
      * called whenever the BiomeSource needs to clear caches
      */
