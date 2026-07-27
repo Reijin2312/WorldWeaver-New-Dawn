@@ -3,6 +3,7 @@ package org.betterx.wover.surface.impl;
 import org.betterx.wover.common.surface.api.InjectableSurfaceRules;
 import org.betterx.wover.common.surface.api.SurfaceRuleProvider;
 import org.betterx.wover.common.generator.impl.compat.LithostitchedBiomeSourceCompat;
+import org.betterx.wover.common.generator.api.biomesource.OwnedBiomeSource;
 import org.betterx.wover.entrypoint.LibWoverSurface;
 import org.betterx.wover.state.api.WorldState;
 import org.betterx.wover.surface.api.AssignedSurfaceRule;
@@ -168,15 +169,9 @@ public class SurfaceRuleUtil {
     @SuppressWarnings("unchecked")
     private static Collection<Holder<Biome>> getBiomesWithWoverSurfaceRules(BiomeSource source) {
         final BiomeSource unwrappedSource = LithostitchedBiomeSourceCompat.unwrap(source);
-        Collection<Holder<Biome>> ownedBiomes = null;
-        try {
-            final var method = unwrappedSource.getClass().getMethod("ownedPossibleBiomes");
-            final Object result = method.invoke(unwrappedSource);
-            if (result instanceof Collection<?> collection) {
-                ownedBiomes = (Collection<Holder<Biome>>) collection;
-            }
-        } catch (ReflectiveOperationException ignored) {
-        }
+        Collection<Holder<Biome>> ownedBiomes = unwrappedSource instanceof OwnedBiomeSource ownedSource
+                ? ownedSource.ownedPossibleBiomes()
+                : null;
 
         if (ownedBiomes == null || ownedBiomes.isEmpty() || source == unwrappedSource) {
             return ownedBiomes == null ? source.possibleBiomes() : ownedBiomes;
