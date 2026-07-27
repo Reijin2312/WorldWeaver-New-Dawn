@@ -3,6 +3,7 @@ package org.betterx.wover.recipe.mixin;
 import org.betterx.wover.entrypoint.LibWoverRecipe;
 import org.betterx.wover.recipe.impl.RecipeRuntimeProviderImpl;
 
+import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -14,6 +15,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Multimap;
 import com.google.gson.JsonElement;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,6 +25,10 @@ import java.util.Map;
 
 @Mixin(RecipeManager.class)
 public class RecipeManagerMixin {
+    @Shadow
+    @Final
+    private HolderLookup.Provider registries;
+
     @Shadow
     private Multimap<RecipeType<?>, RecipeHolder<?>> byType;
 
@@ -38,7 +44,10 @@ public class RecipeManagerMixin {
     ) {
         Stopwatch stopwatch = Stopwatch.createStarted();
         final int count = this.byType.size();
-        RecipeRuntimeProviderImpl.LoadedRecipes loaded = RecipeRuntimeProviderImpl.loadedRecipes(new RecipeRuntimeProviderImpl.LoadedRecipes(this.byType, this.byName));
+        RecipeRuntimeProviderImpl.LoadedRecipes loaded = RecipeRuntimeProviderImpl.loadedRecipes(
+                new RecipeRuntimeProviderImpl.LoadedRecipes(this.byType, this.byName),
+                this.registries
+        );
         this.byType = loaded.byType();
         this.byName = loaded.byName();
 
