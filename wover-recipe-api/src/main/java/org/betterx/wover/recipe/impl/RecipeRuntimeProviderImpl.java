@@ -5,6 +5,7 @@ import org.betterx.wover.recipe.api.OnBootstrapRecipes;
 
 import net.minecraft.advancements.Advancement;
 import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
@@ -17,6 +18,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -30,12 +33,18 @@ public class RecipeRuntimeProviderImpl {
                                 Map<ResourceLocation, RecipeHolder<?>> byName) {
     }
 
+    private static volatile Contribution pendingAdvancements;
+
+    private record Contribution(HolderLookup.Provider registries, List<AdvancementHolder> advancements) {
+    }
 
     @ApiStatus.Internal
     public static LoadedRecipes loadedRecipes(
-            LoadedRecipes loaded
+            LoadedRecipes loaded,
+            HolderLookup.Provider registries
     ) {
         final boolean[] didInit = {false};
+        final List<AdvancementHolder> advancements = new ArrayList<>();
         final ImmutableMultimap.Builder<RecipeType<?>, RecipeHolder<?>> typeBuilder = ImmutableMultimap
                 .<RecipeType<?>, RecipeHolder<?>>builder();
 
@@ -57,6 +66,7 @@ public class RecipeRuntimeProviderImpl {
                 RecipeHolder<?> recipeHolder = new RecipeHolder<>(resourceLocation, recipe);
                 typeBuilder.put(recipe.getType(), recipeHolder);
                 nameBuilder.put(resourceLocation, recipeHolder);
+                if (advancementHolder != null) advancements.add(advancementHolder);
             }
 
             @Override
@@ -79,8 +89,17 @@ public class RecipeRuntimeProviderImpl {
         };
 
         BOOTSTRAP_RECIPES.emit(c -> c.bootstrap(context));
+        pendingAdvancements = new Contribution(registries, List.copyOf(advancements));
 
         if (!didInit[0]) return loaded;
         return new LoadedRecipes(typeBuilder.build(), nameBuilder.build());
+    }
+
+    @ApiStatus.Internal
+    public static List<AdvancementHolder> takeContributedAdvancements(HolderLookup.Provider registries) {
+        final Contribution contribution = pendingAdvancements;
+        pendingAdvancements = null;
+        if (contribution == null || contribution.registries() != registries) return List.of();
+        return contribution.advancements();
     }
 }
