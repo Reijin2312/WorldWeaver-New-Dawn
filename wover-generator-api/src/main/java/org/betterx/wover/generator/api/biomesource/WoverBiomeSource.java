@@ -4,6 +4,7 @@ import org.betterx.wover.biome.api.data.BiomeData;
 import org.betterx.wover.common.generator.api.biomesource.BiomeSourceWithNoiseRelatedSettings;
 import org.betterx.wover.common.generator.api.biomesource.BiomeSourceWithSeed;
 import org.betterx.wover.common.generator.api.biomesource.MergeableBiomeSource;
+import org.betterx.wover.common.generator.api.biomesource.OwnedBiomeSource;
 import org.betterx.wover.common.generator.api.biomesource.ReloadableBiomeSource;
 import org.betterx.wover.common.generator.impl.compat.LithostitchedBiomeSourceCompat;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
@@ -39,6 +40,7 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         ReloadableBiomeSource,
         BiomeSourceWithNoiseRelatedSettings,
         BiomeSourceWithSeed,
+        OwnedBiomeSource,
         MergeableBiomeSource<WoverBiomeSource> {
     private boolean didCreatePickers;
     private Set<Holder<Biome>> ownedPossibleBiomes;
@@ -159,6 +161,7 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         return true;
     }
 
+    @Override
     public Set<Holder<Biome>> ownedPossibleBiomes() {
         return ownedPossibleBiomes;
     }

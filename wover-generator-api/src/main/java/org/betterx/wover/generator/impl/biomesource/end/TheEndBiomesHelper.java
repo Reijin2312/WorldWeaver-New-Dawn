@@ -3,12 +3,14 @@ package org.betterx.wover.generator.impl.biomesource.end;
 import org.betterx.wover.tag.api.predefined.CommonBiomeTags;
 
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.Holder;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import org.jetbrains.annotations.ApiStatus;
@@ -97,5 +99,14 @@ public class TheEndBiomesHelper {
                 || canGenerateAsEndMidlands(biome)
                 || canGenerateAsSmallIslandsBiome(biome)
                 || canGenerateAsMainIslandBiome(biome);
+    }
+
+    /**
+     * Fabric's vanilla {@code TheEndBiomeSource} already exposes every possible biome through
+     * its inherited stream.  NeoForge needs an explicit registry walk, but Fabric has no
+     * equivalent staged-registry hook in this API version, so this is intentionally a no-op.
+     */
+    @ApiStatus.Internal
+    public static void addAllPossibleBiomes(Collection<Holder<Biome>> holders) {
     }
 }
