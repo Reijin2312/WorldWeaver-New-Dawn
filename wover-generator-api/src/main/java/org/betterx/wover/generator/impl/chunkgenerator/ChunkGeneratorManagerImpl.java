@@ -82,7 +82,7 @@ public class ChunkGeneratorManagerImpl {
             WorldDimensions dimensions,
             boolean recreated
     ) {
-        WorldGeneratorConfigImpl.createWorldConfig(currentPreset, dimensions);
+        WorldGeneratorConfigImpl.createWorldConfig(access, currentPreset, dimensions);
     }
 
     public static void onWorldReCreate(

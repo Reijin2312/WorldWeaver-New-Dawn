@@ -16,6 +16,7 @@ import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
 public class WoverEndConfig implements BiomeSourceConfig<WoverEndBiomeSource> {
+    public static final int DEFAULT_CAVE_BIOMES_TOP_Y = 64;
     public static final WoverEndConfig VANILLA = new WoverEndConfig(
             EndBiomeMapType.VANILLA,
             EndBiomeGeneratorType.VANILLA,
@@ -158,6 +159,7 @@ public class WoverEndConfig implements BiomeSourceConfig<WoverEndBiomeSource> {
         this.voidBiomesSize = Mth.clamp(voidBiomesSize, 1, 8192);
         this.centerBiomesSize = Mth.clamp(centerBiomesSize, 1, 8192);
         this.landBiomesSize = Mth.clamp(landBiomesSize, 1, 8192);
+        this.caveBiomesSize = this.landBiomesSize;
     }
 
     public enum EndBiomeMapType implements StringRepresentable {
@@ -217,6 +219,9 @@ public class WoverEndConfig implements BiomeSourceConfig<WoverEndBiomeSource> {
     public final int centerBiomesSize;
     public final int landBiomesSize;
     public final int barrensBiomesSize;
+    public final int caveBiomesSize;
+    public final int caveBiomesTopY = DEFAULT_CAVE_BIOMES_TOP_Y;
+    public final int caveBiomesTopJitter = 8;
 
     @Override
     public String toString() {

@@ -20,7 +20,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import com.google.common.collect.Maps;
@@ -234,18 +233,33 @@ public class WoverBlockModelGenerators {
                 .put(TextureSlot.TOP, TextureMapping.getBlockTexture(composterBlock, "_top"))
                 .put(TextureSlot.BOTTOM, TextureMapping.getBlockTexture(composterBlock, "_bottom"));
         var location = COMPOSTER_MODEL.create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var location1 = composterContents("1").create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var location2 = composterContents("2").create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var location3 = composterContents("3").create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var location4 = composterContents("4").create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var location5 = composterContents("5").create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var location6 = composterContents("6").create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var location7 = composterContents("7").create(composterBlock, mapping, vanillaGenerator.modelOutput());
+        var locationReady = composterContents("_ready").create(composterBlock, mapping, vanillaGenerator.modelOutput());
         acceptBlockState(MultiPartGenerator
                 .multiPart(composterBlock)
                 .with(BlockModelGenerators.plainVariant(location))
-                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 1), BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(Blocks.COMPOSTER, "_contents1")))
-                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 2), BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(Blocks.COMPOSTER, "_contents2")))
-                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 3), BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(Blocks.COMPOSTER, "_contents3")))
-                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 4), BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(Blocks.COMPOSTER, "_contents4")))
-                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 5), BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(Blocks.COMPOSTER, "_contents5")))
-                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 6), BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(Blocks.COMPOSTER, "_contents6")))
-                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 7), BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(Blocks.COMPOSTER, "_contents7")))
-                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 8), BlockModelGenerators.plainVariant(ModelLocationUtils.getModelLocation(Blocks.COMPOSTER, "_contents_ready"))));
+                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 1), BlockModelGenerators.plainVariant(location1))
+                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 2), BlockModelGenerators.plainVariant(location2))
+                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 3), BlockModelGenerators.plainVariant(location3))
+                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 4), BlockModelGenerators.plainVariant(location4))
+                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 5), BlockModelGenerators.plainVariant(location5))
+                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 6), BlockModelGenerators.plainVariant(location6))
+                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 7), BlockModelGenerators.plainVariant(location7))
+                .with(BlockModelGenerators.condition().term(BlockStateProperties.LEVEL_COMPOSTER, 8), BlockModelGenerators.plainVariant(locationReady)));
         delegateItemModel(composterBlock, location);
+    }
+
+    private ModelTemplate composterContents(String suffix) {
+        return new ModelTemplate(
+                Optional.of(Identifier.withDefaultNamespace("block/composter_contents" + suffix)),
+                Optional.of("_contents" + suffix)
+        );
     }
 
     public void createBlockTopSideBottom(Block bottomBlock, Block coverBlock, boolean withVariants) {
