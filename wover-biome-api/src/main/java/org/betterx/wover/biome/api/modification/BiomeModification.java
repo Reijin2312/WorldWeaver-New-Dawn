@@ -32,7 +32,7 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.structure.Structure;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -192,7 +192,7 @@ public interface BiomeModification {
         private BiomePredicate predicate;
         private final FeatureMap features;
         private final List<Weighted<MobSpawnSettings.SpawnerData>> spawns;
-        private final Set<TagKey<Biome>> tags = new HashSet<>();
+        private final Set<TagKey<Biome>> tags = new LinkedHashSet<>();
 
         private final ResourceKey<BiomeModification> key;
 

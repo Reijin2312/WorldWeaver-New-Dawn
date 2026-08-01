@@ -58,7 +58,7 @@ public class VersionChecker implements Runnable {
     }
 
     public static final int WAIT_FOR_DAYS = 5;
-    private static final String BASE_URL = "https://wunderreich.ambertation.de/api/v1/versions/";
+    private static final String BASE_URL = "https://architech-mc.com/api/v1/mods/versions/";
     private static Thread versionChecker;
 
     public static void startCheck(boolean isClient) {

@@ -24,9 +24,10 @@ import java.util.function.BiConsumer;
 import org.jetbrains.annotations.Nullable;
 
 public class WoverBiomePicker {
-    private final Map<BiomeData, PickableBiome> registeredBiomes = new HashMap<>();
+    private static final Comparator<BiomeData> BY_BIOME_ID = Comparator.comparing(data -> data.biomeKey.identifier().toString());
+    private final Map<BiomeData, PickableBiome> registeredBiomes = new LinkedHashMap<>();
     public final HolderGetter<Biome> biomeRegistry;
-    private final Set<PickableBiome> biomes = new HashSet<>();
+    private final Set<PickableBiome> biomes = new LinkedHashSet<>();
     public final PickableBiome fallbackBiome;
     private RandomizedWeightedList<PickableBiome>.SearchTree tree;
 
@@ -55,13 +56,10 @@ public class WoverBiomePicker {
         final Registry<BiomeData> reg = WoverBiomeData.tryGetDataRegistry("biome alternatives", sourceBiome.biomeKey);
         if (reg == null) return;
 
-        for (Map.Entry<ResourceKey<BiomeData>, BiomeData> entry : reg.entrySet()) {
-            if (entry.getValue() instanceof WoverBiomeData b
-                    && sourceBiome.isSame(b.parent)
-            ) {
-                consumeChild.accept(b, b.genChance);
-            }
-        }
+        reg.entrySet().stream().map(Map.Entry::getValue)
+           .filter(data -> data instanceof WoverBiomeData b && sourceBiome.isSame(b.parent))
+           .sorted(BY_BIOME_ID)
+           .forEach(data -> { final WoverBiomeData b = (WoverBiomeData) data; consumeChild.accept(b, b.genChance); });
     }
 
     private boolean isAllowed(BiomeData biomeData) {
@@ -104,10 +102,9 @@ public class WoverBiomePicker {
     public void rebuild() {
         final RandomizedWeightedList<PickableBiome> list = new RandomizedWeightedList<>();
 
-        biomes.forEach(biome -> {
-            if (biome.isValid)
-                list.add(biome, biome.biomeData.genChance());
-        });
+        biomes.stream().filter(biome -> biome.isValid)
+              .sorted(Comparator.comparing(biome -> biome.biomeData, BY_BIOME_ID))
+              .forEach(biome -> list.add(biome, biome.biomeData.genChance()));
 
         //no Biomes? Make sure we add at least one, otherwise bad things will happen
         if (list.isEmpty()) {
@@ -245,5 +242,4 @@ public class WoverBiomePicker {
         }
     }
 }
-
 

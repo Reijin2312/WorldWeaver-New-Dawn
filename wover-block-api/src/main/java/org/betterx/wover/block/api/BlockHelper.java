@@ -79,10 +79,21 @@ public class BlockHelper {
             int length,
             BlockPredicate surface
     ) {
+        return findOnSurroundingSurface(level, startPos, dir, length, length, surface);
+    }
+
+    public static boolean findOnSurroundingSurface(
+            WorldGenLevel level,
+            BlockPos.MutableBlockPos startPos,
+            Direction dir,
+            int length,
+            int oppositeLength,
+            BlockPredicate surface
+    ) {
         for (int len = 0; len < length; len++) {
             if (surface.test(level, startPos)) {
                 if (len == 0) { //we started inside of the surface
-                    for (int lenUp = 0; lenUp < length; lenUp++) {
+                    for (int lenUp = 0; lenUp < oppositeLength; lenUp++) {
                         startPos.move(dir, -1);
                         if (!surface.test(level, startPos)) {
                             return true;

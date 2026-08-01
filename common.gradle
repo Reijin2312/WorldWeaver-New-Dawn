@@ -212,6 +212,10 @@ allprojects { projIt ->
         it.options.release = 25
     }
 
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
     tasks.withType(AbstractArchiveTask).configureEach {
         preserveFileTimestamps = false
         reproducibleFileOrder = true
@@ -329,7 +333,6 @@ javadoc {
         encoding = "UTF-8"
         charSet = "UTF-8"
         memberLevel = JavadocMemberLevel.PROTECTED
-        links("https://docs.oracle.com/en/java/javase/17/docs/api/")
         // Disable the crazy super-strict doclint tool in Java 8
         addStringOption("Xdoclint:none", "-quiet")
         addStringOption("noqualifier", "net.minecraft.*:com.mojang.*:net.fabricmc.*")
@@ -394,7 +397,7 @@ artifacts {
     archives javadocJar
 }
 
-def modrinthModsDir = file(findProperty("modrinth_mods_dir") ?: "C:/Users/Roboute Guilliman/AppData/Roaming/ModrinthApp/profiles/26.1-fab/mods")
+def modrinthModsDir = file(findProperty("modrinth_mods_dir") ?: "C:/Users/Redmi/AppData/Roaming/ModrinthApp/profiles/Fabric 26.2/mods")
 def fabricRuntimeProjects = [project]
 if (local_wunderlib) fabricRuntimeProjects.add(project(":wunderlib"))
 

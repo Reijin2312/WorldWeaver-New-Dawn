@@ -22,6 +22,8 @@ import net.minecraft.world.level.dimension.LevelStem;
 
 import com.google.common.base.Stopwatch;
 
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 class BiomeRepairHelper {
@@ -120,7 +122,9 @@ class BiomeRepairHelper {
         int biomesAdded = 0;
 
         final BiomeTagModificationWorker biomeTagWorker = new BiomeTagModificationWorker();
-        for (Map.Entry<ResourceKey<Biome>, Biome> e : biomes.entrySet()) {
+        final List<Map.Entry<ResourceKey<Biome>, Biome>> sortedBiomes = biomes.entrySet().stream()
+                .sorted(Comparator.comparing(e -> e.getKey().identifier().toString())).toList();
+        for (Map.Entry<ResourceKey<Biome>, Biome> e : sortedBiomes) {
             TagKey<Biome> tag = null;
             if (NetherBiomesHelper.canGenerateInNether(e.getKey())) {
                 tag = BiomeTags.IS_NETHER;

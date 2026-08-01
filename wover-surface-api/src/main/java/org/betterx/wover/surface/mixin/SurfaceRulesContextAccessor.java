@@ -9,8 +9,7 @@ import net.minecraft.world.level.levelgen.NoiseChunk;
 import net.minecraft.world.level.levelgen.RandomState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
-
-import java.util.function.Supplier;
+import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(targets = "net.minecraft.world.level.levelgen.SurfaceRules$Context")
 public interface SurfaceRulesContextAccessor extends SurfaceRulesContext {
@@ -22,8 +21,8 @@ public interface SurfaceRulesContextAccessor extends SurfaceRulesContext {
     int getBlockZ();
     @Accessor("surfaceDepth")
     int getSurfaceDepth();
-    @Accessor("biome")
-    Supplier<Holder<Biome>> getBiome();
+    @Invoker("getBiome")
+    Holder<Biome> getBiomeHolder();
     @Accessor("chunk")
     ChunkAccess getChunk();
     @Accessor("noiseChunk")
