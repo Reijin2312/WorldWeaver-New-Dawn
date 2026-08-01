@@ -37,10 +37,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -150,7 +150,7 @@ public class BiomeSourceManagerImpl {
         return data instanceof WoverBiomeData woverData ? woverData.genChance : defaultChance;
     }
 
-    private static final Map<TagKey<Biome>, Set<Identifier>> EXCLUSIONS = new HashMap<>();
+    private static final Map<TagKey<Biome>, Set<Identifier>> EXCLUSIONS = new ConcurrentHashMap<>();
     private static final Set<Identifier> FABRIC_EXCLUDES = new ResourceLocationSet();
 
     public static void onResourcesLoaded(ResourceManager resourceManager) {
