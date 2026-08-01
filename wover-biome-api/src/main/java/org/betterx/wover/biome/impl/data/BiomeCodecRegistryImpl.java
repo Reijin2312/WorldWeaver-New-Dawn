@@ -36,7 +36,7 @@ public class BiomeCodecRegistryImpl {
             .byNameCodec()
             .dispatch(b -> b.networkCodec().codec(), Function.identity());
 
-    public static MapCodec<? extends BiomeData> register(
+    public static synchronized MapCodec<? extends BiomeData> register(
             Registry<MapCodec<? extends BiomeData>> registry,
             Identifier location,
             KeyDispatchDataCodec<? extends BiomeData> keyDispatchDataCodec
@@ -44,7 +44,7 @@ public class BiomeCodecRegistryImpl {
         return register(registry, location, keyDispatchDataCodec, null);
     }
 
-    public static MapCodec<? extends BiomeData> register(
+    public static synchronized MapCodec<? extends BiomeData> register(
             Registry<MapCodec<? extends BiomeData>> registry,
             Identifier location,
             KeyDispatchDataCodec<? extends BiomeData> keyDispatchDataCodec,
@@ -59,7 +59,7 @@ public class BiomeCodecRegistryImpl {
     }
 
     @ApiStatus.Internal
-    public static void initialize() {
+    public static synchronized void initialize() {
         onBootstrap(BIOME_CODECS);
     }
 
