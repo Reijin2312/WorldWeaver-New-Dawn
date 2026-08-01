@@ -35,6 +35,7 @@ public class Wover {
         tryInit("org.betterx.wover.entrypoint.LibWoverFeature", modEventBus);
         tryInit("org.betterx.wover.entrypoint.LibWoverBiome", modEventBus);
         tryInit("org.betterx.wover.entrypoint.LibWoverWorldGenerator", modEventBus);
+        tryInit("org.betterx.wover.entrypoint.LibWoverPottable", modEventBus);
     }
 
     private static void tryInit(String className, IEventBus modEventBus) {

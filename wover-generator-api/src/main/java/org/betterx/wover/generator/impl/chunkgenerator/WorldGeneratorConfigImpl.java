@@ -15,6 +15,7 @@ import org.betterx.wover.state.api.WorldState;
 
 import com.mojang.serialization.Dynamic;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.*;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class WorldGeneratorConfigImpl {
     private static final long MAX_GENERATOR_CONFIG_NBT_SIZE = 0x1000000L; // 16 MiB
@@ -84,14 +86,24 @@ public class WorldGeneratorConfigImpl {
     }
 
     public static void writeWorldPresetSettingsDirect(Map<ResourceKey<LevelStem>, ChunkGenerator> settings) {
-        DimensionsWrapper wrapper = new DimensionsWrapper(settings);
-        writeWorldPresetSettings(wrapper);
+        writeWorldPresetSettingsDirect(null, settings);
     }
 
-    private static void writeWorldPresetSettings(DimensionsWrapper wrapper) {
+    public static void writeWorldPresetSettingsDirect(
+            @Nullable HolderLookup.Provider access,
+            Map<ResourceKey<LevelStem>, ChunkGenerator> settings
+    ) {
+        DimensionsWrapper wrapper = new DimensionsWrapper(settings);
+        writeWorldPresetSettings(access, wrapper);
+    }
+
+    private static void writeWorldPresetSettings(
+            @Nullable HolderLookup.Provider access,
+            DimensionsWrapper wrapper
+    ) {
         final RegistryOps<Tag> registryOps = RegistryOps.create(
                 NbtOps.INSTANCE,
-                WorldState.allStageRegistryAccess()
+                access != null ? access : WorldState.allStageRegistryAccess()
         );
         final var encodeResult = DimensionsWrapper.CODEC.encodeStart(registryOps, wrapper);
 
@@ -99,7 +111,10 @@ public class WorldGeneratorConfigImpl {
             final CompoundTag settingsNbt = WorldConfig.getRootTag(LibWoverWorldGenerator.C);
             settingsNbt.put(TAG_PRESET, encodeResult.result().get());
         } else {
-            LibWoverWorldGenerator.C.log.error("Unable to encode world generator settings for level.dat.");
+            LibWoverWorldGenerator.C.log.error(
+                    "Unable to encode world generator settings for level.dat: "
+                            + encodeResult.error().map(e -> e.message()).orElse("unknown error")
+            );
         }
 
         WorldConfig.saveFile(LibWoverWorldGenerator.C);
@@ -186,14 +201,18 @@ public class WorldGeneratorConfigImpl {
                     : DimensionsWrapper.getDimensions(biomeSourceVersion);
             if (presetDimensions != null) {
                 LibWoverWorldGenerator.C.log.info("Set world to BiomeSource Version " + biomeSourceVersion);
-                writeWorldPresetSettings(new DimensionsWrapper(presetDimensions));
+                writeWorldPresetSettings(null, new DimensionsWrapper(presetDimensions));
             } else {
                 LibWoverWorldGenerator.C.log.error("Failed to set world to BiomeSource Version " + biomeSourceVersion);
             }
         }
     }
 
-    public static void createWorldConfig(Holder<WorldPreset> currentPreset, WorldDimensions dimensions) {
+    public static void createWorldConfig(
+            @Nullable HolderLookup.Provider access,
+            Holder<WorldPreset> currentPreset,
+            WorldDimensions dimensions
+    ) {
         //make sure we store the preset key in the all generators that currently do not have one
         if (currentPreset != null && currentPreset.unwrapKey().isPresent()) {
             final WorldPresetInfo info = WorldPresetInfoRegistry.getFor(currentPreset);
@@ -209,7 +228,7 @@ public class WorldGeneratorConfigImpl {
         }
 
         LibWoverWorldGenerator.C.log.verbose("Creating presets file for new world");
-        writeWorldPresetSettingsDirect(DimensionsWrapper.build(dimensions));
+        writeWorldPresetSettingsDirect(access, DimensionsWrapper.build(dimensions));
     }
 
     public static @NotNull Map<ResourceKey<LevelStem>, ChunkGenerator> loadWorldDimensions(

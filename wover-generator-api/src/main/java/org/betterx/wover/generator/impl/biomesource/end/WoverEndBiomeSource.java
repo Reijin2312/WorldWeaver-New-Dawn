@@ -33,7 +33,10 @@ import net.minecraft.world.level.levelgen.DensityFunction;
 
 
 import java.awt.*;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 
 public class WoverEndBiomeSource extends WoverBiomeSource implements
@@ -81,6 +84,17 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
     private List<BiomeDecider> deciders;
 
     private WoverEndConfig config;
+
+    @Override
+    protected @NotNull Stream<Holder<Biome>> collectPossibleBiomes() {
+        // The feature sorter only sees biomes returned here. Keep every registered End biome,
+        // especially the five vanilla biomes that provide spikes and gateways, even when biome
+        // tags have not been rebuilt yet during early world-preset loading.
+        final LinkedHashSet<Holder<Biome>> biomes = super.collectPossibleBiomes()
+                                                          .collect(Collectors.toCollection(LinkedHashSet::new));
+        TheEndBiomesHelper.addAllPossibleBiomes(biomes);
+        return biomes.stream();
+    }
 
     private WoverEndBiomeSource(
             long seed,
@@ -172,7 +186,7 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
                     newSeed,
                     size <= 0 ? config.landBiomesSize : size,
                     picker
-            ));
+            ), newSeed);
         }
         this.mapLand = config.mapVersion.mapBuilder.create(
                 newSeed,
@@ -321,6 +335,10 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
     @Override
     public WoverEndConfig getBiomeSourceConfig() {
         return config;
+    }
+
+    public WoverBiomePicker.PickableBiome landBiomeAt(int blockX, int blockZ) {
+        return mapLand == null ? null : mapLand.getBiome(blockX, 0, blockZ);
     }
 
     @Override

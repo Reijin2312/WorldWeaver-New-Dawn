@@ -123,8 +123,8 @@ public class FlatLevelPresetBootstrapContext {
             flatLevelGeneratorSettings.setAddLakes();
         }
 
-        for (int i = flatLayerInfos.length - 1; i >= 0; --i) {
-            flatLevelGeneratorSettings.getLayersInfo().add(flatLayerInfos[i]);
+        for (FlatLayerInfo flatLayerInfo : flatLayerInfos) {
+            flatLevelGeneratorSettings.getLayersInfo().add(flatLayerInfo);
         }
 
         return context.register(
