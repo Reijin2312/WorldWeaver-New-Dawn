@@ -64,7 +64,7 @@ public class WoverBiomeSourceImpl {
             }
         }
 
-        final Set<Holder<Biome>> allBiomes = new HashSet<>();
+        final Set<Holder<Biome>> allBiomes = new LinkedHashSet<>();
         final Set<ResourceKey<Biome>> addedBiomes = new HashSet<>();
         final Registry<Biome> biomes = access.lookupOrThrow(Registries.BIOME);
         final Registry<BiomeData> biomeData = access.lookup(BiomeDataRegistry.BIOME_DATA_REGISTRY).orElse(null);

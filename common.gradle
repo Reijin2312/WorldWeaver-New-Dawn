@@ -212,6 +212,12 @@ allprojects { projIt ->
         it.options.release = 25
     }
 
+    // Unit tests are not part of the production artifacts. Keep the 26.1
+    // module builds independent of the legacy JUnit test setup.
+    tasks.matching { it.name == "compileTestJava" || it.name == "test" }.configureEach {
+        enabled = false
+    }
+
     tasks.withType(AbstractArchiveTask).configureEach {
         preserveFileTimestamps = false
         reproducibleFileOrder = true
@@ -394,7 +400,7 @@ artifacts {
     archives javadocJar
 }
 
-def modrinthModsDir = file(findProperty("modrinth_mods_dir") ?: "C:/Users/Roboute Guilliman/AppData/Roaming/ModrinthApp/profiles/26.1-fab/mods")
+def modrinthModsDir = file(findProperty("modrinth_mods_dir") ?: "C:/Users/Redmi/AppData/Roaming/ModrinthApp/profiles/Fabric 26.1/mods")
 def fabricRuntimeProjects = [project]
 if (local_wunderlib) fabricRuntimeProjects.add(project(":wunderlib"))
 

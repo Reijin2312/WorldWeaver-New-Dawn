@@ -86,23 +86,8 @@ public class VolumeThresholdConditionImpl extends VolumeNoiseCondition implement
     }
 
     public double getValue(int xx, int yy, int zz) {
-        final double x = xx * scaleX;
-        final double y = yy * scaleY;
-        final double z = zz * scaleZ;
-
-        if (noiseContext.lastX == x
-                && noiseContext.lastY == y
-                && noiseContext.lastZ == z)
-            return noiseContext.lastValue + roughness.sample(noiseContext.random);
-
-        double value = noiseContext.noise.eval(x, y, z);
-
-        noiseContext.lastX = x;
-        noiseContext.lastZ = z;
-        noiseContext.lastY = y;
-        noiseContext.lastValue = value;
-
-        return value + roughness.sample(noiseContext.random);
+        return noiseContext.eval(xx * scaleX, yy * scaleY, zz * scaleZ)
+                + roughness.sample(noiseContext.randomAt(xx, yy, zz));
     }
 
     @Override
@@ -118,6 +103,7 @@ public class VolumeThresholdConditionImpl extends VolumeNoiseCondition implement
 
     public static class Context implements VolumeThresholdCondition.Context {
         public final OpenSimplexNoise noise;
+        @Deprecated(forRemoval = true)
         public final RandomSource random;
         public final long seed;
 
@@ -125,6 +111,7 @@ public class VolumeThresholdConditionImpl extends VolumeNoiseCondition implement
             return noise;
         }
 
+        @Deprecated(forRemoval = true)
         public RandomSource getRandom() {
             return random;
         }
@@ -133,15 +120,19 @@ public class VolumeThresholdConditionImpl extends VolumeNoiseCondition implement
             return seed;
         }
 
-        double lastX = Integer.MIN_VALUE;
-        double lastY = Integer.MIN_VALUE;
-        double lastZ = Integer.MIN_VALUE;
-        double lastValue = 0;
+        private final ThreadLocal<double[]> memo = ThreadLocal.withInitial(() -> new double[]{Double.NaN, Double.NaN, Double.NaN, 0});
 
         Context(long seed) {
             this.seed = seed;
             this.noise = new OpenSimplexNoise(seed);
             this.random = new ThreadSafeLegacyRandomSource(seed * 3 + 1);
+        }
+        double eval(double x, double y, double z) {
+            double[] last = memo.get();
+            if (last[0] == x && last[1] == y && last[2] == z) return last[3];
+            double value = noise.eval(x, y, z);
+            last[0] = x; last[1] = y; last[2] = z; last[3] = value;
+            return value;
         }
     }
 }

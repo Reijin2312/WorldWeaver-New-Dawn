@@ -1,6 +1,7 @@
 package org.betterx.wover.surface.impl.conditions;
 
 import org.betterx.wover.math.api.noise.OpenSimplexNoise;
+import org.betterx.wover.math.api.MathHelper;
 import org.betterx.wover.surface.api.conditions.SurfaceNoiseCondition;
 import org.betterx.wover.surface.api.conditions.SurfaceRulesContext;
 
@@ -13,7 +14,6 @@ import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.util.valueproviders.FloatProvider;
 import net.minecraft.util.valueproviders.FloatProviders;
 import net.minecraft.world.level.levelgen.SurfaceRules;
-import net.minecraft.world.level.levelgen.ThreadSafeLegacyRandomSource;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,16 +53,9 @@ public class ThresholdConditionImpl extends SurfaceNoiseCondition {
 
     @Override
     public boolean test(SurfaceRulesContext context) {
-        final double x = context.getBlockX() * scaleX;
-        final double z = context.getBlockZ() * scaleZ;
-        if (noiseContext.lastX == x && noiseContext.lastZ == z)
-            return noiseContext.lastValue + roughness.sample(noiseContext.random) > threshold;
-        double value = noiseContext.noise.eval(x, z);
-
-        noiseContext.lastX = x;
-        noiseContext.lastZ = z;
-        noiseContext.lastValue = value;
-        return value + roughness.sample(noiseContext.random) > threshold;
+        final int x = context.getBlockX(), z = context.getBlockZ();
+        return noiseContext.eval(x * scaleX, z * scaleZ)
+                + roughness.sample(noiseContext.randomAt(x, z)) > threshold;
     }
 
     @Override
@@ -72,17 +65,22 @@ public class ThresholdConditionImpl extends SurfaceNoiseCondition {
 
     static class Context {
         public final OpenSimplexNoise noise;
-        public final RandomSource random;
         public final long seed;
-
-        public double lastX = Integer.MIN_VALUE;
-        public double lastZ = Integer.MIN_VALUE;
-        public double lastValue = 0;
+        private final ThreadLocal<double[]> memo = ThreadLocal.withInitial(() -> new double[]{Double.NaN, Double.NaN, 0});
 
         Context(long seed) {
             this.seed = seed;
             this.noise = new OpenSimplexNoise(seed);
-            this.random = new ThreadSafeLegacyRandomSource(seed * 2);
+        }
+        double eval(double x, double z) {
+            double[] last = memo.get();
+            if (last[0] == x && last[1] == z) return last[2];
+            double value = noise.eval(x, z);
+            last[0] = x; last[1] = z; last[2] = value;
+            return value;
+        }
+        RandomSource randomAt(int x, int z) {
+            return RandomSource.create(MathHelper.getSeed(Long.hashCode(seed), x, 0, z));
         }
     }
 }

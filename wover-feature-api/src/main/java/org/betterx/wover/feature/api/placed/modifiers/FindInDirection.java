@@ -256,24 +256,15 @@ public class FindInDirection extends PlacementModifier {
             Stream.Builder<BlockPos> builder,
             Direction searchDirection
     ) {
-        int searchDist;
+        final int searchDist = Math.min(maxSearchDistance, roomInChunk(blockPos, searchDirection));
+        final int oppositeDist = Math.min(maxSearchDistance, roomInChunk(blockPos, searchDirection.getOpposite()));
         BlockPos.MutableBlockPos POS = blockPos.mutable();
-        if (searchDirection == Direction.EAST) { //+x
-            searchDist = Math.min(maxSearchDistance, 15 - SectionPos.sectionRelative(blockPos.getX()));
-        } else if (searchDirection == Direction.WEST) { //-x
-            searchDist = Math.min(maxSearchDistance, SectionPos.sectionRelative(blockPos.getX()));
-        } else if (searchDirection == Direction.SOUTH) { //+z
-            searchDist = Math.min(maxSearchDistance, 15 - SectionPos.sectionRelative(blockPos.getZ()));
-        } else if (searchDirection == Direction.NORTH) { //-z
-            searchDist = Math.min(maxSearchDistance, SectionPos.sectionRelative(blockPos.getZ()));
-        } else {
-            searchDist = maxSearchDistance;
-        }
         if (BlockHelper.findOnSurroundingSurface(
                 placementContext.getLevel(),
                 POS,
                 searchDirection,
                 searchDist,
+                oppositeDist,
                 surfacePredicate
         )) {
             if (offsetInDir != 0)
@@ -281,6 +272,16 @@ public class FindInDirection extends PlacementModifier {
             else
                 builder.add(POS);
         }
+    }
+
+    private static int roomInChunk(BlockPos blockPos, Direction dir) {
+        return switch (dir) {
+            case EAST -> 15 - SectionPos.sectionRelative(blockPos.getX());
+            case WEST -> SectionPos.sectionRelative(blockPos.getX());
+            case SOUTH -> 15 - SectionPos.sectionRelative(blockPos.getZ());
+            case NORTH -> SectionPos.sectionRelative(blockPos.getZ());
+            case UP, DOWN -> Integer.MAX_VALUE;
+        };
     }
 
     /**
