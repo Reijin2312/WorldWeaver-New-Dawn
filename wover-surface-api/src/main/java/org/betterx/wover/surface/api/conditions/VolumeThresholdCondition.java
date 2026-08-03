@@ -1,6 +1,7 @@
 package org.betterx.wover.surface.api.conditions;
 
 import org.betterx.wover.math.api.noise.OpenSimplexNoise;
+import org.betterx.wover.math.api.MathHelper;
 
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.FloatProvider;
@@ -30,7 +31,12 @@ public interface VolumeThresholdCondition extends NoiseCondition {
          *
          * @return the {@link RandomSource}
          */
+        @Deprecated(forRemoval = true)
         RandomSource getRandom();
+
+        default RandomSource randomAt(int x, int y, int z) {
+            return RandomSource.create(MathHelper.getSeed(Long.hashCode(getSeed()), x, y, z));
+        }
 
         /**
          * The seed used to create the noise function.

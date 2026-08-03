@@ -14,6 +14,7 @@ import org.betterx.wover.surface.api.AssignedSurfaceRule;
 import org.betterx.wover.surface.api.SurfaceRuleRegistry;
 import org.betterx.wover.tag.api.TagManager;
 import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
+import org.betterx.wover.state.api.WorldState;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
@@ -23,6 +24,7 @@ import net.minecraft.world.level.biome.Biome;
 
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import java.util.Objects;
 
 public class BiomeManagerImpl {
     public static final EventImpl<OnBootstrapRegistry<Biome>> BOOTSTRAP_BIOME_REGISTRY
@@ -92,7 +94,13 @@ public class BiomeManagerImpl {
 
     private static void onBootstrapTags(TagBootstrapContext<Biome> biomeTagBootstrapContext) {
         final BiomeBootstrapContextImpl context = initContext(null);
-        if (context == null) return;
+        if (context == null && WorldState.allStageRegistryAccess() == null) {
+            // Client-side pack validation (world list/safe-mode/delete) loads biome tag files without
+            // bootstrapping a world registry. There is no biome registry or BiomeBuilder state to update.
+            return;
+        }
+        Objects.requireNonNull(context,
+                "No biome bootstrap context while a world registry is active");
         context.prepareTags(biomeTagBootstrapContext);
     }
 

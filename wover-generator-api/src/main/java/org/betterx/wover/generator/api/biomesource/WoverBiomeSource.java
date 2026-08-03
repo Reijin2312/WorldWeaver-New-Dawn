@@ -35,7 +35,7 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         BiomeSourceWithNoiseRelatedSettings,
         BiomeSourceWithSeed,
         MergeableBiomeSource<WoverBiomeSource> {
-    private boolean didCreatePickers;
+    private volatile boolean didCreatePickers;
     Set<Holder<Biome>> dynamicPossibleBiomes;
     @Nullable
     private BiomeSource fallbackBiomeSource;
@@ -205,7 +205,7 @@ public abstract class WoverBiomeSource extends BiomeSource implements
     }
 
 
-    protected final void rebuildBiomes(boolean force) {
+    protected final synchronized void rebuildBiomes(boolean force) {
         if (!force && didCreatePickers) return;
 
         LibWoverWorldGenerator.C.log.verbose("Updating Pickers for " + this.toShortString());
@@ -225,7 +225,7 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         onFinishBiomeRebuild(pickers);
     }
 
-    protected void reloadBiomes(boolean force) {
+    protected synchronized void reloadBiomes(boolean force) {
         rebuildBiomes(force);
         this.initMap(currentSeed);
     }

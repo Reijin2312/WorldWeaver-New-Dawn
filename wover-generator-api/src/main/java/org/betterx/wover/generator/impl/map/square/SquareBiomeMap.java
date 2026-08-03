@@ -16,7 +16,7 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 
 public class SquareBiomeMap implements BiomeMap {
-    private final Map<ChunkPos, SquareBiomeChunk> maps = Maps.newHashMap();
+    private final Map<ChunkPos, SquareBiomeChunk> maps = Maps.newConcurrentMap();
     private final OpenSimplexNoise noiseX;
     private final OpenSimplexNoise noiseZ;
     private final WorldgenRandom random;
