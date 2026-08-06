@@ -15,8 +15,10 @@ import net.minecraft.client.data.models.model.TextureMapping;
 import net.minecraft.client.data.models.model.TextureSlot;
 import net.minecraft.client.data.models.model.TexturedModel;
 import net.minecraft.client.renderer.block.dispatch.Variant;
+import net.minecraft.client.renderer.block.dispatch.VariantMutator;
 import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Direction;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -37,6 +39,14 @@ public class WoverBlockModelGenerators {
     public static final Identifier COMPOSTER = LibWoverBlock.C.id("block/composter");
 
     public static final ModelTemplate COMPOSTER_MODEL = new ModelTemplate(Optional.of(COMPOSTER), Optional.empty(), TextureSlot.SIDE, TextureSlot.BOTTOM, TextureSlot.TOP);
+    private static final ModelTemplate[] HANGING_SIGN_MODELS = hangingSignModels("template_hanging_sign_rot_");
+    private static final ModelTemplate[] ATTACHED_HANGING_SIGN_MODELS = hangingSignModels("template_attached_hanging_sign_rot_");
+    private static final ModelTemplate WALL_HANGING_SIGN_MODEL = new ModelTemplate(
+            Optional.of(Identifier.withDefaultNamespace("block/template_wall_hanging_sign")),
+            Optional.empty(),
+            TextureSlot.ALL,
+            TextureSlot.PARTICLE
+    );
     public final WoverBlockModelGeneratorsAccess vanillaGenerator;
 
     public WoverBlockModelGenerators(
@@ -203,11 +213,85 @@ public class WoverBlockModelGenerators {
     }
 
     public void createHangingSign(Block baseBlock, Block hangingSignBlock, Block wallHangingSignBlock) {
-        Identifier Identifier = particleOnlyModel(baseBlock);
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(hangingSignBlock, Identifier));
-        acceptBlockState(WoverBlockModelGeneratorsAccess.createSimpleBlock(wallHangingSignBlock, Identifier));
+        final Identifier hangingSignTexture = ModelLocationUtils.getModelLocation(hangingSignBlock);
+        final TextureMapping textures = new TextureMapping()
+                .put(TextureSlot.ALL, new Material(hangingSignTexture))
+                .put(TextureSlot.PARTICLE, TextureMapping.getBlockTexture(baseBlock));
+        final Identifier baseModel = ModelLocationUtils.getModelLocation(hangingSignBlock);
+        final Identifier[] hangingModels = new Identifier[4];
+        final Identifier[] attachedModels = new Identifier[4];
+
+        for (int rotation = 0; rotation < 4; rotation++) {
+            hangingModels[rotation] = HANGING_SIGN_MODELS[rotation].create(
+                    baseModel.withSuffix("_rot_" + rotation),
+                    textures,
+                    vanillaGenerator.modelOutput()
+            );
+            attachedModels[rotation] = ATTACHED_HANGING_SIGN_MODELS[rotation].create(
+                    baseModel.withSuffix("_attached_rot_" + rotation),
+                    textures,
+                    vanillaGenerator.modelOutput()
+            );
+        }
+
+        final Object ceilingDispatch = DatagenModelDispatch.propertyDispatchInitial(
+                BlockStateProperties.ATTACHED,
+                BlockStateProperties.ROTATION_16
+        );
+        final Quadrant[] quadrants = {Quadrant.R0, Quadrant.R90, Quadrant.R180, Quadrant.R270};
+        for (int rotation = 0; rotation < 16; rotation++) {
+            final int modelRotation = rotation & 3;
+            final Quadrant yRotation = quadrants[rotation >> 2];
+            var hangingVariant = BlockModelGenerators.plainVariant(hangingModels[modelRotation]);
+            var attachedVariant = BlockModelGenerators.plainVariant(attachedModels[modelRotation]);
+            if (yRotation != Quadrant.R0) {
+                hangingVariant = hangingVariant.with(VariantMutator.Y_ROT.withValue(yRotation));
+                attachedVariant = attachedVariant.with(VariantMutator.Y_ROT.withValue(yRotation));
+            }
+            DatagenModelDispatch.propertyDispatchSelect(ceilingDispatch, false, rotation, hangingVariant);
+            DatagenModelDispatch.propertyDispatchSelect(ceilingDispatch, true, rotation, attachedVariant);
+        }
+        acceptBlockState(DatagenModelDispatch.dispatchWith(hangingSignBlock, ceilingDispatch));
+
+        final Identifier wallModel = WALL_HANGING_SIGN_MODEL.create(
+                ModelLocationUtils.getModelLocation(wallHangingSignBlock),
+                textures,
+                vanillaGenerator.modelOutput()
+        );
+        final Object wallDispatch = DatagenModelDispatch.propertyDispatchInitial(BlockStateProperties.HORIZONTAL_FACING);
+        DatagenModelDispatch.propertyDispatchSelect(wallDispatch, Direction.SOUTH, BlockModelGenerators.plainVariant(wallModel));
+        DatagenModelDispatch.propertyDispatchSelect(
+                wallDispatch,
+                Direction.WEST,
+                BlockModelGenerators.plainVariant(wallModel).with(VariantMutator.Y_ROT.withValue(Quadrant.R90))
+        );
+        DatagenModelDispatch.propertyDispatchSelect(
+                wallDispatch,
+                Direction.NORTH,
+                BlockModelGenerators.plainVariant(wallModel).with(VariantMutator.Y_ROT.withValue(Quadrant.R180))
+        );
+        DatagenModelDispatch.propertyDispatchSelect(
+                wallDispatch,
+                Direction.EAST,
+                BlockModelGenerators.plainVariant(wallModel).with(VariantMutator.Y_ROT.withValue(Quadrant.R270))
+        );
+        acceptBlockState(DatagenModelDispatch.dispatchWith(wallHangingSignBlock, wallDispatch));
+
         vanillaGenerator.createSimpleFlatItemModel(hangingSignBlock.asItem());
         vanillaGenerator.skipAutoItemBlock(wallHangingSignBlock);
+    }
+
+    private static ModelTemplate[] hangingSignModels(String prefix) {
+        final ModelTemplate[] models = new ModelTemplate[4];
+        for (int rotation = 0; rotation < models.length; rotation++) {
+            models[rotation] = new ModelTemplate(
+                    Optional.of(Identifier.withDefaultNamespace("block/" + prefix + rotation)),
+                    Optional.empty(),
+                    TextureSlot.ALL,
+                    TextureSlot.PARTICLE
+            );
+        }
+        return models;
     }
 
     public void createBarrel(Block barrelBlock) {

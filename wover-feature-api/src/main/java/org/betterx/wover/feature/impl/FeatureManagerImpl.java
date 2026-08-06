@@ -96,7 +96,7 @@ public class FeatureManagerImpl {
     );
 
     public static final RandomPatchFeature RANDOM_PATCH = register(
-            Identifier.withDefaultNamespace("random_patch"),
+            LibWoverFeature.C.id("random_patch"),
             new RandomPatchFeature(RandomPatchConfiguration.CODEC)
     );
 
