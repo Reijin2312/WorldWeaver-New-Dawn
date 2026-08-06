@@ -69,12 +69,8 @@ public final class LithostitchedBiomeSourceCompat {
             return false;
         }
 
-        try {
-            Set<Holder<Biome>> immutable = Set.copyOf(biomes);
-            ((BiomeSourceAccessor) source).wover_setPossibleBiomes((Supplier<Set<Holder<Biome>>>) () -> immutable);
-            return true;
-        } catch (RuntimeException ignored) {
-            return false;
-        }
+        Set<Holder<Biome>> immutable = Set.copyOf(biomes);
+        ((BiomeSourceAccessor) source).wover_setPossibleBiomes((Supplier<Set<Holder<Biome>>>) () -> immutable);
+        return true;
     }
 }

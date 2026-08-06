@@ -96,6 +96,11 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
         return biomes.stream();
     }
 
+    @Override
+    protected void addRequiredPossibleBiomes(java.util.Set<Holder<Biome>> biomes) {
+        TheEndBiomesHelper.addAllPossibleBiomes(biomes);
+    }
+
     private WoverEndBiomeSource(
             long seed,
             WoverEndConfig config

@@ -34,6 +34,7 @@ import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import com.google.common.base.Stopwatch;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -45,7 +46,7 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         BiomeSourceWithNoiseRelatedSettings,
         BiomeSourceWithSeed,
         MergeableBiomeSource<WoverBiomeSource> {
-    private boolean didCreatePickers;
+    private volatile boolean didCreatePickers;
     private Set<Holder<Biome>> ownedPossibleBiomes;
     private Set<Holder<Biome>> externalPossibleBiomes;
     Set<Holder<Biome>> dynamicPossibleBiomes;
@@ -258,14 +259,18 @@ public abstract class WoverBiomeSource extends BiomeSource implements
     }
 
     private void updateCombinedPossibleBiomes() {
-        if (externalPossibleBiomes.isEmpty()) {
-            this.dynamicPossibleBiomes = ownedPossibleBiomes;
-        } else {
-            HashSet<Holder<Biome>> combined = new HashSet<>(ownedPossibleBiomes);
-            combined.addAll(externalPossibleBiomes);
-            this.dynamicPossibleBiomes = Set.copyOf(combined);
-        }
+        LinkedHashSet<Holder<Biome>> combined = new LinkedHashSet<>(ownedPossibleBiomes);
+        addRequiredPossibleBiomes(combined);
+        combined.addAll(externalPossibleBiomes);
+        this.dynamicPossibleBiomes = Set.copyOf(combined);
         LithostitchedBiomeSourceCompat.replacePossibleBiomes(this, dynamicPossibleBiomes);
+    }
+
+    /**
+     * Adds biome holders which must remain declared even when they are not represented by a WoVer picker entry.
+     * ChunkGenerator uses this complete set to build feature ordering.
+     */
+    protected void addRequiredPossibleBiomes(Set<Holder<Biome>> biomes) {
     }
 
     private void refreshDisabledExternalBiomeKeys() {
@@ -319,7 +324,7 @@ public abstract class WoverBiomeSource extends BiomeSource implements
     }
 
 
-    protected final void rebuildBiomes(boolean force) {
+    protected final synchronized void rebuildBiomes(boolean force) {
         if (!force && didCreatePickers) return;
 
         LibWoverWorldGenerator.C.log.verbose("Updating Pickers for " + this.toShortString());
@@ -340,7 +345,7 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         onFinishBiomeRebuild(pickers);
     }
 
-    protected void reloadBiomes(boolean force) {
+    protected synchronized void reloadBiomes(boolean force) {
         rebuildBiomes(force);
         this.initMap(currentSeed);
     }

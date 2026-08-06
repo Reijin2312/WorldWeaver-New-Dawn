@@ -3,10 +3,12 @@ package org.betterx.wover.surface.impl.numeric;
 import org.betterx.wover.math.api.random.RandomHelper;
 import org.betterx.wover.surface.api.Conditions;
 import org.betterx.wover.surface.api.conditions.SurfaceRulesContext;
+import org.betterx.wover.surface.api.conditions.VolumeThresholdCondition;
 import org.betterx.wover.surface.api.noise.NumericProvider;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.util.RandomSource;
 
 public class NetherNoiseCondition implements NumericProvider {
     /**
@@ -35,20 +37,16 @@ public class NetherNoiseCondition implements NumericProvider {
         final int x = context.getBlockX();
         final int y = context.getBlockY();
         final int z = context.getBlockZ();
-        double value = Conditions.NETHER_VOLUME_NOISE.getNoiseContext().getNoise().eval(
-                x * Conditions.NETHER_VOLUME_NOISE.getScaleX(),
-                y * Conditions.NETHER_VOLUME_NOISE.getScaleY(),
-                z * Conditions.NETHER_VOLUME_NOISE.getScaleZ()
-        );
-
-        int offset = Conditions.NETHER_VOLUME_NOISE.getNoiseContext().getRandom().nextInt(20) == 0 ? 3 : 0;
+        final VolumeThresholdCondition noise = Conditions.NETHER_VOLUME_NOISE;
+        double value = noise.getNoiseContext().getNoise().eval(x * noise.getScaleX(), y * noise.getScaleY(), z * noise.getScaleZ());
+        final RandomSource random = noise.getNoiseContext().randomAt(x, y, z);
+        int offset = random.nextInt(20) == 0 ? 3 : 0;
 
 
-        float cmp = RandomHelper.inRange(Conditions.NETHER_VOLUME_NOISE.getNoiseContext().getRandom(), 0.4F, 0.5F);
+        float cmp = RandomHelper.inRange(random, 0.4F, 0.5F);
         if (value > cmp || value < -cmp) return 2 + offset;
 
-        if (value > Conditions.NETHER_VOLUME_NOISE.getRoughness()
-                                                  .sample(Conditions.NETHER_VOLUME_NOISE.getNoiseContext().getRandom()))
+        if (value > noise.getRoughness().sample(random))
             return 0 + offset;
 
         return 1 + offset;

@@ -18,6 +18,7 @@ import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.biome.Biome;
 
 import java.util.Map;
+import java.util.Comparator;
 import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -236,15 +237,12 @@ public class WoverBiomeData extends BiomeData {
         final Registry<BiomeData> reg = tryGetDataRegistry("edge parent", biomeKey);
         if (reg == null) return null;
 
-        for (Map.Entry<ResourceKey<BiomeData>, BiomeData> entry : reg.entrySet()) {
-            if (entry.getValue() instanceof WoverBiomeData b && this.isSame(b.edge)) {
-                edgeParent = Optional.of(b);
-                return b;
-            }
-        }
-
-        edgeParent = Optional.empty();
-        return null;
+        final WoverBiomeData found = reg.entrySet().stream().map(Map.Entry::getValue)
+                .filter(data -> data instanceof WoverBiomeData b && this.isSame(b.edge))
+                .map(data -> (WoverBiomeData) data)
+                .min(Comparator.comparing(b -> b.biomeKey.identifier().toString())).orElse(null);
+        edgeParent = Optional.ofNullable(found);
+        return found;
     }
 
     /**

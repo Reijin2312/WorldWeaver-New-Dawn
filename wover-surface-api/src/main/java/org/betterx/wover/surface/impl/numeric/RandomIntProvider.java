@@ -7,7 +7,6 @@ import org.betterx.wover.surface.api.noise.NumericProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 
 import java.util.Objects;
 
@@ -16,12 +15,12 @@ public final class RandomIntProvider implements NumericProvider {
             .INT.fieldOf("range")
                 .xmap(RandomIntProvider::new, obj -> obj.range);
     public final int range;
-    private final RandomSource random;
+    private final int seed;
 
 
     RandomIntProvider(int range) {
         this.range = range;
-        random = new XoroshiroRandomSource(MathHelper.getSeed(range));
+        seed = (int) MathHelper.getSeed(range);
     }
 
     public static RandomIntProvider max(int range) {
@@ -30,7 +29,7 @@ public final class RandomIntProvider implements NumericProvider {
 
     @Override
     public int getNumber(SurfaceRulesContext context) {
-        return random.nextInt(range);
+        return RandomSource.create(MathHelper.getSeed(seed, context.getBlockX(), context.getBlockY(), context.getBlockZ())).nextInt(range);
     }
 
     @Override

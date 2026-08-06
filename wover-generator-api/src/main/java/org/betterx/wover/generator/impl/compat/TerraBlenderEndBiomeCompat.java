@@ -11,7 +11,6 @@ import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.util.random.Weighted;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,12 +56,24 @@ public final class TerraBlenderEndBiomeCompat {
         if (!(value instanceof Iterable<?> entries)) return;
         List<BiomeEntry> importedEntries = new ArrayList<>();
         for (Object entry : entries) {
-            if (!(entry instanceof Weighted<?> wrapper)) continue;
-            Object data = wrapper.value();
-            if (!(data instanceof ResourceKey<?> key)) continue;
+            if (entry == null || !"terrablender.util.WeightedEntry$Wrapper".equals(entry.getClass().getName())) {
+                throw new IllegalStateException("Unexpected TerraBlender End biome entry: " + entry);
+            }
+
+            Object data = entry.getClass().getMethod("data").invoke(entry);
+            if (!(data instanceof ResourceKey<?> key)) {
+                throw new IllegalStateException("TerraBlender End biome entry has no biome key: " + entry);
+            }
+
+            Object weight = entry.getClass().getMethod("weight").invoke(entry);
+            Object weightValue = weight.getClass().getMethod("asInt").invoke(weight);
+            if (!(weightValue instanceof Integer integerWeight)) {
+                throw new IllegalStateException("TerraBlender End biome entry has no integer weight: " + entry);
+            }
+
             ResourceKey<Biome> biomeKey = (ResourceKey<Biome>) key;
             if (biomes.containsKey(biomeKey)) {
-                importedEntries.add(new BiomeEntry(biomeKey, weightOf(wrapper)));
+                importedEntries.add(new BiomeEntry(biomeKey, Math.max(1, integerWeight)));
             }
         }
         Map<String, Float> normalizationFactors = normalizationFactors(importedEntries);
@@ -86,11 +97,6 @@ public final class TerraBlenderEndBiomeCompat {
             factors.put(entry.getKey(), entry.getValue() > 0.0F ? biomeCounts.get(entry.getKey()) / entry.getValue() : 1.0F);
         }
         return factors;
-    }
-
-    private static float weightOf(Weighted<?> entry) {
-        int weight = entry.weight();
-        return weight > 0 ? weight : 1.0F;
     }
 
     private record BiomeEntry(ResourceKey<Biome> biome, float weight) {

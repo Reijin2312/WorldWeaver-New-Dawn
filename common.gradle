@@ -275,6 +275,10 @@ allprojects { projIt ->
         it.options.release = 25
     }
 
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
     tasks.withType(AbstractArchiveTask).configureEach {
         preserveFileTimestamps = false
         reproducibleFileOrder = true

@@ -6,8 +6,6 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.NoiseChunk;
 import net.minecraft.world.level.levelgen.RandomState;
 
-import java.util.function.Supplier;
-
 /**
  * This interface is used to provide access to the surface rule context.
  */
@@ -42,7 +40,7 @@ public interface SurfaceRulesContext {
      *
      * @return the biome
      */
-    Supplier<Holder<Biome>> getBiome();
+    Holder<Biome> getBiomeHolder();
     /**
      * Returns the chunk for the evaluated block
      *
