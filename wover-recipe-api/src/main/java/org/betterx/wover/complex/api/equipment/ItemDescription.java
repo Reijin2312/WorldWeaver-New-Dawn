@@ -39,6 +39,7 @@ abstract class ItemDescription<I extends Item> {
             case HOE_SLOT -> builder.shape("##", " I", " I");
             case SHOVEL_SLOT -> builder.shape("#", "I", "I");
             case SWORD_SLOT -> builder.shape("#", "#", "I");
+            case SPEAR_SLOT -> builder.shape("  #", " I ", "I  ");
             default -> {
                 return true;
             }
