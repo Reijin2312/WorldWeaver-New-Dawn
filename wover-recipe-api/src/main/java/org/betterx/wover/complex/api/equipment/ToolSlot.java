@@ -4,6 +4,7 @@ import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.world.item.Item;
 
 import static org.betterx.wover.complex.api.equipment.ToolTier.DIGGER_ITEM_PROPERTIES;
+import static org.betterx.wover.complex.api.equipment.ToolTier.SPEAR_ITEM_PROPERTIES;
 import static org.betterx.wover.complex.api.equipment.ToolTier.SWORD_ITEM_PROPERTIES;
 
 public enum ToolSlot {
@@ -13,7 +14,8 @@ public enum ToolSlot {
     SWORD_SLOT(3, "sword", RecipeCategory.COMBAT, SWORD_ITEM_PROPERTIES),
     HOE_SLOT(4, "hoe", RecipeCategory.TOOLS, DIGGER_ITEM_PROPERTIES),
     SHEARS_SLOT(5, "shears", RecipeCategory.TOOLS, DIGGER_ITEM_PROPERTIES),
-    HAMMER_SLOT(6, "hammer", RecipeCategory.COMBAT, DIGGER_ITEM_PROPERTIES);
+    HAMMER_SLOT(6, "hammer", RecipeCategory.COMBAT, DIGGER_ITEM_PROPERTIES),
+    SPEAR_SLOT(7, "spear", RecipeCategory.COMBAT, SPEAR_ITEM_PROPERTIES);
 
     public interface PropertiesBuilder {
         Item.Properties build(ToolSlot slot, ToolTier tier);
