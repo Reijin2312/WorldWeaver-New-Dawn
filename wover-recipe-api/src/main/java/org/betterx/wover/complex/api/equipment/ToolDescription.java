@@ -26,6 +26,7 @@ class ToolDescription<I extends Item> extends ItemDescription<I> {
             case SHOVEL_SLOT -> new TagKey[]{ItemTags.SHOVELS};
             case HOE_SLOT -> new TagKey[]{ItemTags.HOES};
             case SWORD_SLOT -> new TagKey[]{ItemTags.SWORDS};
+            case SPEAR_SLOT -> new TagKey[]{ItemTags.SPEARS};
             case SHEARS_SLOT -> new TagKey[]{CommonItemTags.SHEARS};
             case HAMMER_SLOT -> new TagKey[]{CommonItemTags.HAMMERS};
             default -> new TagKey[0];
@@ -65,7 +66,7 @@ class ToolDescription<I extends Item> extends ItemDescription<I> {
         } else {
             var builder = RecipeBuilder.crafting(location, item)
                                        .addMaterial('#', repairTag)
-                                       .category(RecipeCategory.TOOLS);
+                                       .category(slot.category);
 
             if (buildToolRecipe(slot, stick, builder)) return;
             builder.category(slot.category).group(location.getPath()).build(ctx);
