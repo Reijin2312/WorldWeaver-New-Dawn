@@ -10,6 +10,7 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterLists;
@@ -46,6 +47,58 @@ public final class NetherBiomesHelper {
         return List.copyOf(ADDITIONS);
     }
 
+    /**
+     * BetterNether places several zero-offset climate points close to the vanilla Warped Forest and
+     * Basalt Deltas points. In the vanilla multi-noise preset those two biomes have a positive offset,
+     * so the added points can otherwise make them unreachable. Zero-offset copies keep the vanilla
+     * biomes selectable in the default world preset. WoverNetherBiomeSource uses its own picker and
+     * does not use these protection points for BetterX biome placement.
+     */
+    public static boolean addBetterNetherVanillaProtectionPoints(
+            List<Pair<Climate.ParameterPoint, Holder<Biome>>> parameters
+    ) {
+        boolean hasBetterNether = getAdditions().stream()
+                                                       .anyMatch(entry -> "betternether".equals(
+                                                               entry.getSecond().location().getNamespace()
+                                                       ));
+        if (!hasBetterNether) return false;
+
+        boolean changed = addZeroOffsetCopy(parameters, Biomes.WARPED_FOREST);
+        changed |= addZeroOffsetCopy(parameters, Biomes.BASALT_DELTAS);
+        return changed;
+    }
+
+    private static boolean addZeroOffsetCopy(
+            List<Pair<Climate.ParameterPoint, Holder<Biome>>> parameters,
+            ResourceKey<Biome> biome
+    ) {
+        for (Pair<Climate.ParameterPoint, Holder<Biome>> entry : parameters) {
+            if (entry.getSecond().is(biome) && entry.getFirst().offset() == 0L) {
+                return false;
+            }
+        }
+
+        for (Pair<Climate.ParameterPoint, Holder<Biome>> entry : List.copyOf(parameters)) {
+            if (!entry.getSecond().is(biome)) continue;
+
+            Climate.ParameterPoint point = entry.getFirst();
+            parameters.add(Pair.of(
+                    new Climate.ParameterPoint(
+                            point.temperature(),
+                            point.humidity(),
+                            point.continentalness(),
+                            point.erosion(),
+                            point.depth(),
+                            point.weirdness(),
+                            0L
+                    ),
+                    entry.getSecond()
+            ));
+            return true;
+        }
+        return false;
+    }
+
     @ApiStatus.Internal
     public static void syncParameterList(RegistryAccess access) {
         if (access == null) return;
@@ -74,6 +127,8 @@ public final class NetherBiomesHelper {
                 }
             }
         }
+
+        changed |= addBetterNetherVanillaProtectionPoints(updated);
 
         if (changed) {
             accessor.wover_setParameters(new Climate.ParameterList<>(updated));

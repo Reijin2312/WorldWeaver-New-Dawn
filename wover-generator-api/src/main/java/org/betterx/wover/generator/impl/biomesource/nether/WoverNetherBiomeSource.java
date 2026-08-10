@@ -52,6 +52,7 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements
     public static final List<TagKey<Biome>> TAGS = List.of(BiomeTags.IS_NETHER);
     private BiomeMap biomeMap;
     private WoverBiomePicker biomePicker;
+    private volatile boolean hasEnabledModdedBiomes;
     private WoverNetherConfig config;
 
     public WoverNetherBiomeSource(
@@ -85,6 +86,14 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements
     protected List<TagToPicker> createFreshPickerMap() {
         this.biomePicker = new WoverBiomePicker(fallbackBiome());
         return List.of(new TagToPicker(BiomeTags.IS_NETHER, biomePicker));
+    }
+
+    @Override
+    protected void onFinishBiomeRebuild(List<TagToPicker> pickerMap) {
+        super.onFinishBiomeRebuild(pickerMap);
+        this.hasEnabledModdedBiomes = biomePicker.hasSelectableBiome(
+                biome -> !VanillaNetherBiomeCompat.isVanillaNetherBiome(biome)
+        );
     }
 
     @Override
@@ -166,8 +175,14 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements
         WoverBiomePicker.PickableBiome bb = biomeMap.getBiome(biomeX << 2, biomeY << 2, biomeZ << 2);
         // MosaicBiomeSource may offer an external biome at every position. Once the picker selected
         // a vanilla Nether biome, preserving it is required for a stable vanilla distribution and
-        // for /locate to agree with the biome actually generated at that position.
+        // for /locate to agree with the biome actually generated at that position. A climate-based
+        // fallback (TerraBlender/Biolith) is consulted for vanilla slots only when the active picker
+        // contains no enabled modded biome at all. This lets those integrations work without
+        // BetterNether while leaving BetterNether's existing distribution completely unchanged.
         if (VanillaNetherBiomeCompat.isVanillaNetherBiome(bb.biome)) {
+            if (!hasEnabledModdedBiomes && hasClimateFallbackBiomeSource()) {
+                return applyFallbackBiomeSource(bb.biome, biomeX, biomeY, biomeZ, var4);
+            }
             return bb.biome;
         }
         return applyFallbackBiomeSource(bb.biome, biomeX, biomeY, biomeZ, var4);

@@ -24,6 +24,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
+import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.dimension.LevelStem;
@@ -242,6 +243,10 @@ public abstract class WoverBiomeSource extends BiomeSource implements
         }
 
         return biome;
+    }
+
+    protected final boolean hasClimateFallbackBiomeSource() {
+        return fallbackBiomeSource instanceof MultiNoiseBiomeSource;
     }
 
     private void setFallbackBiomeSource(BiomeSource source) {

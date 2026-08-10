@@ -58,6 +58,8 @@ public class MultiNoiseBiomeSourceParameterListMixin {
             }
         }
 
+        NetherBiomesHelper.addBetterNetherVanillaProtectionPoints(updated);
+
         this.parameters = new Climate.ParameterList<>(updated);
     }
 }

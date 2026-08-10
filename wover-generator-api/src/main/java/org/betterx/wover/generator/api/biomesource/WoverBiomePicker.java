@@ -21,6 +21,7 @@ import net.minecraft.world.level.levelgen.WorldgenRandom;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 import org.jetbrains.annotations.Nullable;
 
 public class WoverBiomePicker {
@@ -99,6 +100,13 @@ public class WoverBiomePicker {
 
     public boolean isEmpty() {
         return biomes.isEmpty();
+    }
+
+    public boolean hasSelectableBiome(Predicate<Holder<Biome>> predicate) {
+        return biomes.stream()
+                     .filter(biome -> biome.isValid)
+                     .map(biome -> biome.biome)
+                     .anyMatch(predicate);
     }
 
     public void rebuild() {
