@@ -17,6 +17,7 @@ public class ToolTiers {
             .toolValues(ToolSlot.AXE_SLOT, new ToolValues(6, -3.2f))
             .toolValues(ToolSlot.HOE_SLOT, new ToolValues(0, -3.0f))
             .toolValues(ToolSlot.HAMMER_SLOT, new ToolValues(7, -3.0f))
+            .toolValues(ToolSlot.SPEAR_SLOT, new ToolValues(new ToolTier.SpearTuning(0.65f, 0.7f, 0.75f, 5.0f, 14.0f, 10.0f, 5.1f, 15.0f, 4.6f)))
             .build();
 
     public static ToolTier STONE_TOOL = ToolTier
@@ -30,6 +31,7 @@ public class ToolTiers {
             .toolValues(ToolSlot.HOE_SLOT, new ToolValues(-1, -2.0f))
             .toolValues(ToolSlot.SHEARS_SLOT, new ToolValues(-1, -2.5f))
             .toolValues(ToolSlot.HAMMER_SLOT, new ToolValues(9, -5.0f))
+            .toolValues(ToolSlot.SPEAR_SLOT, new ToolValues(new ToolTier.SpearTuning(0.75f, 0.82f, 0.7f, 4.5f, 13.0f, 9.0f, 5.1f, 13.75f, 4.6f)))
             .build();
 
     public static ToolTier GOLD_TOOL = ToolTier
@@ -43,6 +45,7 @@ public class ToolTiers {
             .toolValues(ToolSlot.HOE_SLOT, new ToolValues(0, -3.0f))
             .toolValues(ToolSlot.SHEARS_SLOT, new ToolValues(0, -3.5f)).
             toolValues(ToolSlot.HAMMER_SLOT, new ToolValues(8, -4.0f))
+            .toolValues(ToolSlot.SPEAR_SLOT, new ToolValues(new ToolTier.SpearTuning(0.95f, 0.7f, 0.7f, 3.5f, 13.0f, 8.5f, 5.1f, 13.75f, 4.6f)))
             .build();
 
     public static ToolTier IRON_TOOL = ToolTier
@@ -56,6 +59,7 @@ public class ToolTiers {
             .toolValues(ToolSlot.HOE_SLOT, new ToolValues(-2, -1.0f))
             .toolValues(ToolSlot.SHEARS_SLOT, new ToolValues(-2, -4.0f))
             .toolValues(ToolSlot.HAMMER_SLOT, new ToolValues(8, -4.3f))
+            .toolValues(ToolSlot.SPEAR_SLOT, new ToolValues(new ToolTier.SpearTuning(0.95f, 0.95f, 0.6f, 2.5f, 11.0f, 6.75f, 5.1f, 11.25f, 4.6f)))
             .build();
 
     public static ToolTier DIAMOND_TOOL = ToolTier
@@ -69,6 +73,7 @@ public class ToolTiers {
             .toolValues(ToolSlot.HOE_SLOT, new ToolValues(-3, 0.0f))
             .toolValues(ToolSlot.SHEARS_SLOT, new ToolValues(-3, -0.5f))
             .toolValues(ToolSlot.HAMMER_SLOT, new ToolValues(7, -4.0f))
+            .toolValues(ToolSlot.SPEAR_SLOT, new ToolValues(new ToolTier.SpearTuning(1.05f, 1.075f, 0.5f, 3.0f, 10.0f, 6.5f, 5.1f, 10.0f, 4.6f)))
             .build();
 
     public static ToolTier NETHERITE_TOOL = ToolTier
@@ -82,6 +87,7 @@ public class ToolTiers {
             .toolValues(ToolSlot.HOE_SLOT, new ToolValues(-4, 0.0f))
             .toolValues(ToolSlot.HOE_SLOT, new ToolValues(-4, -0.5f))
             .toolValues(ToolSlot.HAMMER_SLOT, new ToolValues(8, -3.2f))
+            .toolValues(ToolSlot.SPEAR_SLOT, new ToolValues(new ToolTier.SpearTuning(1.15f, 1.2f, 0.4f, 2.5f, 9.0f, 5.5f, 5.1f, 8.75f, 4.6f)))
             .build();
 
 

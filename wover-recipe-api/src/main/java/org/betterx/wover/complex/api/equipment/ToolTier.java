@@ -40,16 +40,64 @@ public class ToolTier {
         return new Item.Properties().sword(tier.toolTier, values.attackDamage, values.attackSpeed);
     };
 
-    public record ToolValues(float attackDamage, float attackSpeed, SmithingTemplateItem smithingTemplate) {
+    public static final ToolSlot.PropertiesBuilder SPEAR_ITEM_PROPERTIES = (slot, tier) -> {
+        var values = tier.getValues(slot);
+        if (values == null)
+            throw new IllegalArgumentException("No values for slot " + slot + " in tier " + tier);
+        var tuning = values.spearTuning;
+        if (tuning == null)
+            throw new IllegalArgumentException("No spear tuning for slot " + slot + " in tier " + tier);
+        return new Item.Properties().spear(
+                tier.toolTier,
+                tuning.attackDuration,
+                tuning.damageMultiplier,
+                tuning.delay,
+                tuning.dismountTime,
+                tuning.dismountThreshold,
+                tuning.knockbackTime,
+                tuning.knockbackThreshold,
+                tuning.damageTime,
+                tuning.damageThreshold
+        );
+    };
+
+    public record SpearTuning(
+            float attackDuration,
+            float damageMultiplier,
+            float delay,
+            float dismountTime,
+            float dismountThreshold,
+            float knockbackTime,
+            float knockbackThreshold,
+            float damageTime,
+            float damageThreshold
+    ) {
+    }
+
+    public record ToolValues(
+            float attackDamage,
+            float attackSpeed,
+            SmithingTemplateItem smithingTemplate,
+            SpearTuning spearTuning
+    ) {
         public ToolValues(float attackDamage, float attackSpeed) {
-            this(attackDamage, attackSpeed, null);
+            this(attackDamage, attackSpeed, null, null);
+        }
+
+        public ToolValues(float attackDamage, float attackSpeed, SmithingTemplateItem smithingTemplate) {
+            this(attackDamage, attackSpeed, smithingTemplate, null);
+        }
+
+        public ToolValues(SpearTuning spearTuning) {
+            this(0, 0, null, spearTuning);
         }
 
         ToolValues copyWithOffset(ToolValues offset) {
             return new ToolValues(
                     attackDamage + offset.attackDamage,
                     attackSpeed + offset.attackSpeed,
-                    offset.smithingTemplate
+                    offset.smithingTemplate != null ? offset.smithingTemplate : smithingTemplate,
+                    offset.spearTuning != null ? offset.spearTuning : spearTuning
             );
         }
     }
