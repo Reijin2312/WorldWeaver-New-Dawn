@@ -31,6 +31,3 @@ config="wover.recipe.mixins.common.json"
 
 [[mixins]]
 config="wover.recipe.mixins.client.json"
-
-[[mixins]]
-config="wover.potion.mixins.common.json"
