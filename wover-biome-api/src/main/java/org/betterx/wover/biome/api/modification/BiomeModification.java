@@ -1,638 +1,259 @@
 package org.betterx.wover.biome.api.modification;
 
-import de.ambertation.wunderlib.configs.AbstractConfig;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicate;
 import org.betterx.wover.biome.impl.modification.BiomeModificationImpl;
 import org.betterx.wover.biome.impl.modification.FeatureMap;
 import org.betterx.wover.biome.impl.modification.GenerationSettingsWorker;
 import org.betterx.wover.biome.impl.modification.MobSettingsWorker;
-import org.betterx.wover.config.api.Configs;
 import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.feature.api.placed.BasePlacedFeatureKey;
-import org.betterx.wover.feature.api.placed.PlacedFeatureKey;
 import org.betterx.wover.structure.api.StructureKey;
-
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.data.worldgen.BootstrapContext;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
-import net.minecraft.util.random.Weighted;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.MobSpawnSettings;
-import net.minecraft.world.level.dimension.LevelStem;
-import net.minecraft.world.level.levelgen.GenerationStep;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
-import net.minecraft.world.level.levelgen.placement.PlacedFeature;
-import net.minecraft.world.level.levelgen.structure.Structure;
-
+import de.ambertation.wunderlib.configs.AbstractConfig;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
-import org.jetbrains.annotations.ApiStatus;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.data.worldgen.BootstrapContext;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.random.WeightedList;
+import net.minecraft.util.valueproviders.ConstantInt;
+import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.UniformInt;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData;
+import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.levelgen.GenerationStep.Decoration;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
+import net.minecraft.world.level.levelgen.structure.Structure;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.ApiStatus.Internal;
 
-/**
- * Biome Modifications are used to modify some aspects of a Biome after a world was loaded.
- * <p>
- * The Modification API uses the {@link org.betterx.wover.events.api.WorldLifecycle#MINECRAFT_SERVER_READY}
- * event to inject the modifications into the world.
- * <p>
- * Modifications are currently injected by directly altering some constant fields in
- * {@link net.minecraft.world.level.biome.BiomeGenerationSettings} as well as the Tags stored
- * in the Biome registry
- */
 public interface BiomeModification {
-    /**
-     * The codec for a {@link BiomeModification}
-     */
-    Codec<BiomeModification> CODEC = RecordCodecBuilder.create(instance ->
-            instance.group(
-                    BiomePredicate.CODEC.fieldOf("predicate").forGetter(BiomeModification::predicate),
-                    FeatureMap.CODEC
-                            .optionalFieldOf("features", List.of())
-                            .forGetter(BiomeModification::features),
-                    TagKey.codec(Registries.BIOME)
-                          .listOf()
-                          .optionalFieldOf("biome_tags", List.of())
-                          .forGetter(BiomeModification::biomeTags),
-                    Weighted.codec(MobSpawnSettings.SpawnerData.CODEC).listOf()
-                         .optionalFieldOf("spawns", List.of())
-                         .forGetter(BiomeModification::spawns)
-            ).apply(instance, BiomeModificationImpl::new)
-    );
+   Codec<BiomeModification> CODEC = RecordCodecBuilder.create(
+      instance -> instance.group(
+            BiomePredicate.CODEC.fieldOf("predicate").forGetter(BiomeModification::predicate),
+            FeatureMap.CODEC.optionalFieldOf("features", List.of()).forGetter(BiomeModification::features),
+            TagKey.codec(Registries.BIOME).listOf().optionalFieldOf("biome_tags", List.of()).forGetter(BiomeModification::biomeTags),
+            WeightedList.codec(SpawnerData.CODEC)
+               .optionalFieldOf("spawns", WeightedList.<SpawnerData>builder().build())
+               .forGetter(BiomeModification::spawns)
+         )
+         .apply(instance, BiomeModificationImpl::new)
+   );
 
-    /**
-     * A network-safe codec that avoids resolving PlacedFeatures during sync.
-     */
-    Codec<BiomeModification> NETWORK_CODEC = RecordCodecBuilder.create(instance ->
-            instance.group(
-                    BiomePredicate.CODEC.fieldOf("predicate").forGetter(BiomeModification::predicate),
-                    FeatureMap.NETWORK_CODEC
-                            .optionalFieldOf("features", List.of())
-                            .forGetter(BiomeModification::featureKeys),
-                    TagKey.codec(Registries.BIOME)
-                          .listOf()
-                          .optionalFieldOf("biome_tags", List.of())
-                          .forGetter(BiomeModification::biomeTags),
-                    Weighted.codec(MobSpawnSettings.SpawnerData.CODEC).listOf()
-                         .optionalFieldOf("spawns", List.of())
-                         .forGetter(BiomeModification::spawns)
-            ).apply(instance, (predicate, features, tags, spawns) -> new BiomeModificationImpl(
-                    predicate,
-                    FeatureMap.ofKeys(features),
-                    tags,
-                    spawns
-            ))
-    );
+   BiomePredicate predicate();
 
-    /**
-     * A predicate that determines if this modification should be applied to a biome.
-     * If not set, the modification will be applied to <b>ALL</b> biomes! That is probably
-     * never what you want.
-     *
-     * @return The predicate.
-     */
-    BiomePredicate predicate();
+   List<List<Holder<PlacedFeature>>> features();
 
-    /**
-     * The features that should be added to the biome.
-     * The index represents a {@link GenerationStep.Decoration}.
-     *
-     * @return The features.
-     */
-    List<List<Holder<PlacedFeature>>> features();
+   WeightedList<SpawnerData> spawns();
 
-    /**
-     * Internal feature-key view used for network sync.
-     *
-     * @return feature keys grouped by generation step.
-     */
-    @ApiStatus.Internal
-    default List<List<ResourceKey<PlacedFeature>>> featureKeys() {
-        List<List<ResourceKey<PlacedFeature>>> keyLists = new ArrayList<>(features().size());
-        for (List<Holder<PlacedFeature>> list : features()) {
-            List<ResourceKey<PlacedFeature>> keys = new ArrayList<>(list.size());
-            for (Holder<PlacedFeature> holder : list) {
-                holder.unwrapKey().ifPresent(keys::add);
-            }
-            keyLists.add(keys);
-        }
-        return keyLists;
-    }
+   List<TagKey<Biome>> biomeTags();
 
-    /**
-     * The spawns that should be added to the biome.
-     *
-     * @return all spawns
-     */
-    List<Weighted<MobSpawnSettings.SpawnerData>> spawns();
+   @Internal
+   void apply(GenerationSettingsWorker var1, MobSettingsWorker var2);
 
-    /**
-     * The biome tags the biome should be added to
-     *
-     * @return The biome tags
-     */
-    List<TagKey<Biome>> biomeTags();
+   static BiomeModification.Builder build(@NotNull BootstrapContext<BiomeModification> context, @NotNull Identifier location) {
+      return new BiomeModification.Builder(context, ResourceKey.create(BiomeModificationRegistry.BIOME_MODIFICATION_REGISTRY, location));
+   }
 
-    /**
-     * For <b>internal</b> use only! Called when the modification should be applied to a biome.
-     *
-     * @param worker    The worker that can be used to apply the modification to the biome
-     * @param mobWorker The worker that can be used to apply the modification to the mob spawns
-     */
-    @ApiStatus.Internal
-    void apply(GenerationSettingsWorker worker, MobSettingsWorker mobWorker);
+   static BiomeModification.Builder build(@NotNull BootstrapContext<BiomeModification> context, @NotNull ResourceKey<BiomeModification> key) {
+      return new BiomeModification.Builder(context, key);
+   }
 
-    /**
-     * Creates a new {@link Builder} for a {@link BiomeModification}.
-     *
-     * @param context  The bootstrap context of the registry
-     * @param location The location of the modification.
-     * @return The builder.
-     */
-    static Builder build(@NotNull BootstrapContext<BiomeModification> context, @NotNull Identifier location) {
-        return new Builder(
-                context,
-                ResourceKey.create(BiomeModificationRegistry.BIOME_MODIFICATION_REGISTRY, location)
-        );
-    }
+   public static final class Builder {
+      @Nullable
+      private final BootstrapContext<BiomeModification> bootstrapContext;
+      private BiomePredicate predicate;
+      private final FeatureMap features;
+      private final net.minecraft.util.random.WeightedList.Builder<SpawnerData> spawns;
+      private final Set<TagKey<Biome>> tags = new LinkedHashSet<>();
+      private final ResourceKey<BiomeModification> key;
 
-    /**
-     * Creates a new {@link Builder} for a {@link BiomeModification}.
-     *
-     * @param context The bootstrap context of the registry
-     * @param key     The key of the modification.
-     * @return The builder.
-     */
-    static Builder build(
-            @NotNull BootstrapContext<BiomeModification> context,
-            @NotNull ResourceKey<BiomeModification> key
-    ) {
-        return new Builder(context, key);
-    }
+      private Builder(@Nullable BootstrapContext<BiomeModification> bootstrapContext, ResourceKey<BiomeModification> key) {
+         this.bootstrapContext = bootstrapContext;
+         this.key = key;
+         this.predicate = BiomePredicate.always();
+         this.features = FeatureMap.of(new ArrayList<>(Decoration.values().length));
+         this.spawns = WeightedList.builder();
+      }
 
-    /**
-     * A builder for {@link BiomeModification}s.
-     * <p>
-     * When the modification is finished, it can be registered using {@link #register()}.
-     * You can also build a {@link Holder.Direct} using {@link #directHolder()}.
-     */
-    final class Builder {
-        @Nullable
-        private final BootstrapContext<BiomeModification> bootstrapContext;
-        private BiomePredicate predicate;
-        private final FeatureMap features;
-        private final List<Weighted<MobSpawnSettings.SpawnerData>> spawns;
-        private final Set<TagKey<Biome>> tags = new LinkedHashSet<>();
+      public BiomeModification.Builder predicate(BiomePredicate p) {
+         this.predicate = p;
+         return this;
+      }
 
-        private final ResourceKey<BiomeModification> key;
+      public BiomeModification.Builder isBiome(ResourceKey<Biome> key) {
+         this.predicate(BiomePredicate.isBiome(key));
+         return this;
+      }
 
-        private Builder(
-                @Nullable BootstrapContext<BiomeModification> bootstrapContext,
-                ResourceKey<BiomeModification> key
-        ) {
-            this.bootstrapContext = bootstrapContext;
-            this.key = key;
-            this.predicate = BiomePredicate.always();
-            this.features = FeatureMap.of(new ArrayList<>(GenerationStep.Decoration.values().length));
-            this.spawns = new ArrayList<>(2);
-        }
+      @SafeVarargs
+      public final BiomeModification.Builder inBiomes(ResourceKey<Biome>... keys) {
+         return this.predicate(BiomePredicate.inBiomes(keys));
+      }
 
-        /**
-         * Sets the predicate for this modification.
-         *
-         * @param p The predicate.
-         * @return This builder.
-         */
-        public Builder predicate(BiomePredicate p) {
-            this.predicate = p;
-            return this;
-        }
+      @SafeVarargs
+      public final BiomeModification.Builder notInBiomes(ResourceKey<Biome>... keys) {
+         return this.predicate(BiomePredicate.notInBiomes(keys));
+      }
 
-        /**
-         * Sets a predicate that tests if a biome matches the passed key.
-         *
-         * @param key The key of the biome.
-         * @return This builder.
-         * @see BiomePredicate#isBiome(ResourceKey)
-         */
-        public Builder isBiome(ResourceKey<Biome> key) {
-            predicate(BiomePredicate.isBiome(key));
-            return this;
-        }
+      public BiomeModification.Builder inDimension(ResourceKey<LevelStem> key) {
+         return this.predicate(BiomePredicate.inDimension(key));
+      }
 
-        /**
-         * Sets a predicate that tests if a biome matches any of the passed keys.
-         *
-         * @param keys The keys of the biomes.
-         * @return This builder.
-         * @see BiomePredicate#inBiomes(ResourceKey[])
-         */
-        @SafeVarargs
-        public final Builder inBiomes(ResourceKey<Biome>... keys) {
-            return predicate(BiomePredicate.inBiomes(keys));
-        }
+      public BiomeModification.Builder inOverworld() {
+         return this.predicate(BiomePredicate.inOverworld());
+      }
 
+      public BiomeModification.Builder inEnd() {
+         return this.predicate(BiomePredicate.inEnd());
+      }
 
-        /**
-         * Sets a predicate that will return {@code true} when the biome does not match any of the passed keys.
-         *
-         * @param keys The keys of the biomes.
-         * @return This builder.
-         * @see BiomePredicate#notInBiomes(ResourceKey[])
-         */
-        @SafeVarargs
-        public final Builder notInBiomes(ResourceKey<Biome>... keys) {
-            return predicate(BiomePredicate.notInBiomes(keys));
-        }
+      public BiomeModification.Builder inNether() {
+         return this.predicate(BiomePredicate.inNether());
+      }
 
-        /**
-         * Sets a predicate that tests if a biome is in the passed dimension.
-         *
-         * @param key The key of the dimension.
-         * @return This builder.
-         * @see BiomePredicate#inDimension(ResourceKey)
-         */
-        public Builder inDimension(ResourceKey<LevelStem> key) {
-            return predicate(BiomePredicate.inDimension(key));
-        }
+      public BiomeModification.Builder hasTag(TagKey<Biome> tag) {
+         return this.predicate(BiomePredicate.hasTag(tag));
+      }
 
-        /**
-         * Sets a predicate that tests if a biome is in the overworld.
-         *
-         * @return This builder.
-         * @see BiomePredicate#inOverworld()
-         */
-        public Builder inOverworld() {
-            return predicate(BiomePredicate.inOverworld());
-        }
+      public BiomeModification.Builder spawns(EntityType<?> type) {
+         return this.predicate(BiomePredicate.spawns(type));
+      }
 
-        /**
-         * Sets a predicate that tests if a biome is in the end.
-         *
-         * @return This builder.
-         * @see BiomePredicate#inEnd()
-         */
-        public Builder inEnd() {
-            return predicate(BiomePredicate.inEnd());
-        }
+      public BiomeModification.Builder hasStructure(ResourceKey<Structure> key) {
+         return this.predicate(BiomePredicate.hasStructure(key));
+      }
 
-        /**
-         * Sets a predicate that tests if a biome is in the nether.
-         *
-         * @return This builder.
-         * @see BiomePredicate#inNether()
-         */
-        public Builder inNether() {
-            return predicate(BiomePredicate.inNether());
-        }
+      public BiomeModification.Builder hasPlacedFeature(ResourceKey<PlacedFeature> key) {
+         return this.predicate(BiomePredicate.hasPlacedFeature(key));
+      }
 
-        /**
-         * Sets a predicate that tests if a biome is in the specified namespace.
-         *
-         * @param tag The tag.
-         * @return This builder.
-         * @see BiomePredicate#hasTag(TagKey)
-         **/
-        public Builder hasTag(TagKey<Biome> tag) {
-            return predicate(BiomePredicate.hasTag(tag));
-        }
+      public BiomeModification.Builder hasFeature(ResourceKey<Feature> key) {
+         return this.predicate(BiomePredicate.hasFeature(key));
+      }
 
+      public BiomeModification.Builder anyOf(BiomePredicate... predicates) {
+         return this.predicate(BiomePredicate.or(predicates));
+      }
 
-        /**
-         * Sets a predicate that tests if an entity can spawn in the biome
-         *
-         * @param type The entity type
-         * @return This builder.
-         * @see BiomePredicate#spawns(EntityType)
-         */
-        public Builder spawns(EntityType<?> type) {
-            return predicate(BiomePredicate.spawns(type));
-        }
+      public BiomeModification.Builder allOf(BiomePredicate... predicates) {
+         return this.predicate(BiomePredicate.and(predicates));
+      }
 
-        /**
-         * Sets a predicate that tests if the passed structure can generate in the biome.
-         *
-         * @param key The key of the structure.
-         * @return This builder.
-         * @see BiomePredicate#hasStructure(ResourceKey)
-         */
-        public Builder hasStructure(ResourceKey<Structure> key) {
-            return predicate(BiomePredicate.hasStructure(key));
-        }
+      public BiomeModification.Builder not(BiomePredicate predicate) {
+         return this.predicate(BiomePredicate.not(predicate));
+      }
 
-        /**
-         * Sets a predicate that tests if the passed placed feature can generate in the biome.
-         *
-         * @param key The key of the feature.
-         * @return This builder.
-         * @see BiomePredicate#hasPlacedFeature(ResourceKey)
-         */
-        public Builder hasPlacedFeature(ResourceKey<PlacedFeature> key) {
-            return predicate(BiomePredicate.hasPlacedFeature(key));
-        }
+      public BiomeModification.Builder isVanilla() {
+         return this.predicate(BiomePredicate.isVanilla());
+      }
 
-        /**
-         * Sets a predicate that tests if the passed configured feature can generate in the biome.
-         *
-         * @param key The key of the feature.
-         * @return This builder.
-         * @see BiomePredicate#hasConfiguredFeature(ResourceKey)
-         */
-        public Builder hasConfiguredFeature(ResourceKey<ConfiguredFeature<?, ?>> key) {
-            return predicate(BiomePredicate.hasConfiguredFeature(key));
-        }
+      public BiomeModification.Builder inNamespace(String namespace) {
+         return this.predicate(BiomePredicate.inNamespace(namespace));
+      }
 
-        /**
-         * Sets a predicate that is {@code true} when any one of the passed predicates is {@code true}.
-         * <p>
-         * This predicate is lazy, meaning that it will stop testing predicates once one of them returns
-         * {@code true}.
-         *
-         * @param predicates The predicates.
-         * @return This builder.
-         * @see BiomePredicate#or(BiomePredicate...)
-         */
-        public Builder anyOf(BiomePredicate... predicates) {
-            return predicate(BiomePredicate.or(predicates));
-        }
+      public BiomeModification.Builder inNamespace(ModCore core) {
+         return this.predicate(BiomePredicate.inNamespace(core));
+      }
 
-        /**
-         * Sets a predicate that is {@code true} when all of the passed predicates are {@code true}.
-         * <p>
-         * This predicate is lazy, meaning that it will stop testing predicates once one of them returns
-         * {@code false}.
-         *
-         * @param predicates The predicates.
-         * @return This builder.
-         * @see BiomePredicate#and(BiomePredicate...)
-         */
-        public Builder allOf(BiomePredicate... predicates) {
-            return predicate(BiomePredicate.and(predicates));
-        }
+      public BiomeModification.Builder notInNamespace(String namespace) {
+         return this.predicate(BiomePredicate.notInNamespace(namespace));
+      }
 
-        /**
-         * Sets  a predicate that negates the pass predicate.
-         *
-         * @param predicate The predicate to negate
-         * @return This builder.
-         * @see BiomePredicate#not(BiomePredicate)
-         */
-        public Builder not(BiomePredicate predicate) {
-            return predicate(BiomePredicate.not(predicate));
-        }
+      public BiomeModification.Builder notInNamespace(ModCore core) {
+         return this.predicate(BiomePredicate.notInNamespace(core));
+      }
 
-        /**
-         * Sets a predicate that tests if the biome is in the vanilla (<i>minecraft</i>) namespace.
-         *
-         * @return This builder.
-         * @see BiomePredicate#isVanilla()
-         */
-        public Builder isVanilla() {
-            return predicate(BiomePredicate.isVanilla());
-        }
+      public <T, R extends AbstractConfig<?>.Value<T, R>> BiomeModification.Builder hasConfig(AbstractConfig<?>.Value<T, R> value, T targetValue) {
+         return this.predicate(BiomePredicate.hasConfig(value, targetValue));
+      }
 
-        /**
-         * Sets a predicate that tests if a biome is in the specified namespace.
-         *
-         * @param namespace The namespace.
-         * @return This builder.
-         * @see BiomePredicate#inNamespace(String)
-         */
-        public Builder inNamespace(String namespace) {
-            return predicate(BiomePredicate.inNamespace(namespace));
-        }
-
-
-        /**
-         * Sets a predicate that tests if a biome is in the specified namespace.
-         *
-         * @param core The namespace.
-         * @return This builder.
-         * @see BiomePredicate#inNamespace(ModCore)
-         */
-        public Builder inNamespace(ModCore core) {
-            return predicate(BiomePredicate.inNamespace(core));
-        }
-
-        /**
-         * Sets a predicate that tests if a biome is not in the specified namespace.
-         *
-         * @param namespace The namespace.
-         * @return This builder.
-         * @see BiomePredicate#notInNamespace(String)
-         */
-        public Builder notInNamespace(String namespace) {
-            return predicate(BiomePredicate.notInNamespace(namespace));
-        }
-
-        /**
-         * Sets a predicate that tests if a biome is not in the specified namespace.
-         *
-         * @param core The namespace.
-         * @return This builder.
-         * @see BiomePredicate#notInNamespace(ModCore)
-         */
-        public Builder notInNamespace(ModCore core) {
-            return predicate(BiomePredicate.inNamespace(core));
-        }
-
-        /**
-         * Creates a predicate that tests if the given value from a config file matches the targetValue.
-         * <p>
-         * The {@link AbstractConfig} that provides the value has to be registered using
-         * {@link org.betterx.wover.config.api.Configs#register(Supplier)} or
-         * {@link org.betterx.wover.config.api.Configs#register(ModCore, String, Configs.ConfigSupplier)}.
-         * Otherwise it will not be found.
-         *
-         * @param value       the value from a config file
-         * @param targetValue the target value to compare against
-         * @return This builder.
-         * @see BiomePredicate#hasConfig(AbstractConfig.Value, Object)
-         */
-        public <T, R extends AbstractConfig<?>.Value<T, R>> Builder hasConfig(
-                AbstractConfig<?>.Value<T, R> value,
-                T targetValue
-        ) {
-            return predicate(BiomePredicate.hasConfig(value, targetValue));
-        }
-
-        /**
-         * Adds a feature to the modification. This feature will be added to the {@link GenerationStep.Decoration}
-         * of all Biomes that match the {@link #predicate}.
-         *
-         * @param decoration The decoration step.
-         * @param featureKey The {@link ResourceKey} for the feature.
-         * @return This builder.
-         */
-        public Builder addFeature(
-                GenerationStep.Decoration decoration,
-                ResourceKey<PlacedFeature> featureKey
-        ) {
-            if (bootstrapContext == null) {
-                throw new IllegalStateException(
-                        "You can not add a ResourceKey for a PlacedFeature to a Biome Modification if no Bootstrap Context was supplied (" + key + ").");
-            }
-            var holder = bootstrapContext.lookup(Registries.PLACED_FEATURE).getOrThrow(featureKey);
-            return this.addFeature(decoration, holder);
-        }
-
-        /**
-         * Adds a feature to the modification. This feature will be added to the {@link GenerationStep.Decoration}
-         * of all Biomes that match the {@link #predicate}.
-         *
-         * @param decoration The decoration step.
-         * @param holder     The holder of the feature.
-         * @return This builder.
-         */
-        public Builder addFeature(
-                GenerationStep.Decoration decoration,
-                Holder<PlacedFeature> holder
-        ) {
-            this.features.getFeatures(decoration).add(holder);
-            return this;
-        }
-
-        /**
-         * Adds a feature to the modification. This feature will be added to the {@link GenerationStep.Decoration}
-         * specified in the PlacedFeatureKey of all Biomes that match the {@link #predicate}.
-         * <p>
-         * Internally this will  call {@link #addFeature(GenerationStep.Decoration, Holder)}. The
-         * Holder Object is created using {@link PlacedFeatureKey#getHolder(BootstrapContext)}.
-         * If you want to add a lot of features, it is recommended to use
-         * {@link #addFeature(GenerationStep.Decoration, Holder)}
-         * instead, as it will be faster.
-         *
-         * @param feature The feature.
-         * @return This builder.
-         */
-        public Builder addFeature(BasePlacedFeatureKey<?> feature) {
-            if (bootstrapContext == null) {
-                throw new IllegalStateException(
-                        "You can not add a PlacedFeatureKey to a Biome Modification if no Bootstrap Context was supplied (" + key + ").");
-            }
-            return this.addFeature(feature.getDecoration(), feature.getHolder(bootstrapContext));
-        }
-
-        public Builder addStructureSet(
-                StructureKey<?, ?, ?> structure
-        ) {
-            if (bootstrapContext == null) {
-                throw new IllegalStateException(
-                        "You can not add a Structure to a Biome Modification if no Bootstrap Context was supplied (" + key + ").");
-            }
-
-            return this.addToTag(structure.biomeTag());
-        }
-
-        public Builder addStructureSet(
-                TagKey<Biome> structureSet
-        ) {
-            if (bootstrapContext == null) {
-                throw new IllegalStateException(
-                        "You can not add a Structure to a Biome Modification if no Bootstrap Context was supplied (" + key + ").");
-            }
-
-            return this.addToTag(structureSet);
-        }
-
-        /**
-         * Add a Mob-Spawn to the Biome
-         *
-         * @param entityType    The {@link EntityType} of the mob
-         * @param weight        The weight for this pawn entry
-         * @param minGroupCount The minimum number of mobs that spawn in a group
-         * @param maxGroupCount The maximum number of mobs that spawn in a group
-         * @param <M>           The type of the mob
-         * @return This builder.
-         */
-        public <M extends Mob> Builder addSpawn(
-                EntityType<M> entityType,
-                int weight,
-                int minGroupCount,
-                int maxGroupCount
-        ) {
-            return addSpawn(new Weighted<>(
-                    new MobSpawnSettings.SpawnerData(entityType, minGroupCount, maxGroupCount),
-                    weight
-            ));
-        }
-
-        /**
-         * Add a Mob-Spawn to the Biome
-         *
-         * @param spawnerData The Spawn definition
-         * @param <M>         The type of the mob
-         * @return This builder.
-         */
-        public <M extends Mob> Builder addSpawn(
-                MobSpawnSettings.SpawnerData spawnerData
-        ) {
-            this.spawns.add(new Weighted<>(spawnerData, 1));
-            return this;
-        }
-
-        public <M extends Mob> Builder addSpawn(
-                Weighted<MobSpawnSettings.SpawnerData> spawnerData
-        ) {
-            this.spawns.add(spawnerData);
-            return this;
-        }
-
-
-        /**
-         * Adds the Biome into a given Tag.
-         *
-         * @param tag
-         * @return This builder.
-         */
-        public Builder addToTag(TagKey<Biome> tag) {
-            tags.add(tag);
-            return this;
-        }
-
-        /**
-         * Creates a {@link Holder.Direct} for the {@link BiomeModification}.
-         *
-         * @return The holder.
-         */
-        public Holder<BiomeModification> directHolder() {
-            return Holder.direct(build());
-        }
-
-        /**
-         * Registers the {@link BiomeModification} to the {@link BiomeModificationRegistry}.
-         *
-         * @return The holder created in the registry
-         */
-        public Holder<BiomeModification> register() {
-            if (key == null) {
-                throw new IllegalStateException("You need to specify a key when you register a Biome Modification.");
-            }
-
-            if (bootstrapContext == null) {
-                throw new IllegalStateException("You need to supply a key when you register a Biome Modification (" + key + ").");
-            }
-            return bootstrapContext.register(key, build());
-        }
-
-        @NotNull
-        private BiomeModificationImpl build() {
-            return new BiomeModificationImpl(
-                    predicate,
-                    features.generic(),
-                    tags != null ? tags.stream().toList() : null,
-                    spawns
+      public BiomeModification.Builder addFeature(Decoration decoration, ResourceKey<PlacedFeature> featureKey) {
+         if (this.bootstrapContext == null) {
+            throw new IllegalStateException(
+               "You can not add a ResourceKey for a PlacedFeature to a Biome Modification if no Bootstrap Context was supplied (" + this.key + ")."
             );
-        }
-    }
+         } else {
+            Reference<PlacedFeature> holder = this.bootstrapContext.lookup(Registries.PLACED_FEATURE).getOrThrow(featureKey);
+            return this.addFeature(decoration, holder);
+         }
+      }
+
+      public BiomeModification.Builder addFeature(Decoration decoration, Holder<PlacedFeature> holder) {
+         this.features.getFeatures(decoration).add(holder);
+         return this;
+      }
+
+      public BiomeModification.Builder addFeature(BasePlacedFeatureKey<?> feature) {
+         if (this.bootstrapContext == null) {
+            throw new IllegalStateException(
+               "You can not add a PlacedFeatureKey to a Biome Modification if no Bootstrap Context was supplied (" + this.key + ")."
+            );
+         } else {
+            return this.addFeature(feature.getDecoration(), feature.getHolder(this.bootstrapContext));
+         }
+      }
+
+      public BiomeModification.Builder addStructureSet(StructureKey<?, ?, ?> structure) {
+         if (this.bootstrapContext == null) {
+            throw new IllegalStateException("You can not add a Structure to a Biome Modification if no Bootstrap Context was supplied (" + this.key + ").");
+         } else {
+            return this.addToTag(structure.biomeTag());
+         }
+      }
+
+      public BiomeModification.Builder addStructureSet(TagKey<Biome> structureSet) {
+         if (this.bootstrapContext == null) {
+            throw new IllegalStateException("You can not add a Structure to a Biome Modification if no Bootstrap Context was supplied (" + this.key + ").");
+         } else {
+            return this.addToTag(structureSet);
+         }
+      }
+
+      public <M extends Mob> BiomeModification.Builder addSpawn(EntityType<M> entityType, int weight, int minGroupCount, int maxGroupCount) {
+         IntProvider count = (IntProvider)(minGroupCount == maxGroupCount ? ConstantInt.of(minGroupCount) : UniformInt.of(minGroupCount, maxGroupCount));
+         return this.addSpawn(weight, new SpawnerData(entityType, count));
+      }
+
+      public <M extends Mob> BiomeModification.Builder addSpawn(int weight, SpawnerData spawnerData) {
+         this.spawns.add(spawnerData, weight);
+         return this;
+      }
+
+      public BiomeModification.Builder addToTag(TagKey<Biome> tag) {
+         this.tags.add(tag);
+         return this;
+      }
+
+      public Holder<BiomeModification> directHolder() {
+         return Holder.direct(this.build());
+      }
+
+      public Holder<BiomeModification> register() {
+         if (this.key == null) {
+            throw new IllegalStateException("You need to specify a key when you register a Biome Modification.");
+         } else if (this.bootstrapContext == null) {
+            throw new IllegalStateException("You need to supply a key when you register a Biome Modification (" + this.key + ").");
+         } else {
+            return this.bootstrapContext.register(this.key, this.build());
+         }
+      }
+
+      @NotNull
+      private BiomeModificationImpl build() {
+         return new BiomeModificationImpl(this.predicate, this.features.generic(), this.tags != null ? this.tags.stream().toList() : null, this.spawns.build());
+      }
+   }
 }

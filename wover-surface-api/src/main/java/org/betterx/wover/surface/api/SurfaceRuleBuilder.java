@@ -8,7 +8,7 @@ import net.minecraft.core.HolderGetter;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.levelgen.SurfaceRules.RuleSource;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -59,7 +59,7 @@ public interface SurfaceRuleBuilder extends BaseSurfaceRuleBuilder<SurfaceRuleBu
      *
      * @return {@link RuleSource}.
      */
-    RuleSource build(HolderGetter<Biome> biomes);
+    MaterialRule build(HolderGetter<Biome> biomes);
 
     /**
      * Register rule in the {@link SurfaceRuleRegistry} with the currently set sort priority (see {@link #sortPriority}).

@@ -1,8 +1,8 @@
 package org.betterx.wover.recipe.impl;
 
+import org.betterx.wover.recipe.api.RecipeBuilder;
 import org.betterx.wover.recipe.api.SmithingRecipeBuilder;
 
-import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.SmithingTransformRecipeBuilder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
@@ -14,9 +14,9 @@ import net.minecraft.world.level.ItemLike;
 import org.jetbrains.annotations.NotNull;
 
 public class SmithingRecipeBuilderImpl extends BaseRecipeBuilderImpl<SmithingRecipeBuilder> implements SmithingRecipeBuilder {
-    protected Ingredient template;
-    protected Ingredient base;
-    protected Ingredient addon;
+    protected CraftingRecipeBuilderImpl.IngredientFactory template;
+    protected CraftingRecipeBuilderImpl.IngredientFactory base;
+    protected CraftingRecipeBuilderImpl.IngredientFactory addon;
 
     public SmithingRecipeBuilderImpl(
             @NotNull Identifier id,
@@ -27,44 +27,44 @@ public class SmithingRecipeBuilderImpl extends BaseRecipeBuilderImpl<SmithingRec
 
     @Override
     public SmithingRecipeBuilderImpl template(SmithingTemplateItem in) {
-        this.template = Ingredient.of(in);
+        this.template = provider -> Ingredient.of(in);
         unlockedBy(in);
         return this;
     }
 
     @Override
     public SmithingRecipeBuilderImpl base(TagKey<Item> in) {
-        this.base = ingredientOf(in);
+        this.base = provider -> provider.tag(in);
         return this;
     }
 
     @Override
     public SmithingRecipeBuilderImpl base(ItemLike in) {
-        this.base = Ingredient.of(in);
+        this.base = provider -> Ingredient.of(in);
         return this;
     }
 
     @Override
     public SmithingRecipeBuilderImpl base(Ingredient in) {
-        this.base = in;
+        this.base = provider -> in;
         return this;
     }
 
     @Override
     public SmithingRecipeBuilderImpl addon(TagKey<Item> in) {
-        this.addon = ingredientOf(in);
+        this.addon = provider -> provider.tag(in);
         return this;
     }
 
     @Override
     public SmithingRecipeBuilderImpl addon(ItemLike in) {
-        this.addon = Ingredient.of(in);
+        this.addon = provider -> Ingredient.of(in);
         return this;
     }
 
     @Override
     public SmithingRecipeBuilderImpl addon(Ingredient in) {
-        this.addon = in;
+        this.addon = provider -> in;
         return this;
     }
 
@@ -81,20 +81,24 @@ public class SmithingRecipeBuilderImpl extends BaseRecipeBuilderImpl<SmithingRec
         if (addon == null) {
             throwIllegalStateException("Addon must be set");
         }
-        if (outputCount() != 1) {
+        if (outputCount != 1) {
             throwIllegalStateException("Output count must be 1");
         }
     }
 
     @Override
-    public void build(RecipeOutput ctx) {
+    public void build(RecipeBuilder.Context context) {
         final SmithingTransformRecipeBuilder builder = SmithingTransformRecipeBuilder.smithing(
-                template, base, addon, category, outputItem()
+                template.createIngredient(context),
+                base.createIngredient(context),
+                addon.createIngredient(context),
+                category,
+                outputItem
         );
 
         for (var item : unlocks.entrySet()) {
-            builder.unlocks(item.getKey(), item.getValue());
+            builder.unlocks(item.getKey(), item.getValue().createCriterion(context));
         }
-        builder.save(ctx, recipeKey(id));
+        builder.save(context.recipeOutput(), this.key());
     }
 }

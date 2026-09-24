@@ -1,10 +1,9 @@
 package org.betterx.wover.feature.api.placed.modifiers;
 
-import org.betterx.wover.feature.impl.placed.modifiers.PlacementModifiersImpl;
-
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
@@ -15,367 +14,215 @@ import net.minecraft.util.valueproviders.IntProvider;
 import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.world.level.levelgen.placement.PlacementContext;
 import net.minecraft.world.level.levelgen.placement.PlacementModifier;
-import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
-
-import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Extends the input direction in the xz-plane by the given radius. This will
- * create a new position for every block in the radius around the input.
- * <p>
- * The density of the positions can be controlled by the {@code centerDensity} and
- * {@code borderDensity} parameters. The {@code centerDensity} controls the density
- * at the input position, while the {@code borderDensity} controls the density
- * for blocks at radius distance from the input position. Positions in between
- * will be interpolated linearly. The density is the chance of a position to be
- * accepted. If the density for a position is {@code 0} the position will be
- * rejected. If the density is {@code 1} the position will be accepted.
- * <p>
- * If {@code square} is {@code true}, the positions will be created in a square
- * with edge length {@code 2*xzSpread+1} centered on the input position.
- * If {@code false}, the positions will be created in a circle.
- */
-public class ExtendXYZ extends PlacementModifier {
-    private interface PropagationFunction {
-        void propagate(
-                RandomSource randomSource,
-                Stream.Builder<BlockPos> builder,
-                float maxR2, int maxDepth, int scale, float d0, float d1,
-                float currentR2, float density,
-                BlockPos pos, boolean didAdd
-        );
-    }
+public class ExtendXYZ implements PlacementModifier {
+   public static final MapCodec<ExtendXYZ> CODEC = RecordCodecBuilder.mapCodec(
+      instance -> instance.group(
+            IntProviders.codec(0, 16).fieldOf("radius").forGetter(cfg -> cfg.radius),
+            FloatProviders.codec(0.0F, 2.0F).optionalFieldOf("center_density", ConstantFloat.of(1.0F)).forGetter(cfg -> cfg.centerDensity),
+            FloatProviders.codec(0.0F, 2.0F).optionalFieldOf("border_density", ConstantFloat.of(0.05F)).forGetter(cfg -> cfg.borderDensity),
+            Codec.BOOL.optionalFieldOf("square", false).forGetter(cfg -> cfg.square),
+            FloatProviders.codec(0.0F, 30.0F).optionalFieldOf("height", ConstantFloat.of(1.0F)).forGetter(cfg -> cfg.heightScale),
+            ExtendXYZ.HeightPropagation.CODEC.optionalFieldOf("height_propagation", ExtendXYZ.HeightPropagation.NONE).forGetter(cfg -> cfg.heightPropagation)
+         )
+         .apply(instance, ExtendXYZ::new)
+   );
+   private final IntProvider radius;
+   private final FloatProvider centerDensity;
+   private final FloatProvider borderDensity;
+   private final boolean square;
+   private final FloatProvider heightScale;
+   private final ExtendXYZ.HeightPropagation heightPropagation;
 
-    /**
-     * Determines how the positions are extended in the y-direction.
-     */
-    public enum HeightPropagation implements StringRepresentable {
-        /**
-         * The positions will not be extended in the y-direction.
-         */
-        NONE(1, ((randomSource, builder, maxR2, maxDepth, scale1, d0, d1, currentR2, density, pos, didAdd) -> {
-        })),
+   public ExtendXYZ(
+      IntProvider radius,
+      FloatProvider centerDensity,
+      FloatProvider borderDensity,
+      boolean square,
+      FloatProvider heightScale,
+      ExtendXYZ.HeightPropagation heightPropagation
+   ) {
+      this.radius = radius;
+      this.centerDensity = centerDensity;
+      this.borderDensity = borderDensity;
+      this.square = square;
+      this.heightScale = heightScale;
+      this.heightPropagation = heightPropagation;
+   }
 
-        /**
-         * The positions will be extended in the <b>negative y-direction</b> by a constant height. The density is maximum at the
-         * original height and decreases until the maximum height is reached.
-         */
-        BOX_DOWN(-1, ExtendXYZ::propagateSquare),
+   public ExtendXYZ(IntProvider radius, FloatProvider centerDensity, FloatProvider borderDensity, boolean square) {
+      this(radius, centerDensity, borderDensity, square, ConstantFloat.of(1.0F), ExtendXYZ.HeightPropagation.NONE);
+   }
 
-        /**
-         * The positions will be extended in the <b>positive y-direction</b> by a constant height. The density is maximum at the
-         * original height and decreases until the maximum height is reached.
-         */
-        BOX_UP(1, ExtendXYZ::propagateSquare),
+   public static ExtendXYZ circle(IntProvider radius, FloatProvider centerDensity, FloatProvider borderDensity) {
+      return new ExtendXYZ(radius, centerDensity, borderDensity, false);
+   }
 
-        /**
-         * The positions will be extended in the <b>negative y-direction</b>. The extension height is maximum at the center
-         * and decreases spherical towards the edges. The density is maximum at the original height and decreases until
-         * the maximum height is reached.
-         */
-        SPHERE_DOWN(-1, ExtendXYZ::propagateSphere),
-        /**
-         * The positions will be extended in the <b>positive y-direction</b>. The extension height is maximum at the center
-         * and decreases spherical towards the edges. The density is maximum at the original height and decreases until
-         * the maximum height is reached.
-         */
-        SPHERE_UP(1, ExtendXYZ::propagateSphere),
+   public static ExtendXYZ spikedCircle(IntProvider radius, FloatProvider centerDensity, FloatProvider borderDensity, FloatProvider heightScale) {
+      return new ExtendXYZ(radius, centerDensity, borderDensity, false, heightScale, ExtendXYZ.HeightPropagation.SPIKES_DOWN);
+   }
 
-        /**
-         * Every position at the surface is extended <b>down</b> until the density reaches zero. The start density is the
-         * one at the surface.
-         */
-        SPIKES_DOWN(-1, ExtendXYZ::propagateSpikesConnected),
-        /**
-         * Every position at the surface is extended <b>up</b> until the density reaches zero. The start density is the
-         * one at the surface.
-         */
-        SPIKES_UP(1, ExtendXYZ::propagateSpikesConnected);
+   public static ExtendXYZ square(IntProvider radius, FloatProvider centerDensity, FloatProvider borderDensity) {
+      return new ExtendXYZ(radius, centerDensity, borderDensity, true);
+   }
 
-        /**
-         * The codec for this enum.
-         */
-        public static final Codec<HeightPropagation> CODEC = StringRepresentable.fromEnum(HeightPropagation::values);
+   private static void propagateSphere(
+      RandomSource randomSource,
+      Consumer<BlockPos> consumer,
+      float maxR2,
+      int maxDepth,
+      int scale,
+      float d0,
+      float d1,
+      float currentR2,
+      float currentDensity,
+      BlockPos pos,
+      boolean didAdd
+   ) {
+      int depth = (int)(maxDepth * (1.0F - currentR2 / maxR2));
+      propagateDown(randomSource, consumer, d0, d1, currentDensity, pos, depth, scale);
+   }
 
-        private final int scale;
-        private final PropagationFunction propagationFunction;
+   private static void propagateSquare(
+      RandomSource randomSource,
+      Consumer<BlockPos> consumer,
+      float maxR2,
+      int maxDepth,
+      int scale,
+      float d0,
+      float d1,
+      float currentR2,
+      float currentDensity,
+      BlockPos pos,
+      boolean didAdd
+   ) {
+      propagateDown(randomSource, consumer, d0, d1, currentDensity, pos, maxDepth, scale);
+   }
 
-        HeightPropagation(int scale, PropagationFunction propagationFunction) {
-            this.scale = scale;
-            this.propagationFunction = propagationFunction;
-        }
+   private static void propagateSpikesConnected(
+      RandomSource randomSource,
+      Consumer<BlockPos> consumer,
+      float maxR2,
+      int maxDepth,
+      int scale,
+      float d0,
+      float d1,
+      float currentR2,
+      float currentDensity,
+      BlockPos pos,
+      boolean didAdd
+   ) {
+      if (didAdd) {
+         propagateDownConnected(randomSource, consumer, d0, d1, currentDensity * currentDensity, pos, maxDepth, scale);
+      }
+   }
 
-        @Override
-        public @NotNull String getSerializedName() {
-            return this.name().toLowerCase();
-        }
-    }
+   private static void propagateDownConnected(
+      RandomSource randomSource, Consumer<BlockPos> consumer, float d0, float d1, float currentDensity, BlockPos pos, int depth, int scale
+   ) {
+      int depth2 = depth * depth;
 
-    /**
-     * The codec for this placement modifier.
-     */
-    public static final MapCodec<ExtendXYZ> CODEC = RecordCodecBuilder.mapCodec((instance) -> instance
-            .group(
-                    IntProviders.codec(0, 16)
-                               .fieldOf("radius")
-                               .forGetter(cfg -> cfg.radius),
-                    FloatProviders.codec(0, 2)
-                                 .optionalFieldOf("center_density", ConstantFloat.of(1))
-                                 .forGetter(cfg -> cfg.centerDensity),
-                    FloatProviders.codec(0, 2)
-                                 .optionalFieldOf("border_density", ConstantFloat.of(0.05f))
-                                 .forGetter(cfg -> cfg.borderDensity),
-                    Codec.BOOL
-                            .optionalFieldOf("square", false)
-                            .forGetter(cfg -> cfg.square),
-                    FloatProviders.codec(0.0f, 30.0f)
-                                 .optionalFieldOf("height", ConstantFloat.of(1.0f))
-                                 .forGetter(cfg -> cfg.heightScale),
-                    HeightPropagation.CODEC
-                            .optionalFieldOf("height_propagation", HeightPropagation.NONE)
-                            .forGetter(cfg -> cfg.heightPropagation)
-            )
-            .apply(instance, ExtendXYZ::new));
-    private final IntProvider radius;
-    private final FloatProvider centerDensity;
-    private final FloatProvider borderDensity;
-    private final boolean square;
+      for (int y = 1; y <= depth; y++) {
+         float lambda = (float)(y * y) / depth2;
+         float densityDown = (d0 + (d1 - d0) * lambda) * currentDensity;
+         if (densityDown <= 0.001) {
+            return;
+         }
 
+         if (randomSource.nextFloat() > densityDown) {
+            return;
+         }
 
-    private final FloatProvider heightScale;
-    private final HeightPropagation heightPropagation;
+         consumer.accept(pos.above(scale * y));
+      }
+   }
 
-    /**
-     * Creates a new placement modifier that extends the input direction in the
-     * xz-plane by the given radius.
-     *
-     * @param radius            the radius to extend the input position by
-     * @param centerDensity     the density at the input position
-     * @param borderDensity     the density at the border of the radius
-     * @param square            if {@code true}, the positions will be created in a square
-     *                          with edge length {@code 2*xzSpread+1} centered on the input position.
-     *                          If {@code false}, the positions will be created in a circle.
-     * @param heightScale       the height of the extension in the y-direction is the radius times this value
-     * @param heightPropagation the {@link HeightPropagation} to use
-     */
-    public ExtendXYZ(
-            IntProvider radius,
-            FloatProvider centerDensity,
-            FloatProvider borderDensity,
-            boolean square,
-            FloatProvider heightScale,
-            HeightPropagation heightPropagation
-    ) {
-        this.radius = radius;
-        this.centerDensity = centerDensity;
-        this.borderDensity = borderDensity;
-        this.square = square;
-        this.heightScale = heightScale;
-        this.heightPropagation = heightPropagation;
+   private static void propagateDown(
+      RandomSource randomSource, Consumer<BlockPos> consumer, float d0, float d1, float currentDensity, BlockPos pos, int depth, int scale
+   ) {
+      int depth2 = depth * depth;
 
-    }
+      for (int y = 1; y <= depth; y++) {
+         float lambda = (float)(y * y) / depth2;
+         float densityDown = (d0 + (d1 - d0) * lambda) * currentDensity;
+         if (!(densityDown <= 0.001) && !(randomSource.nextFloat() > densityDown)) {
+            consumer.accept(pos.above(y * scale));
+         }
+      }
+   }
 
-    /**
-     * Creates a new placement modifier that extends the input direction in the
-     * xz-plane by the given radius.
-     *
-     * @param radius        the radius to extend the input position by
-     * @param centerDensity the density at the input position
-     * @param borderDensity the density at the border of the radius
-     * @param square        if {@code true}, the positions will be created in a square
-     *                      with edge length {@code 2*xzSpread+1} centered on the input position.
-     *                      If {@code false}, the positions will be created in a circle.
-     */
-    public ExtendXYZ(IntProvider radius, FloatProvider centerDensity, FloatProvider borderDensity, boolean square) {
-        this(radius, centerDensity, borderDensity, square, ConstantFloat.of(1.0f), HeightPropagation.NONE);
-    }
+   public void modify(PlacementContext placementContext, RandomSource randomSource, BlockPos blockPos, Consumer<BlockPos> consumer) {
+      int r = this.radius.sample(randomSource);
+      float r2 = r * r;
+      float d0 = this.centerDensity.sample(randomSource);
+      float d1 = this.borderDensity.sample(randomSource);
+      int height = (int)(r * this.heightScale.sample(randomSource));
 
-    /**
-     * Creates a new placement modifier that extends the input direction in the
-     * xz-plane by the given radius in a circular shape.
-     *
-     * @param radius        the radius to extend the input position by
-     * @param centerDensity the density at the input position
-     * @param borderDensity the density at the border of the radius
-     * @return a new instance
-     */
-    public static ExtendXYZ circle(IntProvider radius, FloatProvider centerDensity, FloatProvider borderDensity) {
-        return new ExtendXYZ(radius, centerDensity, borderDensity, false);
-    }
-
-    /**
-     * Creates a new placement modifier that extends the input direction in the
-     * xz-plane by the given radius in a circular shape. Every generated position
-     * will then be extended down to form spikes.
-     *
-     * @param radius        the radius to extend the input position by
-     * @param centerDensity the density at the input position
-     * @param borderDensity the density at the border of the radius
-     * @param heightScale   the height of the extension in the y-direction is the radius times this value
-     * @return a new instance
-     */
-    public static ExtendXYZ spikedCircle(
-            IntProvider radius,
-            FloatProvider centerDensity,
-            FloatProvider borderDensity,
-            FloatProvider heightScale
-    ) {
-        return new ExtendXYZ(radius, centerDensity, borderDensity, false, heightScale, HeightPropagation.SPIKES_DOWN);
-    }
-
-    /**
-     * Creates a new placement modifier that extends the input direction in the
-     * xz-plane by the given radius in a square shape.
-     *
-     * @param radius        the radius to extend the input position by
-     * @param centerDensity the density at the input position
-     * @param borderDensity the density at the border of the radius
-     * @return
-     */
-    public static ExtendXYZ square(IntProvider radius, FloatProvider centerDensity, FloatProvider borderDensity) {
-        return new ExtendXYZ(radius, centerDensity, borderDensity, true);
-    }
-
-    private static void propagateSphere(
-            RandomSource randomSource,
-            Stream.Builder<BlockPos> builder,
-            float maxR2, int maxDepth, int scale, float d0, float d1,
-            float currentR2, float currentDensity,
-            BlockPos pos, boolean didAdd
-    ) {
-        final int depth = (int) (maxDepth * (1 - (currentR2 / maxR2)));
-        propagateDown(randomSource, builder, d0, d1, currentDensity, pos, depth, scale);
-    }
-
-    private static void propagateSquare(
-            RandomSource randomSource,
-            Stream.Builder<BlockPos> builder,
-            float maxR2, int maxDepth, int scale, float d0, float d1,
-            float currentR2, float currentDensity,
-            BlockPos pos, boolean didAdd
-    ) {
-        propagateDown(randomSource, builder, d0, d1, currentDensity, pos, maxDepth, scale);
-    }
-
-    private static void propagateSpikesConnected(
-            RandomSource randomSource,
-            Stream.Builder<BlockPos> builder,
-            float maxR2, int maxDepth, int scale, float d0, float d1,
-            float currentR2, float currentDensity,
-            BlockPos pos, boolean didAdd
-    ) {
-        if (!didAdd) return;
-        propagateDownConnected(randomSource, builder, d0, d1, currentDensity * currentDensity, pos, maxDepth, scale);
-    }
-
-    private static void propagateDownConnected(
-            RandomSource randomSource,
-            Stream.Builder<BlockPos> builder,
-            float d0, float d1,
-            float currentDensity,
-            BlockPos pos, int depth, int scale
-    ) {
-        final int depth2 = depth * depth;
-        float lambda, densityDown;
-        for (int y = 1; y <= depth; y++) {
-            lambda = (float) (y * y) / depth2;
-            densityDown = (d0 + (d1 - d0) * lambda) * currentDensity;
-
-            //basically a 0 density, so discard
-            if (densityDown <= 0.001) return;
-
-            //if densityDown is >=1 the condition will always be false
-            if (randomSource.nextFloat() > densityDown) return;
-
-            builder.add(pos.above(scale * y));
-        }
-    }
-
-    private static void propagateDown(
-            RandomSource randomSource,
-            Stream.Builder<BlockPos> builder,
-            float d0, float d1,
-            float currentDensity,
-            BlockPos pos, int depth, int scale
-    ) {
-        final int depth2 = depth * depth;
-        float lambda, densityDown;
-        for (int y = 1; y <= depth; y++) {
-            lambda = (float) (y * y) / depth2;
-            densityDown = (d0 + (d1 - d0) * lambda) * currentDensity;
-
-            //basically a 0 density, so discard
-            if (densityDown <= 0.001) continue;
-
-            //if densityDown is >=1 the condition will always be false
-            if (randomSource.nextFloat() > densityDown) continue;
-
-            builder.add(pos.above(y * scale));
-        }
-    }
-
-    /**
-     * Calculates the positions that this placement modifier will emit.
-     *
-     * @param placementContext The placement context.
-     * @param randomSource     The random source.
-     * @param blockPos         The input position.
-     * @return The stream of new positions.
-     */
-    @Override
-    public @NotNull Stream<BlockPos> getPositions(
-            PlacementContext placementContext,
-            RandomSource randomSource,
-            BlockPos blockPos
-    ) {
-        final Stream.Builder<BlockPos> builder = Stream.<BlockPos>builder();
-        final int r = radius.sample(randomSource);
-        final float r2 = r * r;
-        final float d0 = centerDensity.sample(randomSource);
-        final float d1 = borderDensity.sample(randomSource);
-        final int height = (int) (r * this.heightScale.sample(randomSource));
-
-        float currentR2, density, lambda;
-        BlockPos now;
-        for (int x = -r; x <= r; x++) {
-            for (int z = -r; z <= r; z++) {
-                currentR2 = x * x + z * z;
-                //only consider blocks within a circular area
-                if (!square && currentR2 > r2) continue;
-
-                lambda = currentR2 / r2;
-                density = d0 + (d1 - d0) * lambda;
-                now = blockPos.offset(x, 0, z);
-
-                if (density >= 1.0f || ( //if density is >=1 the condition will always be true
-                        density > 0.001f && density >= randomSource.nextFloat()
-                )) {
-                    builder.add(now);
-                    heightPropagation.propagationFunction.propagate(
-                            randomSource, builder,
-                            r2, height, heightPropagation.scale, d0, d1,
-                            currentR2, density, now, true
-                    );
-                } else {
-                    heightPropagation.propagationFunction.propagate(
-                            randomSource, builder,
-                            r2, height, heightPropagation.scale, d0, d1,
-                            currentR2, density, now, false
-                    );
-                }
+      for (int x = -r; x <= r; x++) {
+         for (int z = -r; z <= r; z++) {
+            float currentR2 = x * x + z * z;
+            if (this.square || !(currentR2 > r2)) {
+               float lambda = currentR2 / r2;
+               float density = d0 + (d1 - d0) * lambda;
+               BlockPos now = blockPos.offset(x, 0, z);
+               if (!(density >= 1.0F) && (!(density > 0.001F) || !(density >= randomSource.nextFloat()))) {
+                  this.heightPropagation
+                     .propagationFunction
+                     .propagate(randomSource, consumer, r2, height, this.heightPropagation.scale, d0, d1, currentR2, density, now, false);
+               } else {
+                  consumer.accept(now);
+                  this.heightPropagation
+                     .propagationFunction
+                     .propagate(randomSource, consumer, r2, height, this.heightPropagation.scale, d0, d1, currentR2, density, now, true);
+               }
             }
-        }
-        return builder.build();
-    }
+         }
+      }
+   }
 
-    /**
-     * Gets the type of this placement modifier.
-     *
-     * @return the type of this placement modifier
-     */
-    @Override
-    public @NotNull PlacementModifierType<ExtendXYZ> type() {
-        return PlacementModifiersImpl.EXTEND_XZ;
-    }
+   @NotNull
+   public MapCodec<ExtendXYZ> codec() {
+      return CODEC;
+   }
+
+   public static enum HeightPropagation implements StringRepresentable {
+      NONE(1, (randomSource, builder, maxR2, maxDepth, scale1, d0, d1, currentR2, density, pos, didAdd) -> {}),
+      BOX_DOWN(-1, ExtendXYZ::propagateSquare),
+      BOX_UP(1, ExtendXYZ::propagateSquare),
+      SPHERE_DOWN(-1, ExtendXYZ::propagateSphere),
+      SPHERE_UP(1, ExtendXYZ::propagateSphere),
+      SPIKES_DOWN(-1, ExtendXYZ::propagateSpikesConnected),
+      SPIKES_UP(1, ExtendXYZ::propagateSpikesConnected);
+
+      public static final Codec<ExtendXYZ.HeightPropagation> CODEC = StringRepresentable.fromEnum(ExtendXYZ.HeightPropagation::values);
+      private final int scale;
+      private final ExtendXYZ.PropagationFunction propagationFunction;
+
+      private HeightPropagation(int scale, ExtendXYZ.PropagationFunction propagationFunction) {
+         this.scale = scale;
+         this.propagationFunction = propagationFunction;
+      }
+
+      @NotNull
+      public String getSerializedName() {
+         return this.name().toLowerCase();
+      }
+   }
+
+   private interface PropagationFunction {
+      void propagate(
+         RandomSource var1,
+         Consumer<BlockPos> var2,
+         float var3,
+         int var4,
+         int var5,
+         float var6,
+         float var7,
+         float var8,
+         float var9,
+         BlockPos var10,
+         boolean var11
+      );
+   }
 }

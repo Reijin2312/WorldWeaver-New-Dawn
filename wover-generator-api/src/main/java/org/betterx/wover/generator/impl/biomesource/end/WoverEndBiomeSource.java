@@ -1,5 +1,9 @@
 package org.betterx.wover.generator.impl.biomesource.end;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import org.betterx.wover.biome.api.data.BiomeData;
 import org.betterx.wover.biome.impl.data.BiomeDataRegistryImpl;
 import org.betterx.wover.common.generator.api.biomesource.BiomeSourceWithConfig;
 import org.betterx.wover.core.api.ModCore;
@@ -8,17 +12,12 @@ import org.betterx.wover.generator.api.biomesource.WoverBiomePicker;
 import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 import org.betterx.wover.generator.api.biomesource.end.BiomeDecider;
 import org.betterx.wover.generator.api.biomesource.end.WoverEndConfig;
-import org.betterx.wover.generator.api.client.biomesource.client.BiomeSourceConfigPanel;
-import org.betterx.wover.generator.api.client.biomesource.client.BiomeSourceWithConfigScreen;
 import org.betterx.wover.generator.api.map.BiomeMap;
-import org.betterx.wover.generator.impl.client.EndConfigPage;
 import org.betterx.wover.state.api.WorldState;
 import org.betterx.wover.tag.api.predefined.CommonBiomeTags;
-
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.client.gui.screens.Screen;
+import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
 import net.minecraft.core.SectionPos;
@@ -26,335 +25,283 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeResolver;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Biomes;
-import net.minecraft.world.level.biome.Climate;
-import net.minecraft.world.level.levelgen.DensityFunction;
-
-
-import java.awt.*;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import net.minecraft.world.level.biome.Climate.Sampler;
 import org.jetbrains.annotations.NotNull;
 
-public class WoverEndBiomeSource extends WoverBiomeSource implements
-        BiomeSourceWithConfig<WoverEndBiomeSource, WoverEndConfig>,
-        BiomeSourceWithConfigScreen<WoverEndBiomeSource, WoverEndConfig> {
+public class WoverEndBiomeSource extends WoverBiomeSource implements BiomeSourceWithConfig<WoverEndBiomeSource, WoverEndConfig> {
+   public static MapCodec<WoverEndBiomeSource> CODEC = RecordCodecBuilder.mapCodec(
+      instance -> instance.group(
+            Codec.LONG.fieldOf("seed").stable().forGetter(source -> source.currentSeed),
+            WoverEndConfig.CODEC.fieldOf("config").orElse(WoverEndConfig.DEFAULT).forGetter(o -> o.config)
+         )
+         .apply(instance, instance.stable(WoverEndBiomeSource::new))
+   );
+   public static final List<TagKey<Biome>> TAGS = List.of(
+      CommonBiomeTags.IS_END_CENTER,
+      CommonBiomeTags.IS_END_BARRENS,
+      CommonBiomeTags.IS_SMALL_END_ISLAND,
+      CommonBiomeTags.IS_END_HIGHLAND,
+      CommonBiomeTags.IS_END_MIDLAND,
+      BiomeTags.IS_END
+   );
+   private final Point pos;
+   private BiomeMap mapLand;
+   private BiomeMap mapVoid;
+   private BiomeMap mapCenter;
+   private BiomeMap mapBarrens;
+   private WoverBiomePicker endLandBiomePicker;
+   private WoverBiomePicker endVoidBiomePicker;
+   private WoverBiomePicker endCenterBiomePicker;
+   private WoverBiomePicker endBarrensBiomePicker;
+   private List<BiomeDecider> deciders;
+   private WoverEndConfig config;
 
-    public static MapCodec<WoverEndBiomeSource> CODEC
-            = RecordCodecBuilder.mapCodec((instance) -> instance
-            .group(
-                    Codec
-                            .LONG
-                            .fieldOf("seed")
-                            .stable()
-                            .forGetter(source -> source.currentSeed),
-                    WoverEndConfig
-                            .CODEC
-                            .fieldOf("config")
-                            .orElse(WoverEndConfig.DEFAULT)
-                            .forGetter(o -> o.config)
-            )
-            .apply(
-                    instance,
-                    instance.stable(WoverEndBiomeSource::new)
-            )
-    );
+   private WoverEndBiomeSource(long seed, WoverEndConfig config) {
+      this(seed, config, true);
+   }
 
-    public static final List<TagKey<Biome>> TAGS = List.of(
-            CommonBiomeTags.IS_END_CENTER,
-            CommonBiomeTags.IS_END_BARRENS,
-            CommonBiomeTags.IS_SMALL_END_ISLAND,
-            CommonBiomeTags.IS_END_HIGHLAND,
-            CommonBiomeTags.IS_END_MIDLAND,
-            BiomeTags.IS_END
-    );
-    private final Point pos;
-    private BiomeMap mapLand;
-    private BiomeMap mapVoid;
-    private BiomeMap mapCenter;
-    private BiomeMap mapBarrens;
+   public WoverEndBiomeSource(WoverEndConfig config) {
+      this(0L, config, false);
+   }
 
-    private WoverBiomePicker endLandBiomePicker;
-    private WoverBiomePicker endVoidBiomePicker;
-    private WoverBiomePicker endCenterBiomePicker;
-    private WoverBiomePicker endBarrensBiomePicker;
-    private List<BiomeDecider> deciders;
+   private WoverEndBiomeSource(long seed, WoverEndConfig config, boolean initMaps) {
+      super(seed);
+      this.config = config;
+      this.rebuildBiomes(false);
+      this.pos = new Point();
+      if (initMaps) {
+         this.initMap(seed);
+      }
+   }
 
-    private WoverEndConfig config;
+   @Override
+   protected List<WoverBiomeSource.TagToPicker> createFreshPickerMap() {
+      this.deciders = BiomeDeciderImpl.DECIDERS.stream().filter(d -> d.canProvideFor(this)).map(d -> d.createInstance(this)).toList();
+      this.endLandBiomePicker = new WoverBiomePicker(this.fallbackBiome());
+      this.endVoidBiomePicker = new WoverBiomePicker(Biomes.SMALL_END_ISLANDS);
+      this.endCenterBiomePicker = new WoverBiomePicker(Biomes.THE_END);
+      this.endBarrensBiomePicker = new WoverBiomePicker(Biomes.END_BARRENS);
+      List<WoverBiomeSource.TagToPicker> pickerMap = new ArrayList<>();
 
-    @Override
-    protected @NotNull Stream<Holder<Biome>> collectPossibleBiomes() {
-        // The feature sorter only sees biomes returned here. Keep every registered End biome,
-        // especially the five vanilla biomes that provide spikes and gateways, even when biome
-        // tags have not been rebuilt yet during early world-preset loading.
-        final LinkedHashSet<Holder<Biome>> biomes = super.collectPossibleBiomes()
-                                                          .collect(Collectors.toCollection(LinkedHashSet::new));
-        TheEndBiomesHelper.addAllPossibleBiomes(biomes);
-        return biomes.stream();
-    }
+      for (BiomeDecider decider : this.deciders) {
+         TagKey<Biome> deciderTag = decider.pickerTag();
+         WoverBiomePicker deciderPicker = decider.picker();
+         if (deciderTag != null && deciderPicker != null) {
+            pickerMap.add(new WoverBiomeSource.TagToPicker(deciderTag, deciderPicker));
+         }
+      }
 
-    @Override
-    protected void addRequiredPossibleBiomes(java.util.Set<Holder<Biome>> biomes) {
-        TheEndBiomesHelper.addAllPossibleBiomes(biomes);
-    }
+      pickerMap.add(new WoverBiomeSource.TagToPicker(CommonBiomeTags.IS_END_CENTER, this.endCenterBiomePicker));
+      pickerMap.add(new WoverBiomeSource.TagToPicker(CommonBiomeTags.IS_END_BARRENS, this.endBarrensBiomePicker));
+      pickerMap.add(new WoverBiomeSource.TagToPicker(CommonBiomeTags.IS_SMALL_END_ISLAND, this.endVoidBiomePicker));
+      pickerMap.add(new WoverBiomeSource.TagToPicker(CommonBiomeTags.IS_END_HIGHLAND, this.endLandBiomePicker));
+      pickerMap.add(new WoverBiomeSource.TagToPicker(CommonBiomeTags.IS_END_MIDLAND, this.endLandBiomePicker));
+      pickerMap.add(new WoverBiomeSource.TagToPicker(BiomeTags.IS_END, this.endLandBiomePicker));
+      return pickerMap;
+   }
 
-    private WoverEndBiomeSource(
-            long seed,
-            WoverEndConfig config
-    ) {
-        this(seed, config, true);
-    }
+   @Override
+   protected boolean addToPicker(BiomeData biomeData, TagKey<Biome> type, WoverBiomePicker picker) {
+      picker.addBiome(biomeData);
+      return !type.equals(CommonBiomeTags.IS_END_BARRENS) || !biomeData.isIntendedFor(CommonBiomeTags.IS_SMALL_END_ISLAND);
+   }
 
-    public WoverEndBiomeSource(
-            WoverEndConfig config
-    ) {
-        this(0, config, false);
-    }
+   @Override
+   protected TagKey<Biome> defaultBiomeTag() {
+      return CommonBiomeTags.IS_END_HIGHLAND;
+   }
 
+   @Override
+   protected List<TagKey<Biome>> acceptedTags() {
+      return TAGS;
+   }
 
-    private WoverEndBiomeSource(
-            long seed,
-            WoverEndConfig config,
-            boolean initMaps
-    ) {
-        super(seed);
-        this.config = config;
-        rebuildBiomes(false);
+   @Override
+   protected ResourceKey<Biome> fallbackBiome() {
+      return Biomes.END_HIGHLANDS;
+   }
 
-        this.pos = new Point();
+   @Override
+   public String toShortString() {
+      return "WoVer - The End  BiomeSource (" + Integer.toHexString(this.hashCode()) + ")";
+   }
 
-        if (initMaps) {
-            initMap(seed);
-        }
-    }
+   public String toString() {
+      return this.toShortString()
+         + "\n    biomes     = "
+         + this.possibleBiomes().size()
+         + "\n    namespaces = "
+         + this.getNamespaces()
+         + "\n    seed       = "
+         + this.currentSeed
+         + "\n    height     = "
+         + this.maxHeight
+         + "\n    deciders   = "
+         + this.deciders.size()
+         + "\n    config     = "
+         + this.config;
+   }
 
-    @Override
-    protected List<TagToPicker> createFreshPickerMap() {
-        this.deciders = BiomeDeciderImpl.DECIDERS.stream()
-                                                 .filter(d -> d.canProvideFor(this))
-                                                 .map(d -> d.createInstance(this))
-                                                 .toList();
+   @Override
+   protected void onInitMap(long newSeed) {
+      for (BiomeDecider decider : this.deciders) {
+         decider.createMap((picker, size) -> this.config.mapVersion.mapBuilder.create(newSeed, size <= 0 ? this.config.landBiomesSize : size, picker), newSeed);
+      }
 
-        this.endLandBiomePicker = new WoverBiomePicker(fallbackBiome());
-        this.endVoidBiomePicker = new WoverBiomePicker(Biomes.SMALL_END_ISLANDS);
-        this.endCenterBiomePicker = new WoverBiomePicker(Biomes.THE_END);
-        this.endBarrensBiomePicker = new WoverBiomePicker(Biomes.END_BARRENS);
+      this.mapLand = this.config.mapVersion.mapBuilder.create(newSeed, this.config.landBiomesSize, this.endLandBiomePicker);
+      this.mapVoid = this.config.mapVersion.mapBuilder.create(newSeed, this.config.voidBiomesSize, this.endVoidBiomePicker);
+      this.mapCenter = this.config.mapVersion.mapBuilder.create(newSeed, this.config.centerBiomesSize, this.endCenterBiomePicker);
+      this.mapBarrens = this.config.mapVersion.mapBuilder.create(newSeed, this.config.barrensBiomesSize, this.endBarrensBiomePicker);
+   }
 
-        return List.of(
-                new TagToPicker(CommonBiomeTags.IS_END_CENTER, endCenterBiomePicker),
-                new TagToPicker(CommonBiomeTags.IS_END_BARRENS, endBarrensBiomePicker),
-                new TagToPicker(CommonBiomeTags.IS_SMALL_END_ISLAND, endVoidBiomePicker),
-                new TagToPicker(CommonBiomeTags.IS_END_HIGHLAND, endLandBiomePicker),
-                new TagToPicker(CommonBiomeTags.IS_END_MIDLAND, endLandBiomePicker),
-                new TagToPicker(BiomeTags.IS_END, endLandBiomePicker)
-        );
-    }
+   @Override
+   protected void onHeightChange(int newHeight) {
+   }
 
-    @Override
-    protected TagKey<Biome> defaultBiomeTag() {
-        return CommonBiomeTags.IS_END_HIGHLAND;
-    }
+   @Override
+   protected void onFinishBiomeRebuild(List<WoverBiomeSource.TagToPicker> pickerMap) {
+      super.onFinishBiomeRebuild(pickerMap);
 
-    @Override
-    protected List<TagKey<Biome>> acceptedTags() {
-        return TAGS;
-    }
+      for (BiomeDecider decider : this.deciders) {
+         decider.rebuild();
+      }
 
-    @Override
-    protected ResourceKey<Biome> fallbackBiome() {
-        return Biomes.END_HIGHLANDS;
-    }
+      if (WorldState.allStageRegistryAccess() != null) {
+         this.endBarrensBiomePicker.addBiome(BiomeDataRegistryImpl.getFromRegistryOrTemp(Biomes.END_BARRENS));
+         this.endBarrensBiomePicker.rebuild();
+      }
 
-    @Override
-    public String toShortString() {
-        return "WoVer - The End  BiomeSource (" + Integer.toHexString(hashCode()) + ")";
-    }
+      boolean voidWasEmpty = this.endVoidBiomePicker.isEmpty();
+      if (voidWasEmpty) {
+         if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null) {
+            LibWoverWorldGenerator.C.log.verbose("No Void Biomes found. Disabling by using barrens");
+         }
 
-    @Override
-    public String toString() {
-        return toShortString() +
-                "\n    biomes     = " + possibleBiomes().size() +
-                "\n    namespaces = " + getNamespaces() +
-                "\n    seed       = " + currentSeed +
-                "\n    height     = " + maxHeight +
-                "\n    deciders   = " + deciders.size() +
-                "\n    config     = " + config;
-    }
+         this.endVoidBiomePicker = this.endBarrensBiomePicker;
+      }
 
-    @Override
-    protected void onInitMap(long newSeed) {
-        for (BiomeDecider decider : deciders) {
-            decider.createMap((picker, size) -> config.mapVersion.mapBuilder.create(
-                    newSeed,
-                    size <= 0 ? config.landBiomesSize : size,
-                    picker
-            ), newSeed);
-        }
-        this.mapLand = config.mapVersion.mapBuilder.create(
-                newSeed,
-                config.landBiomesSize,
-                endLandBiomePicker
-        );
+      if (this.endBarrensBiomePicker.isEmpty()) {
+         if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null) {
+            LibWoverWorldGenerator.C.log.verbose("No Barrens Biomes found. Disabling by using land Biomes");
+         }
 
-        this.mapVoid = config.mapVersion.mapBuilder.create(
-                newSeed,
-                config.voidBiomesSize,
-                endVoidBiomePicker
-        );
+         this.endBarrensBiomePicker = this.endLandBiomePicker;
+         if (voidWasEmpty) {
+            this.endVoidBiomePicker = this.endLandBiomePicker;
+         }
+      }
 
-        this.mapCenter = config.mapVersion.mapBuilder.create(
-                newSeed,
-                config.centerBiomesSize,
-                endCenterBiomePicker
-        );
+      if (this.endCenterBiomePicker.isEmpty()) {
+         if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null) {
+            LibWoverWorldGenerator.C.log.verbose("No Center Island Biomes found. Forcing use of vanilla center.");
+         }
 
-        this.mapBarrens = config.mapVersion.mapBuilder.create(
-                newSeed,
-                config.barrensBiomesSize,
-                endBarrensBiomePicker
-        );
-    }
-
-    @Override
-    protected void onHeightChange(int newHeight) {
-
-    }
-
-    @Override
-    protected void onFinishBiomeRebuild(List<TagToPicker> pickerMap) {
-        super.onFinishBiomeRebuild(pickerMap);
-
-        for (BiomeDecider decider : deciders) {
-            decider.rebuild();
-        }
-
-        if (endVoidBiomePicker.isEmpty()) {
-            if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
-                LibWoverWorldGenerator.C.log.verbose("No Void Biomes found. Disabling by using barrens");
-            endVoidBiomePicker = endBarrensBiomePicker;
-        }
-        if (endBarrensBiomePicker.isEmpty()) {
-            if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
-                LibWoverWorldGenerator.C.log.verbose("No Barrens Biomes found. Disabling by using land Biomes");
-            endBarrensBiomePicker = endLandBiomePicker;
-            endVoidBiomePicker = endLandBiomePicker;
-        }
-        if (endCenterBiomePicker.isEmpty()) {
-            if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
-                LibWoverWorldGenerator.C.log.verbose("No Center Island Biomes found. Forcing use of vanilla center.");
-            endCenterBiomePicker.addBiome(BiomeDataRegistryImpl.getFromRegistryOrTemp(Biomes.THE_END));
-            endCenterBiomePicker.rebuild();
-            if (endCenterBiomePicker.isEmpty()) {
-                if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null)
-                    LibWoverWorldGenerator.C.log.verbose(
-                            "Unable to force vanilla central Island. Falling back to land Biomes...");
-                endCenterBiomePicker = endLandBiomePicker;
+         this.endCenterBiomePicker.addBiome(BiomeDataRegistryImpl.getFromRegistryOrTemp(Biomes.THE_END));
+         this.endCenterBiomePicker.rebuild();
+         if (this.endCenterBiomePicker.isEmpty()) {
+            if (!ModCore.isDatagen() && WorldState.allStageRegistryAccess() != null) {
+               LibWoverWorldGenerator.C.log.verbose("Unable to force vanilla central Island. Falling back to land Biomes...");
             }
-        }
-    }
 
-    @Override
-    protected @NotNull MapCodec<? extends BiomeSource> codec() {
-        return CODEC;
-    }
+            this.endCenterBiomePicker = this.endLandBiomePicker;
+         }
+      }
+   }
 
-    @Override
-    public @NotNull Holder<Biome> getNoiseBiome(int biomeX, int biomeY, int biomeZ, Climate.@NotNull Sampler sampler) {
-        if (!wasBound()) reloadBiomes(false);
+   @NotNull
+   protected MapCodec<? extends BiomeSource> codec() {
+      return CODEC;
+   }
 
-        if (mapLand == null || mapVoid == null || mapCenter == null || mapBarrens == null)
-            return applyFallbackBiomeSource(this.possibleBiomes().stream().findFirst().orElseThrow(), biomeX, biomeY, biomeZ, sampler);
+   @NotNull
+   public BiomeResolver createResolver(@NotNull Sampler sampler) {
+      return (biomeX, biomeY, biomeZ) -> this.getNoiseBiome(biomeX, biomeY, biomeZ, sampler);
+   }
 
-        int posX = QuartPos.toBlock(biomeX);
-        int posY = QuartPos.toBlock(biomeY);
-        int posZ = QuartPos.toBlock(biomeZ);
+   @NotNull
+   private Holder<Biome> getNoiseBiome(int biomeX, int biomeY, int biomeZ, @NotNull Sampler sampler) {
+      if (!this.wasBound()) {
+         this.reloadBiomes(false);
+      }
 
-        long dist = Math.abs(posX) + Math.abs(posZ) > (long) config.innerVoidRadiusSquared
-                ? ((long) config.innerVoidRadiusSquared + 1)
-                : (long) posX * (long) posX + (long) posZ * (long) posZ;
+      if (this.mapLand != null && this.mapVoid != null && this.mapCenter != null && this.mapBarrens != null) {
+         int posX = QuartPos.toBlock(biomeX);
+         int posY = QuartPos.toBlock(biomeY);
+         int posZ = QuartPos.toBlock(biomeZ);
+         long dist = Math.abs(posX) + Math.abs(posZ) > this.config.innerVoidRadiusSquared
+            ? this.config.innerVoidRadiusSquared + 1L
+            : (long)posX * posX + (long)posZ * posZ;
+         if ((biomeX & 63) == 0 || (biomeZ & 63) == 0) {
+            this.mapLand.clearCache();
+            this.mapVoid.clearCache();
+            this.mapCenter.clearCache();
+            this.mapBarrens.clearCache();
 
-
-        if ((biomeX & 63) == 0 || (biomeZ & 63) == 0) {
-            mapLand.clearCache();
-            mapVoid.clearCache();
-            mapCenter.clearCache();
-            mapVoid.clearCache();
-            for (BiomeDecider decider : deciders) {
-                decider.clearMapCache();
+            for (BiomeDecider decider : this.deciders) {
+               decider.clearMapCache();
             }
-        }
+         }
 
-        TagKey<Biome> suggestedType;
-
-
-        int x = (SectionPos.blockToSectionCoord(posX) * 2 + 1) * 8;
-        int z = (SectionPos.blockToSectionCoord(posZ) * 2 + 1) * 8;
-        double d = sampler.erosion().compute(new DensityFunction.SinglePointContext(x, posY, z));
-        if (dist <= (long) config.innerVoidRadiusSquared) {
+         int x = (SectionPos.blockToSectionCoord(posX) * 2 + 1) * 8;
+         int z = (SectionPos.blockToSectionCoord(posZ) * 2 + 1) * 8;
+         double d = sampler.erosion().sampleValue(x, posY, z);
+         TagKey<Biome> suggestedType;
+         if (dist <= this.config.innerVoidRadiusSquared) {
             suggestedType = CommonBiomeTags.IS_END_CENTER;
-        } else {
-            if (d > 0.25) {
-                suggestedType = CommonBiomeTags.IS_END_HIGHLAND; //highlands
-            } else if (d >= -0.0625) {
-                suggestedType = CommonBiomeTags.IS_END_MIDLAND; //midlands
-            } else {
-                suggestedType = d < -0.21875
-                        ? CommonBiomeTags.IS_SMALL_END_ISLAND //small islands
-                        : (config.withVoidBiomes
-                                ? CommonBiomeTags.IS_END_BARRENS
-                                : CommonBiomeTags.IS_END_HIGHLAND); //barrens
-            }
-        }
+         } else if (d > 0.25) {
+            suggestedType = CommonBiomeTags.IS_END_HIGHLAND;
+         } else if (d >= -0.0625) {
+            suggestedType = CommonBiomeTags.IS_END_MIDLAND;
+         } else {
+            suggestedType = d < -0.21875
+               ? CommonBiomeTags.IS_SMALL_END_ISLAND
+               : (this.config.withVoidBiomes ? CommonBiomeTags.IS_END_BARRENS : CommonBiomeTags.IS_END_HIGHLAND);
+         }
 
-        final TagKey<Biome> originalType = suggestedType;
-        for (BiomeDecider decider : deciders) {
-            suggestedType = decider
-                    .suggestType(originalType, suggestedType, d, maxHeight, posX, posY, posZ, biomeX, biomeY, biomeZ);
-        }
+         TagKey<Biome> originalType = suggestedType;
 
+         for (BiomeDecider decider : this.deciders) {
+            suggestedType = decider.suggestType(originalType, suggestedType, d, this.maxHeight, posX, posY, posZ, biomeX, biomeY, biomeZ);
+         }
 
-        WoverBiomePicker.PickableBiome result;
-        for (BiomeDecider decider : deciders) {
+         for (BiomeDecider decider : this.deciders) {
             if (decider.canProvideBiome(suggestedType)) {
-                result = decider.provideBiome(suggestedType, posX, posY, posZ);
-                if (result != null) return applyFallbackBiomeSource(result.biome, biomeX, biomeY, biomeZ, sampler);
+               WoverBiomePicker.PickableBiome result = decider.provideBiome(suggestedType, posX, posY, posZ);
+               if (result != null) {
+                  return result.biome;
+               }
             }
-        }
+         }
 
-        final Holder<Biome> pickedBiome;
-        if (suggestedType == CommonBiomeTags.IS_END_CENTER) {
-            pickedBiome = mapCenter.getBiome(posX, posY, posZ).biome;
-        } else if (suggestedType == CommonBiomeTags.IS_SMALL_END_ISLAND) {
-            pickedBiome = mapVoid.getBiome(posX, posY, posZ).biome;
-        } else if (suggestedType == CommonBiomeTags.IS_END_BARRENS) {
-            pickedBiome = mapBarrens.getBiome(posX, posY, posZ).biome;
-        } else {
-            pickedBiome = mapLand.getBiome(posX, posY, posZ).biome;
-        }
-        return applyFallbackBiomeSource(pickedBiome, biomeX, biomeY, biomeZ, sampler);
-    }
+         if (suggestedType == CommonBiomeTags.IS_END_CENTER) {
+            return this.mapCenter.getBiome(posX, posY, posZ).biome;
+         } else if (suggestedType == CommonBiomeTags.IS_SMALL_END_ISLAND) {
+            return this.mapVoid.getBiome(posX, posY, posZ).biome;
+         } else {
+            return suggestedType == CommonBiomeTags.IS_END_BARRENS
+               ? this.mapBarrens.getBiome(posX, posY, posZ).biome
+               : this.mapLand.getBiome(posX, posY, posZ).biome;
+         }
+      } else {
+         return (Holder<Biome>)this.possibleBiomes().stream().findFirst().orElseThrow();
+      }
+   }
 
-    @Override
-    public WoverEndConfig getBiomeSourceConfig() {
-        return config;
-    }
+   public WoverBiomePicker.PickableBiome landBiomeAt(int posX, int posZ) {
+      return this.mapLand == null ? null : this.mapLand.getBiome(posX, 0.0, posZ);
+   }
 
-    public WoverBiomePicker.PickableBiome landBiomeAt(int blockX, int blockZ) {
-        return mapLand == null ? null : mapLand.getBiome(blockX, 0, blockZ);
-    }
+   public WoverEndConfig getBiomeSourceConfig() {
+      return this.config;
+   }
 
-    @Override
-    public void setBiomeSourceConfig(WoverEndConfig newConfig) {
-        this.config = newConfig;
-        rebuildBiomes(true);
-        this.initMap(currentSeed);
-    }
-
-    @Override
-    public BiomeSourceConfigPanel<WoverEndBiomeSource, WoverEndConfig> biomeSourceConfigPanel(@NotNull Screen parent) {
-        return new EndConfigPage(config);
-    }
+   public void setBiomeSourceConfig(WoverEndConfig newConfig) {
+      this.config = newConfig;
+      this.rebuildBiomes(true);
+      this.initMap(this.currentSeed);
+   }
 }
+

@@ -11,33 +11,34 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
+import net.minecraft.world.level.levelgen.synth.Noise;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.jetbrains.annotations.ApiStatus;
 
 public class NoiseRegistryImpl {
-    public static ResourceKey<NormalNoise.NoiseParameters> createKey(Identifier loc) {
+    public static ResourceKey<NormalNoise> createKey(Identifier loc) {
         return ResourceKey.create(Registries.NOISE, loc);
     }
 
-    private static NormalNoise createNoise(
-            Registry<NormalNoise.NoiseParameters> registry,
+    private static Noise createNoise(
+            Registry<NormalNoise> registry,
             RandomSource randomSource,
-            ResourceKey<NormalNoise.NoiseParameters> resourceKey
+            ResourceKey<NormalNoise> resourceKey
     ) {
-        Holder<NormalNoise.NoiseParameters> holder = registry.getOrThrow(resourceKey);
-        return NormalNoise.create(randomSource, holder.value());
+        Holder<NormalNoise> holder = registry.getOrThrow(resourceKey);
+        return holder.value().create(randomSource);
     }
 
-    private static final Map<ResourceKey<NormalNoise.NoiseParameters>, NormalNoise> noiseIntances = new ConcurrentHashMap<>();
+    private static final Map<ResourceKey<NormalNoise>, Noise> noiseIntances = new ConcurrentHashMap<>();
 
-    public static NormalNoise getOrCreateNoise(
+    public static Noise getOrCreateNoise(
             RegistryAccess registryAccess,
             RandomSource randomSource,
-            ResourceKey<NormalNoise.NoiseParameters> noise
+            ResourceKey<NormalNoise> noise
     ) {
-        final Registry<NormalNoise.NoiseParameters> registry = registryAccess.lookupOrThrow(Registries.NOISE);
+        final Registry<NormalNoise> registry = registryAccess.lookupOrThrow(Registries.NOISE);
         return noiseIntances.computeIfAbsent(
                 noise,
                 (key) -> NoiseRegistryImpl.createNoise(registry, randomSource, noise)
@@ -45,18 +46,26 @@ public class NoiseRegistryImpl {
     }
 
     public static void register(
-            BootstrapContext<NormalNoise.NoiseParameters> bootstapContext,
-            ResourceKey<NormalNoise.NoiseParameters> resourceKey,
+            BootstrapContext<NormalNoise> bootstapContext,
+            ResourceKey<NormalNoise> resourceKey,
             int firstOctave,
             double firstAmplitude,
             double... amplitudes
     ) {
-        bootstapContext.register(resourceKey, new NormalNoise.NoiseParameters(firstOctave, firstAmplitude, amplitudes));
+        int octaveCount = Math.max(1, amplitudes.length);
+        NormalNoise.Builder builder = NormalNoise.builder()
+                .setBaseOctave(firstOctave)
+                .setBaseAmplitude(firstAmplitude)
+                .setOctaveCount(octaveCount);
+        for (int i = 0; i < amplitudes.length; i++) {
+            builder.setAmplitudeModifier(i, amplitudes[i]);
+        }
+        bootstapContext.register(resourceKey, builder.build());
     }
 
 
     @ApiStatus.Internal
-    public static void bootstrap(BootstrapContext<NormalNoise.NoiseParameters> bootstapContext) {
+    public static void bootstrap(BootstrapContext<NormalNoise> bootstapContext) {
         register(bootstapContext, NoiseParameterManager.ROUGHNESS_NOISE, 2, 1.0D, 1.0, 1.0, 1.0, 1.0);
     }
 }

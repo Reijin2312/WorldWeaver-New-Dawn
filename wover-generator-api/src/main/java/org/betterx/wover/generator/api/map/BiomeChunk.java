@@ -3,7 +3,10 @@ package org.betterx.wover.generator.api.map;
 import org.betterx.wover.generator.api.biomesource.WoverBiomePicker;
 
 public interface BiomeChunk {
-    void setBiome(int x, int z, WoverBiomePicker.PickableBiome biome);
-    WoverBiomePicker.PickableBiome getBiome(int x, int z);
-    int getSide();
+   void setBiome(int var1, int var2, WoverBiomePicker.PickableBiome var3);
+
+   WoverBiomePicker.PickableBiome getBiome(int var1, int var2);
+
+   int getSide();
 }
+

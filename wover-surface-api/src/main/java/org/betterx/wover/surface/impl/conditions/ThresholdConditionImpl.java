@@ -3,7 +3,6 @@ package org.betterx.wover.surface.impl.conditions;
 import org.betterx.wover.math.api.noise.OpenSimplexNoise;
 import org.betterx.wover.math.api.MathHelper;
 import org.betterx.wover.surface.api.conditions.SurfaceNoiseCondition;
-import org.betterx.wover.surface.api.conditions.SurfaceRulesContext;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -12,7 +11,12 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.util.valueproviders.FloatProvider;
 import net.minecraft.util.valueproviders.FloatProviders;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,14 +54,14 @@ public class ThresholdConditionImpl extends SurfaceNoiseCondition {
     }
 
     @Override
-    public boolean test(SurfaceRulesContext context) {
-        final int x = context.getBlockX(), z = context.getBlockZ();
+    public boolean test(MaterialRuleContext context) {
+        final int x = context.blockX(), z = context.blockZ();
         return noiseContext.eval(x * scaleX, z * scaleZ)
                 + roughness.sample(noiseContext.randomAt(x, z)) > threshold;
     }
 
     @Override
-    public MapCodec<? extends SurfaceRules.ConditionSource> codec() {
+    public MapCodec<? extends MaterialCondition> codec() {
         return CODEC;
     }
 

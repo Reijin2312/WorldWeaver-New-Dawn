@@ -123,6 +123,12 @@ public abstract class WoverFullRegistryProvider<T> extends WoverRegistryProvider
     ) {
         RegistrySetBuilder registryBuilder = new RegistrySetBuilder();
         buildRegistry(registryBuilder);
-        return new DatapackBuiltinEntriesProvider(output, registriesFuture, registryBuilder, modIdSet());
+        return DatapackBuiltinEntriesProvider.forWorldLayer(
+                output,
+                title,
+                registriesFuture,
+                registryBuilder,
+                modIdSet()
+        );
     }
 }

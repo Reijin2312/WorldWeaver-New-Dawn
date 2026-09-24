@@ -5,8 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "NoiseBasedChunkGeneratorMixin",
-    "NoiseGeneratorSettingsMixin",
-    "SurfaceRulesContextAccessor"
+    "NoiseGeneratorSettingsMixin"
   ],
   "injectors": {
     "defaultRequire": 1

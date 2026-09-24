@@ -1,7 +1,6 @@
 package org.betterx.wover.surface.impl.conditions;
 
 import org.betterx.wover.math.api.noise.OpenSimplexNoise;
-import org.betterx.wover.surface.api.conditions.SurfaceRulesContext;
 import org.betterx.wover.surface.api.conditions.VolumeNoiseCondition;
 import org.betterx.wover.surface.api.conditions.VolumeThresholdCondition;
 
@@ -12,7 +11,12 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.util.valueproviders.FloatProvider;
 import net.minecraft.util.valueproviders.FloatProviders;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 import net.minecraft.world.level.levelgen.ThreadSafeLegacyRandomSource;
 
 import java.util.Map;
@@ -79,8 +83,8 @@ public class VolumeThresholdConditionImpl extends VolumeNoiseCondition implement
         noiseContext = NOISES.computeIfAbsent(noiseSeed, seed -> new Context(seed));
     }
 
-    public double getValue(SurfaceRulesContext context) {
-        return getValue(context.getBlockX(), context.getBlockY(), context.getBlockZ());
+    public double getValue(MaterialRuleContext context) {
+        return getValue(context.blockX(), context.blockY(), context.blockZ());
     }
 
     public double getValue(int xx, int yy, int zz) {
@@ -89,12 +93,12 @@ public class VolumeThresholdConditionImpl extends VolumeNoiseCondition implement
     }
 
     @Override
-    public boolean test(SurfaceRulesContext context) {
+    public boolean test(MaterialRuleContext context) {
         return getValue(context) > threshold;
     }
 
     @Override
-    public MapCodec<? extends SurfaceRules.ConditionSource> codec() {
+    public MapCodec<? extends MaterialCondition> codec() {
         return CODEC;
     }
 

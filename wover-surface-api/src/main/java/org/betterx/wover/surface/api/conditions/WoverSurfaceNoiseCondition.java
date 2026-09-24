@@ -1,6 +1,11 @@
 package org.betterx.wover.surface.api.conditions;
 
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 
 /**
  * Surface noise condition implementation that can access package-private
@@ -12,21 +17,7 @@ public abstract class WoverSurfaceNoiseCondition implements NoiseCondition {
      * a 2D (X/Z) location.
      */
     @Override
-    public final SurfaceRules.Condition apply(SurfaceRules.Context context2) {
-        final WoverSurfaceNoiseCondition self = this;
-
-        class Generator extends SurfaceRules.LazyXZCondition {
-            Generator() {
-                super(context2);
-            }
-
-            @Override
-            protected boolean compute() {
-                final SurfaceRulesContext context = SurfaceRulesContext.class.cast(this.context);
-                return context != null && self.test(context);
-            }
-        }
-
-        return new Generator();
+    public final ConditionEvaluator compile(MaterialRuleContext context) {
+        return () -> test(context);
     }
 }

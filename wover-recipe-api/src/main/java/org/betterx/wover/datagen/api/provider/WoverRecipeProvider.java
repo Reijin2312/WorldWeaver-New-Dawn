@@ -5,10 +5,10 @@ import org.betterx.wover.datagen.api.WoverDataProvider;
 import org.betterx.wover.datagen.api.WoverRecipeGenerator;
 import org.betterx.wover.recipe.impl.WoverRecipeProviderAccess;
 
-import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.recipes.RecipeOutput;
-import net.minecraft.data.recipes.RecipeProvider;
+import net.minecraft.data.worldgen.BootstrapContextAccess;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -31,10 +31,10 @@ public abstract class WoverRecipeProvider implements WoverDataProvider<net.minec
         this.modCore = modCore;
     }
 
-    protected abstract void bootstrap(HolderLookup.Provider provider, RecipeOutput context);
+    protected abstract void bootstrap(BootstrapContextAccess provider, RecipeOutput context);
 
     @Override
-    public void buildRecipes(HolderLookup.Provider lookup, RecipeOutput exporter) {
+    public void buildRecipes(BootstrapContextAccess lookup, RecipeOutput exporter) {
         WoverRecipeProviderAccess.withLookup(lookup, () -> bootstrap(lookup, exporter));
     }
 
@@ -43,20 +43,17 @@ public abstract class WoverRecipeProvider implements WoverDataProvider<net.minec
             PackOutput output,
             CompletableFuture<HolderLookup.Provider> registriesFuture
     ) {
-        return new RecipeProvider.Runner(output, registriesFuture) {
+        return new net.minecraft.data.DataProvider() {
             @Override
             public String getName() {
                 return "Recipes: " + modCore.namespace + "/" + title;
             }
 
             @Override
-            protected RecipeProvider createRecipeProvider(HolderLookup.Provider lookup, RecipeOutput output) {
-                return new RecipeProvider(lookup, output) {
-                    @Override
-                    protected void buildRecipes() {
-                        WoverRecipeProviderAccess.withLookup(lookup, () -> bootstrap(lookup, output));
-                    }
-                };
+            public CompletableFuture<?> run(net.minecraft.data.CachedOutput cache) {
+                return CompletableFuture.failedFuture(new IllegalStateException(
+                        "WoverRecipeProvider must be registered through WoverDataGenEntryPoint"
+                ));
             }
         };
     }

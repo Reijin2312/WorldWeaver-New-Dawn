@@ -6,7 +6,12 @@ import org.betterx.wover.util.PriorityLinkedList;
 
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 
 public interface BaseSurfaceRuleBuilder<T extends BaseSurfaceRuleBuilder<T>> {
     /**
@@ -159,18 +164,18 @@ public interface BaseSurfaceRuleBuilder<T extends BaseSurfaceRuleBuilder<T>> {
      * Allows to add custom rule.
      *
      * @param priority rule priority, lower values = higher priority (rule will be applied before others).
-     * @param rule     custom {@link SurfaceRules.RuleSource}.
+     * @param rule     custom {@link MaterialRule}.
      * @return same {@link BaseSurfaceRuleBuilder} instance.
      */
-    T rule(SurfaceRules.RuleSource rule, int priority);
+    T rule(MaterialRule rule, int priority);
 
     /**
      * Allows to add custom rule with default priority {@link PriorityLinkedList#DEFAULT_PRIORITY}.
      *
-     * @param rule custom {@link SurfaceRules.RuleSource}.
+     * @param rule custom {@link MaterialRule}.
      * @return same {@link BaseSurfaceRuleBuilder} instance.
      */
-    T rule(SurfaceRules.RuleSource rule);
+    T rule(MaterialRule rule);
 
     /**
      * Set biome floor with specified {@link BlockState} and the
@@ -195,15 +200,15 @@ public interface BaseSurfaceRuleBuilder<T extends BaseSurfaceRuleBuilder<T>> {
     T chancedFloor(BlockState surfaceBlockA, BlockState surfaceBlockB, NoiseCondition noise);
 
     /**
-     * Set biome floor with specified {@link BlockState}/{@link SurfaceRules.RuleSource} and the given Noise Function.
+     * Set biome floor with specified {@link BlockState}/{@link MaterialRule} and the given Noise Function.
      * The rule is added with priority {@link #FLOOR_PRIORITY}.
      *
      * @param surfaceBlockA {@link BlockState} for the ground cover.
-     * @param surfaceBlockB {@link SurfaceRules.RuleSource} for the alternative ground cover.
+     * @param surfaceBlockB {@link MaterialRule} for the alternative ground cover.
      * @param noise         The {@link NoiseCondition}
      * @return same {@link BaseSurfaceRuleBuilder} instance.
      */
-    T chancedFloor(BlockState surfaceBlockA, SurfaceRules.RuleSource surfaceBlockB, NoiseCondition noise);
+    T chancedFloor(BlockState surfaceBlockA, MaterialRule surfaceBlockB, NoiseCondition noise);
 
     /**
      * Change the sorting order of this rule. Higher priority rules are applied first if there are multiple rules for a

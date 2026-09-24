@@ -13,6 +13,7 @@ import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -228,21 +229,6 @@ public class DatapackRegistryBuilder {
             @Override
             public Holder.Reference<T> register(
                     ResourceKey<T> resourceKey,
-                    T object,
-                    Lifecycle lifecycle
-            ) {
-                if (!registry.containsKey(resourceKey)) {
-                    //TODO: 1.21 creating a new instance of RegistrationInfo might be expensive...
-                    return registry.register(resourceKey, object, new RegistrationInfo(Optional.empty(), lifecycle));
-                } else {
-                    return registry.get(resourceKey)
-                            .orElseThrow(() -> new IllegalStateException("Missing key in " + registry.key() + ": " + resourceKey));
-                }
-            }
-
-            @Override
-            public Holder.Reference<T> register(
-                    ResourceKey<T> resourceKey,
                     T object
             ) {
                 if (!registry.containsKey(resourceKey)) {
@@ -255,7 +241,13 @@ public class DatapackRegistryBuilder {
 
             @Override
             public <S> HolderGetter<S> lookup(ResourceKey<? extends Registry<? extends S>> resourceKey) {
-                return registryInfoLookup.lookup(resourceKey).map(o -> o.getter()).orElse(null);
+                return registryInfoLookup.lookup(resourceKey).orElse(null);
+            }
+
+            @Override
+            public <S> Stream<Holder.Reference<S>> listContextElements(ResourceKey<? extends Registry<? extends S>> resourceKey) {
+                HolderGetter<S> getter = lookup(resourceKey);
+                return getter instanceof HolderLookup<S> holderLookup ? holderLookup.listElements() : Stream.empty();
             }
         };
     }
@@ -278,22 +270,6 @@ public class DatapackRegistryBuilder {
             @Override
             public Holder.Reference<T> register(
                     ResourceKey<T> resourceKey,
-                    T object,
-                    Lifecycle lifecycle
-            ) {
-                if (!registry.containsKey(resourceKey)) {
-                    //TODO: 1.21 creating a new instance of RegistrationInfo might be expensive...
-                    return registry.register(resourceKey, object, new RegistrationInfo(Optional.empty(), lifecycle));
-                } else {
-                    return registry.get(resourceKey)
-                            .orElseThrow(() -> new IllegalStateException("Missing key in " + registry.key() + ": " + resourceKey));
-                }
-            }
-
-
-            @Override
-            public Holder.Reference<T> register(
-                    ResourceKey<T> resourceKey,
                     T object
             ) {
                 if (!registry.containsKey(resourceKey)) {
@@ -313,6 +289,14 @@ public class DatapackRegistryBuilder {
                     return null;
                 }
                 return access.lookupOrThrow(resourceKey);
+            }
+
+            @Override
+            public <S> Stream<Holder.Reference<S>> listContextElements(ResourceKey<? extends Registry<? extends S>> resourceKey) {
+                if (access == null) {
+                    return resourceKey.equals(registry.key()) ? ((HolderLookup<S>) registry).listElements() : Stream.empty();
+                }
+                return access.lookupOrThrow(resourceKey).listElements();
             }
         };
     }

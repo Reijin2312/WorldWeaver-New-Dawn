@@ -6,10 +6,9 @@ import org.betterx.wover.biome.impl.modification.BiomeModificationRegistryImpl;
 import org.betterx.wover.core.api.registry.DatapackRegistryEntrypoint;
 
 public class BiomeDatapackRegistryEntrypoint implements DatapackRegistryEntrypoint {
-    @Override
-    public void registerDatapackRegistries() {
-        BiomeManagerImpl.initialize();
-        BiomeDataRegistryImpl.initialize();
-        BiomeModificationRegistryImpl.initialize();
-    }
+   public void registerDatapackRegistries() {
+      BiomeManagerImpl.initialize();
+      BiomeDataRegistryImpl.initialize();
+      BiomeModificationRegistryImpl.initialize();
+   }
 }

@@ -1,9 +1,9 @@
 package org.betterx.wover.recipe.impl;
 
 import org.betterx.wover.recipe.api.CraftingRecipeBuilder;
+import org.betterx.wover.recipe.api.RecipeBuilder;
+import org.betterx.wover.recipe.api.RecipeMaterial;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.data.recipes.ShapelessRecipeBuilder;
 import net.minecraft.resources.Identifier;
@@ -19,9 +19,13 @@ import java.util.Map;
 
 public class CraftingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CraftingRecipeBuilder> implements
         CraftingRecipeBuilder {
+    public interface IngredientFactory {
+        Ingredient createIngredient(RecipeBuilder.Context context);
+    }
+
     private String[] shape;
     protected boolean showNotification;
-    protected final Map<Character, Ingredient> materials;
+    protected final Map<Character, IngredientFactory> materials;
 
     public CraftingRecipeBuilderImpl(Identifier id, ItemLike output) {
         super(id, output);
@@ -30,31 +34,63 @@ public class CraftingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CraftingRec
     }
 
     @Override
-    public CraftingRecipeBuilder addMaterial(char key, TagKey<Item> value) {
-        unlockedBy(value);
-        return _addMaterial(key, ingredientOf(value));
+    public CraftingRecipeBuilder addMaterial(char key, TagKey<Item> tagKey) {
+        unlockedBy(tagKey);
+        return _addMaterial(key, (provider) -> provider.tag(tagKey));
     }
 
     @Override
     public CraftingRecipeBuilder addMaterial(char key, ItemStack... values) {
         unlockedBy(values);
-        return _addMaterial(key, Ingredient.of(Arrays.stream(values).map(ItemStack::getItem)));
+        return _addMaterial(
+                key,
+                provider -> Ingredient.of(Arrays.stream(values).map(ItemStack::getItem))
+        );
     }
 
     @Override
     public CraftingRecipeBuilder addMaterial(char key, ItemLike... values) {
         unlockedBy(values);
-        return _addMaterial(key, Ingredient.of(values));
+        return _addMaterial(key, provider -> Ingredient.of(values));
     }
 
     @Override
     public CraftingRecipeBuilderImpl addMaterial(char key, Ingredient value) {
         unlockedBy(value);
-        return _addMaterial(key, value);
+        return _addMaterial(key, items -> value);
     }
 
-    public CraftingRecipeBuilderImpl _addMaterial(char key, Ingredient value) {
-        materials.put(key, value);
+    @Override
+    public CraftingRecipeBuilderImpl addMaterial(char key, RecipeMaterial value) {
+        final var self = this;
+        value.consume(
+                new RecipeMaterial.Consumer() {
+                    @Override
+                    public void apply(TagKey<Item> tag) {
+                        self.addMaterial(key, tag);
+                    }
+
+                    @Override
+                    public void apply(ItemStack... stacks) {
+                        self.addMaterial(key, stacks);
+                    }
+
+                    @Override
+                    public void apply(ItemLike... items) {
+                        self.addMaterial(key, items);
+                    }
+
+                    @Override
+                    public void apply(Ingredient ingredient) {
+                        self.addMaterial(key, ingredient);
+                    }
+                }
+        );
+        return this;
+    }
+
+    public CraftingRecipeBuilderImpl _addMaterial(char key, IngredientFactory factory) {
+        materials.put(key, factory);
         return this;
     }
 
@@ -110,50 +146,55 @@ public class CraftingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CraftingRec
         }
     }
 
-    private void buildShaped(RecipeOutput ctx) {
-        var builder = ShapedRecipeBuilder.shaped(BuiltInRegistries.ITEM, category, outputTemplate());
+    private void buildShaped(RecipeBuilder.Context context) {
+        var builder = ShapedRecipeBuilder.shaped(context.itemLookup(), category, outputItem, outputCount);
 
-        for (Map.Entry<Character, Ingredient> mat : materials.entrySet()) {
-            builder.define(mat.getKey(), mat.getValue());
+        for (Map.Entry<Character, IngredientFactory> mat : materials.entrySet()) {
+            builder.define(mat.getKey(), mat.getValue().createIngredient(context));
         }
 
         for (String row : shape) builder.pattern(row);
 
         if (shouldUnlockAdvancements) {
             for (var item : unlocks.entrySet()) {
-                builder.unlockedBy(item.getKey(), item.getValue());
+                builder.unlockedBy(item.getKey(), item.getValue().createCriterion(context));
             }
         }
 
         builder.showNotification(this.showNotification);
         builder.group(this.group);
-        builder.save(ctx, recipeKey(id));
+        builder.save(context.recipeOutput(), this.key());
     }
 
-    private void buildShapeless(RecipeOutput ctx) {
-        var builder = ShapelessRecipeBuilder.shapeless(BuiltInRegistries.ITEM, category, outputTemplate());
+    private void buildShapeless(RecipeBuilder.Context context) {
+        var builder = ShapelessRecipeBuilder.shapeless(
+                context.itemLookup(),
+                category,
+                outputItem,
+                outputCount
+        );
 
-        for (Map.Entry<Character, Ingredient> mat : materials.entrySet()) {
-            builder.requires(mat.getValue());
+        for (Map.Entry<Character, IngredientFactory> mat : materials.entrySet()) {
+            builder.requires(mat.getValue().createIngredient(context));
         }
 
         if (shouldUnlockAdvancements) {
             for (var item : unlocks.entrySet()) {
-                builder.unlockedBy(item.getKey(), item.getValue());
+                builder.unlockedBy(item.getKey(), item.getValue().createCriterion(context));
             }
         }
 
         builder.group(this.group);
-        builder.save(ctx, recipeKey(id));
+        builder.save(context.recipeOutput(), this.key());
     }
 
     @Override
-    public void build(RecipeOutput ctx) {
+    public void build(RecipeBuilder.Context context) {
         validate();
         if (isShaped()) {
-            buildShaped(ctx);
+            buildShaped(context);
         } else {
-            buildShapeless(ctx);
+            buildShapeless(context);
         }
     }
 }

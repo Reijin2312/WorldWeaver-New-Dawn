@@ -10,7 +10,6 @@
     "biomesource.BiomeSourcePrintMixin",
     "biomesource.MultiNoiseBiomeSourceParameterListAccessor",
     "biomesource.ServerLevelMixin",
-    "biomesource.TheEndBiomeSourceMixin",
     "generator.ChunkGeneratorMixin",
     "generator.ChunkGeneratorPrintMixin",
     "generator.NoiseBasedChunkGeneratorMixin"

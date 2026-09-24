@@ -3,6 +3,7 @@ package org.betterx.wover.core.mixin.registry;
 import org.betterx.wover.core.impl.registry.DatapackRegistryBuilderImpl;
 
 import net.minecraft.core.RegistrySetBuilder;
+import net.minecraft.core.registries.SingleRegistryBootstrap;
 import net.minecraft.data.registries.VanillaRegistries;
 import net.minecraft.resources.ResourceKey;
 
@@ -22,7 +23,7 @@ public class VanillaRegistriesMixin {
     @Inject(method = "<clinit>", at = @At(value = "TAIL"))
     private static void together_registerSurface(CallbackInfo ci) {
         DatapackRegistryBuilderImpl.bootstrap((key, bootstrap) -> {
-            BUILDER.add((ResourceKey) key, (RegistrySetBuilder.RegistryBootstrap<? extends Object>) bootstrap);
+            BUILDER.add((ResourceKey) key, (SingleRegistryBootstrap<? extends Object>) bootstrap);
         });
 
     }

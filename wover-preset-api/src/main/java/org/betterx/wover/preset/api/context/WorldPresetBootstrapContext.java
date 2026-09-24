@@ -1,6 +1,6 @@
 package org.betterx.wover.preset.api.context;
 
-import com.mojang.serialization.Lifecycle;
+import java.util.stream.Stream;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.Registry;
@@ -178,16 +178,14 @@ public class WorldPresetBootstrapContext implements BootstrapContext<WorldPreset
      *
      * @param resourceKey the key of the preset
      * @param preset      the preset to register
-     * @param lifecycle   the lifecycle of the preset
      * @return a reference to the registered preset
      */
     @Override
     public Holder.@NotNull Reference<WorldPreset> register(
             ResourceKey<WorldPreset> resourceKey,
-            WorldPreset preset,
-            Lifecycle lifecycle
+            WorldPreset preset
     ) {
-        return context.register(resourceKey, preset, lifecycle);
+        return context.register(resourceKey, preset);
     }
 
     /**
@@ -200,6 +198,14 @@ public class WorldPresetBootstrapContext implements BootstrapContext<WorldPreset
     @Override
     public <S> HolderGetter<S> lookup(ResourceKey<? extends Registry<? extends S>> resourceKey) {
         return context.lookup(resourceKey);
+    }
+
+    @Override
+    @Deprecated
+    public <S> Stream<Holder.Reference<S>> listContextElements(
+            ResourceKey<? extends Registry<? extends S>> resourceKey
+    ) {
+        return context.listContextElements(resourceKey);
     }
 
     /**

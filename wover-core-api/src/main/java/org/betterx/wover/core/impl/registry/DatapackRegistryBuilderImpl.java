@@ -9,6 +9,7 @@ import com.mojang.serialization.Codec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistrySetBuilder;
 import net.minecraft.core.WritableRegistry;
+import net.minecraft.core.registries.SingleRegistryBootstrap;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
@@ -178,7 +179,7 @@ public class DatapackRegistryBuilderImpl {
     // VanillaRegistries are apparently only used in the vanilla datagen, debug mode and in the validate command
     @ApiStatus.Internal
     public static void bootstrap(
-            BiConsumer<ResourceKey<? extends Registry<?>>, RegistrySetBuilder.RegistryBootstrap<? extends Object>> consumer
+            BiConsumer<ResourceKey<? extends Registry<?>>, SingleRegistryBootstrap<? extends Object>> consumer
     ) {
         LibWoverCore.C.LOG.verboseWarning("DID NOT bootstrap VanillaRegistries.");
 //        initEntrypoints();

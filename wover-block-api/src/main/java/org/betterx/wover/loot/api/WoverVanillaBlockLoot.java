@@ -1,6 +1,11 @@
 package org.betterx.wover.loot.api;
 
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderGetter;
+import net.minecraft.core.Registry;
+import net.minecraft.data.loot.LootTableSubProvider;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.data.loot.packs.VanillaBlockLoot;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.Item;
@@ -12,15 +17,17 @@ import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
 import net.minecraft.world.level.storage.loot.functions.FunctionUserBuilder;
 import net.minecraft.world.level.storage.loot.predicates.ConditionUserBuilder;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
-import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProvider;
+
+import java.util.stream.Stream;
 
 public class WoverVanillaBlockLoot extends VanillaBlockLoot {
     public WoverVanillaBlockLoot(HolderLookup.Provider provider) {
-        super(provider);
+        super(new LookupContext(provider));
     }
 
     @Override
-    public LootItemCondition.Builder hasSilkTouch() {
+    public Holder<LootItemCondition> hasSilkTouch() {
         return super.hasSilkTouch();
     }
 
@@ -30,7 +37,9 @@ public class WoverVanillaBlockLoot extends VanillaBlockLoot {
     }
 
     public LootItemCondition.Builder hasShearsOrSilkTouch() {
-        return hasShears().or(hasSilkTouch());
+        return new net.minecraft.world.level.storage.loot.predicates.AnyOfCondition.Builder()
+                .or(hasShears())
+                .or(hasSilkTouch());
     }
 
     public LootItemCondition.Builder doesNotHaveShearsOrSilkTouch() {
@@ -67,7 +76,7 @@ public class WoverVanillaBlockLoot extends VanillaBlockLoot {
     public LootTable.Builder createSingleItemTableWithSilkTouch(
             Block block,
             ItemLike item,
-            NumberProvider numberProvider
+            Holder<ContextIntProvider> numberProvider
     ) {
         return super.createSingleItemTableWithSilkTouch(block, item, numberProvider);
     }
@@ -133,5 +142,22 @@ public class WoverVanillaBlockLoot extends VanillaBlockLoot {
     @Override
     public LootTable.Builder createDoublePlantWithSeedDrops(Block block, Block seed) {
         return super.createDoublePlantWithSeedDrops(block, seed);
+    }
+
+    private record LookupContext(HolderLookup.Provider provider) implements LootTableSubProvider.Context {
+        @Override
+        public <S> HolderGetter<S> lookup(ResourceKey<? extends Registry<? extends S>> key) {
+            return provider.lookupOrThrow(key);
+        }
+
+        @Override
+        public <S> Stream<Holder.Reference<S>> listContextElements(ResourceKey<? extends Registry<? extends S>> key) {
+            return provider.lookupOrThrow(key).listElements();
+        }
+
+        @Override
+        public Holder.Reference<LootTable> accept(ResourceKey<LootTable> key, LootTable.Builder value) {
+            throw new UnsupportedOperationException("Builder-only loot context cannot register tables");
+        }
     }
 }

@@ -2,7 +2,6 @@ package org.betterx.wover.datagen.api;
 
 import org.betterx.wover.core.api.ModCore;
 
-import com.mojang.serialization.Lifecycle;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
@@ -18,6 +17,7 @@ import net.neoforged.neoforge.common.data.DatapackBuiltinEntriesProvider;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.ApiStatus;
 
 
@@ -65,14 +65,21 @@ public abstract class WoverRegistryContentProvider<T> extends WoverRegistryProvi
     private void wrappedBoostrap(BootstrapContext<T> context) {
         BootstrapContext<T> wrapped = new BootstrapContext<T>() {
             @Override
-            public Holder.Reference<T> register(ResourceKey<T> resourceKey, T object, Lifecycle lifecycle) {
+            public Holder.Reference<T> register(ResourceKey<T> resourceKey, T object) {
                 addContent(resourceKey);
-                return context.register(resourceKey, object, lifecycle);
+                return context.register(resourceKey, object);
             }
 
             @Override
             public <S> HolderGetter<S> lookup(ResourceKey<? extends Registry<? extends S>> resourceKey) {
                 return context.lookup(resourceKey);
+            }
+
+            @Override
+            public <S> Stream<Holder.Reference<S>> listContextElements(
+                    ResourceKey<? extends Registry<? extends S>> resourceKey
+            ) {
+                return context.listContextElements(resourceKey);
             }
         };
         bootstrap(wrapped);
@@ -106,6 +113,12 @@ public abstract class WoverRegistryContentProvider<T> extends WoverRegistryProvi
     ) {
         RegistrySetBuilder registryBuilder = new RegistrySetBuilder();
         buildRegistry(registryBuilder);
-        return new DatapackBuiltinEntriesProvider(output, registriesFuture, registryBuilder, modIdSet());
+        return DatapackBuiltinEntriesProvider.forWorldLayer(
+                output,
+                title,
+                registriesFuture,
+                registryBuilder,
+                modIdSet()
+        );
     }
 }

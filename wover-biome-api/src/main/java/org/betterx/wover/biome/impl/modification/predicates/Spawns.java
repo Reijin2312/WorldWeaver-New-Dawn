@@ -1,47 +1,34 @@
 package org.betterx.wover.biome.impl.modification.predicates;
 
+import com.mojang.serialization.MapCodec;
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicate;
-
+import org.betterx.wover.biome.impl.modification.MobSettingsWorker;
 import net.minecraft.util.random.Weighted;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.biome.MobSpawnSettings;
+import net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData;
 
 public record Spawns(EntityType<?> entityType) implements BiomePredicate {
-    public static final KeyDispatchDataCodec<Spawns> CODEC = KeyDispatchDataCodec
-            .of(Identifier.CODEC
-                    .xmap(Spawns::fromLocation, Spawns::entityLocation)
-                    .fieldOf("entity_type")
-            );
+   public static final MapCodec<Spawns> CODEC = EntityType.CODEC.xmap(Spawns::new, Spawns::entityType).fieldOf("entity_type");
 
-    private static Spawns fromLocation(Identifier entityLocation) {
-        return new Spawns(BuiltInRegistries.ENTITY_TYPE.getOptional(entityLocation).orElseThrow());
-    }
+   @Override
+   public MapCodec<? extends BiomePredicate> codec() {
+      return CODEC;
+   }
 
-    private Identifier entityLocation() {
-        return EntityType.getKey(entityType);
-    }
+   @Override
+   public boolean test(BiomePredicate.Context ctx) {
+      MobSpawnSettings spawns = MobSettingsWorker.mobSettingsOf(ctx.biome);
 
-    @Override
-    public KeyDispatchDataCodec<? extends BiomePredicate> codec() {
-        return CODEC;
-    }
-
-    @Override
-    public boolean test(Context ctx) {
-        final MobSpawnSettings spawns = ctx.biome.getMobSettings();
-
-        for (MobCategory spawnGroup : MobCategory.values()) {
-            for (Weighted<MobSpawnSettings.SpawnerData> spawnEntry : spawns.getMobs(spawnGroup).unwrap()) {
-                if (spawnEntry.value().type().equals(entityType)) {
-                    return true;
-                }
+      for (MobCategory spawnGroup : MobCategory.values()) {
+         for (Weighted<SpawnerData> spawnEntry : spawns.getMobsToSpawn(spawnGroup).unwrap()) {
+            if (((SpawnerData)spawnEntry.value()).type().equals(this.entityType)) {
+               return true;
             }
-        }
+         }
+      }
 
-        return false;
-    }
+      return false;
+   }
 }

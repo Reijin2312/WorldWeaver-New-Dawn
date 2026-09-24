@@ -30,9 +30,6 @@ public class LibWoverWorldGenerator {
         modEventBus.addListener(GatherDataEvent.Client.class, datagen::onGatherData);
         modEventBus.addListener(GatherDataEvent.Server.class, datagen::onGatherData);
         modEventBus.addListener(net.neoforged.neoforge.registries.RegisterEvent.class, BiomeSourceManagerImpl::register);
-        modEventBus.addListener(net.neoforged.neoforge.registries.RegisterEvent.class, ChunkGeneratorManagerImpl::onRegister);
-        WorldPresetManager.BOOTSTRAP_WORLD_PRESETS.subscribe(PresetRegistryImpl::bootstrapWorldPresets);
-        WorldPresetTags.TAGS.bootstrapEvent().subscribe(PresetRegistryImpl::bootstrapWorldPresetTags);
         WorldPresetInfoRegistry.BOOTSTRAP_WORLD_PRESET_INFO_REGISTRY.subscribe(LibWoverWorldGenerator::bootstrapPresetInfo);
         if (!ModCore.isClient() && Configs.MAIN.forceDefaultWorldPresetOnServer.get()) {
             WorldPresetManager.suggestDefault(WorldPresets.WOVER_WORLD, 2000);
@@ -50,13 +47,6 @@ public class LibWoverWorldGenerator {
                               .order(1500)
                               .overworldOverride(net.minecraft.world.level.levelgen.presets.WorldPresets.NORMAL)
                               .register(WorldPresets.WOVER_WORLD);
-
-        WorldPresetInfoBuilder.start(context)
-                              .order(1600)
-                              .overworldOverride(net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT)
-                              .netherOverride(WorldPresets.WOVER_WORLD)
-                              .endOverride(WorldPresets.WOVER_WORLD)
-                              .register(WorldPresets.WOVER_WORLD_SUPERFLAT);
 
         WorldPresetInfoBuilder.start(context)
                               .order(2500)

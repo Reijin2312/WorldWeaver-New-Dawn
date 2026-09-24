@@ -1,119 +1,48 @@
 package org.betterx.wover.feature.impl;
 
+import com.mojang.serialization.MapCodec;
 import org.betterx.wover.entrypoint.LibWoverFeature;
-import org.betterx.wover.feature.api.features.*;
-import org.betterx.wover.feature.api.features.config.*;
-import org.betterx.wover.legacy.api.LegacyHelper;
-
-import com.mojang.serialization.Codec;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
+import org.betterx.wover.feature.api.features.ConditionFeature;
+import org.betterx.wover.feature.api.features.MarkPostProcessingFeature;
+import org.betterx.wover.feature.api.features.PillarFeature;
+import org.betterx.wover.feature.api.features.PlaceFacingBlockFeature;
+import org.betterx.wover.feature.api.features.SequenceFeature;
+import org.betterx.wover.feature.api.features.TemplateFeature;
+import org.betterx.wover.feature.impl.random.RandomPatchFeature;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import org.betterx.wover.feature.impl.features.RandomPatchFeature;
-import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
-import org.betterx.wover.feature.impl.features.RandomPatchConfiguration;
-
-import java.util.function.Function;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import net.neoforged.neoforge.registries.RegisterEvent;
+import org.jetbrains.annotations.ApiStatus.Internal;
 
 public class FeatureManagerImpl {
-    private static final Map<ResourceKey<Feature<?>>, Feature<?>> FEATURES = new LinkedHashMap<>();
+   public static final MapCodec<PlaceFacingBlockFeature> PLACE_BLOCK = register(LibWoverFeature.C.id("place_block"), PlaceFacingBlockFeature.CODEC);
+   public static final MapCodec<MarkPostProcessingFeature> MARK_POSTPROCESSING = register(
+      LibWoverFeature.C.id("mark_postprocessing"), MarkPostProcessingFeature.CODEC
+   );
+   public static final MapCodec<SequenceFeature> SEQUENCE = register(LibWoverFeature.C.id("sequence"), SequenceFeature.CODEC);
+   public static final MapCodec<ConditionFeature> CONDITION = register(LibWoverFeature.C.id("condition"), ConditionFeature.CODEC);
+   public static final MapCodec<PillarFeature> PILLAR = register(LibWoverFeature.C.id("pillar"), PillarFeature.CODEC);
+   public static final MapCodec<TemplateFeature> TEMPLATE = register(LibWoverFeature.C.id("template"), TemplateFeature.CODEC);
+   public static final MapCodec<RandomPatchFeature> RANDOM_PATCH = register(LibWoverFeature.C.id("random_patch"), RandomPatchFeature.CODEC);
 
+   public static <F extends Feature> MapCodec<F> register(@NotNull Identifier id, @NotNull MapCodec<F> codec) {
+      return register(createKey(id), codec);
+   }
 
-    public static <C extends FeatureConfiguration, F extends Feature<C>> F register(
-            @NotNull Identifier id,
-            @NotNull F feature
-    ) {
-        return register(createKey(id), feature);
-    }
+   public static <F extends Feature> MapCodec<F> register(@NotNull ResourceKey<MapCodec<? extends Feature>> key, @NotNull MapCodec<F> codec) {
+      Registry.register(BuiltInRegistries.FEATURE_TYPE, key, codec);
+      return codec;
+   }
 
-    public static <C extends FeatureConfiguration, F extends Feature<C>> F register(
-            @NotNull ResourceKey<Feature<?>> key,
-            @NotNull F feature
-    ) {
-        FEATURES.putIfAbsent(key, feature);
-        return feature;
-    }
+   @NotNull
+   public static ResourceKey<MapCodec<? extends Feature>> createKey(Identifier location) {
+      return ResourceKey.create(BuiltInRegistries.FEATURE_TYPE.key(), location);
+   }
 
-    private static <C extends FeatureConfiguration, F extends Feature<C>> F registerWithLegacy(
-            @NotNull Identifier id,
-            @NotNull Function<Codec<C>, F> feature,
-            Codec<C> codec
-    ) {
-        final var key = createKey(id);
-        F res = register(key, feature.apply(codec));
-        if (LegacyHelper.isLegacyEnabled()) {
-            register(LegacyHelper.BCLIB_CORE.convertNamespace(key.identifier()), feature.apply(codec));
-        }
-        return res;
-    }
-
-    @NotNull
-    public static ResourceKey<Feature<?>> createKey(Identifier location) {
-        return ResourceKey.create(
-                Registries.FEATURE,
-                location
-        );
-    }
-
-    public static final Feature<PlaceFacingBlockConfig> PLACE_BLOCK = registerWithLegacy(
-            LibWoverFeature.C.id("place_block"),
-            PlaceBlockFeature::new,
-            PlaceFacingBlockConfig.CODEC
-    );
-
-
-    public static final Feature<NoneFeatureConfiguration> MARK_POSTPROCESSING = registerWithLegacy(
-            LibWoverFeature.C.id("mark_postprocessing"),
-            (codec) -> new MarkPostProcessingFeature(),
-            null
-    );
-
-    public static final Feature<SequenceFeatureConfig> SEQUENCE = registerWithLegacy(
-            LibWoverFeature.C.id("sequence"),
-            (codec) -> new SequenceFeature(),
-            null
-    );
-
-    public static final Feature<ConditionFeatureConfig> CONDITION = registerWithLegacy(
-            LibWoverFeature.C.id("condition"),
-            codec -> new ConditionFeature(),
-            null
-    );
-
-    public static final Feature<PillarFeatureConfig> PILLAR = registerWithLegacy(
-            LibWoverFeature.C.id("pillar"),
-            codec -> new PillarFeature(),
-            null
-    );
-
-    public static final Feature<TemplateFeatureConfig> TEMPLATE = registerWithLegacy(
-            LibWoverFeature.C.id("template"),
-            TemplateFeature::new,
-            TemplateFeatureConfig.CODEC
-    );
-
-    public static final RandomPatchFeature RANDOM_PATCH = register(
-            LibWoverFeature.C.id("random_patch"),
-            new RandomPatchFeature(RandomPatchConfiguration.CODEC)
-    );
-
-    public static void register(RegisterEvent event) {
-        if (event.getRegistryKey().equals(Registries.FEATURE)) {
-            event.register(Registries.FEATURE, helper -> FEATURES.forEach((k, v) -> helper.register(k.identifier(), v)));
-        }
-    }
-
-    @ApiStatus.Internal
-    public static void ensureStaticInitialization() {
-        // no-op
-    }
-
-
+   @Internal
+   public static void ensureStaticInitialization() {
+   }
 }

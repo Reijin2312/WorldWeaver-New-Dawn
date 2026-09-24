@@ -8,7 +8,12 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 
 import net.neoforged.neoforge.registries.RegisterEvent;
 
@@ -16,32 +21,32 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 public class MaterialConditionRegistryImpl {
-    public static final ResourceKey<MapCodec<? extends SurfaceRules.ConditionSource>> THRESHOLD_CONDITION
+    public static final ResourceKey<MapCodec<? extends MaterialCondition>> THRESHOLD_CONDITION
             = ConditionManager.createKey(LibWoverSurface.C.id("threshold_condition"));
-    public static final ResourceKey<MapCodec<? extends SurfaceRules.ConditionSource>> VOLUME_THRESHOLD_CONDITION
+    public static final ResourceKey<MapCodec<? extends MaterialCondition>> VOLUME_THRESHOLD_CONDITION
             = ConditionManager.createKey(LibWoverSurface.C.id("volume_threshold_condition"));
-    public static final ResourceKey<MapCodec<? extends SurfaceRules.ConditionSource>> ROUGH_NOISE_CONDITION
+    public static final ResourceKey<MapCodec<? extends MaterialCondition>> ROUGH_NOISE_CONDITION
             = ConditionManager.createKey(LibWoverSurface.C.id("rough_noise_condition"));
 
-    public static ResourceKey<MapCodec<? extends SurfaceRules.ConditionSource>> register(
-            ResourceKey<MapCodec<? extends SurfaceRules.ConditionSource>> key,
-            MapCodec<? extends SurfaceRules.ConditionSource> codec,
+    public static ResourceKey<MapCodec<? extends MaterialCondition>> register(
+            ResourceKey<MapCodec<? extends MaterialCondition>> key,
+            MapCodec<? extends MaterialCondition> codec,
             boolean withBCLibLegacy
     ) {
         return key;
     }
 
     @NotNull
-    public static ResourceKey<MapCodec<? extends SurfaceRules.ConditionSource>> createKey(Identifier location) {
+    public static ResourceKey<MapCodec<? extends MaterialCondition>> createKey(Identifier location) {
         return ResourceKey.create(
-                Registries.MATERIAL_CONDITION,
+                Registries.MATERIAL_CONDITION_TYPE,
                 location
         );
     }
 
     @ApiStatus.Internal
     public static void register(RegisterEvent event) {
-        event.register(Registries.MATERIAL_CONDITION, helper -> {
+        event.register(Registries.MATERIAL_CONDITION_TYPE, helper -> {
             helper.register(THRESHOLD_CONDITION.identifier(), ThresholdConditionImpl.CODEC);
             helper.register(VOLUME_THRESHOLD_CONDITION.identifier(), VolumeThresholdConditionImpl.CODEC);
             helper.register(ROUGH_NOISE_CONDITION.identifier(), RoughNoiseConditionImpl.CODEC);

@@ -1,19 +1,21 @@
 package org.betterx.wover.recipe.impl;
 
+import org.betterx.wover.recipe.api.RecipeBuilder;
+import org.betterx.wover.recipe.api.RecipeMaterial;
 import org.betterx.wover.recipe.api.StonecutterRecipeBuilder;
 
-import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.SingleItemRecipeBuilder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
 
 import org.jetbrains.annotations.NotNull;
 
 public class StonecutterRecipeBuilderImpl extends BaseRecipeBuilderImpl<StonecutterRecipeBuilder> implements StonecutterRecipeBuilder {
-    Ingredient input;
+    CraftingRecipeBuilderImpl.IngredientFactory input;
 
     public StonecutterRecipeBuilderImpl(
             @NotNull Identifier id,
@@ -23,17 +25,55 @@ public class StonecutterRecipeBuilderImpl extends BaseRecipeBuilderImpl<Stonecut
     }
 
 
-    public StonecutterRecipeBuilder input(TagKey<Item> input) {
-        return input(ingredientOf(input));
+    public StonecutterRecipeBuilder input(TagKey<Item> tagKey) {
+        this.input = provider -> provider.tag(tagKey);
+        unlockedBy(tagKey);
+        return this;
     }
 
     public StonecutterRecipeBuilder input(ItemLike input) {
-        return input(Ingredient.of(input));
+        this.input = provider -> Ingredient.of(input);
+        unlockedBy(input);
+        return this;
     }
 
     public StonecutterRecipeBuilder input(Ingredient input) {
-        this.input = input;
+        this.input = provider -> input;
         unlockedBy(input);
+        return this;
+    }
+
+    public StonecutterRecipeBuilder input(RecipeMaterial input) {
+        final var self = this;
+        input.consume(
+                new RecipeMaterial.Consumer() {
+                    @Override
+                    public void apply(TagKey<Item> tag) {
+                        self.input(tag);
+                    }
+
+                    @Override
+                    public void apply(ItemStack... stacks) {
+                        if (stacks.length == 0) {
+                            throwIllegalStateException("No stacks provided for input");
+                        }
+                        self.input(stacks[0].getItem());
+                    }
+
+                    @Override
+                    public void apply(ItemLike... items) {
+                        if (items.length == 0) {
+                            throwIllegalStateException("No stacks provided for input");
+                        }
+                        self.input(items[0]);
+                    }
+
+                    @Override
+                    public void apply(Ingredient ingredient) {
+                        self.input(ingredient);
+                    }
+                }
+        );
         return this;
     }
 
@@ -47,16 +87,16 @@ public class StonecutterRecipeBuilderImpl extends BaseRecipeBuilderImpl<Stonecut
     }
 
     @Override
-    public void build(RecipeOutput ctx) {
+    public void build(RecipeBuilder.Context context) {
         final SingleItemRecipeBuilder builder = SingleItemRecipeBuilder.stonecutting(
-                input, category, outputItem(), outputCount()
+                input.createIngredient(context), category, outputItem, outputCount
         );
 
         for (var item : unlocks.entrySet()) {
-            builder.unlockedBy(item.getKey(), item.getValue());
+            builder.unlockedBy(item.getKey(), item.getValue().createCriterion(context));
         }
 
         builder.group(group);
-        builder.save(ctx, recipeKey(id));
+        builder.save(context.recipeOutput(), this.key());
     }
 }

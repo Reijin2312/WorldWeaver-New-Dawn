@@ -1,12 +1,16 @@
 package org.betterx.wover.recipe.impl;
 
 import org.betterx.wover.recipe.api.CookingRecipeBuilder;
+import org.betterx.wover.recipe.api.RecipeBuilder;
+import org.betterx.wover.recipe.api.RecipeMaterial;
 
-import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.data.recipes.SimpleCookingRecipeBuilder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CookingBookCategory;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.ItemLike;
@@ -14,7 +18,7 @@ import net.minecraft.world.level.ItemLike;
 public class CookingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CookingRecipeBuilder> implements CookingRecipeBuilder {
     protected float xp;
     protected int cookingTime;
-    protected Ingredient input;
+    protected CraftingRecipeBuilderImpl.IngredientFactory input;
 
     protected boolean blasting, campfire, smoker, smelting;
 
@@ -85,17 +89,56 @@ public class CookingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CookingRecip
         return this;
     }
 
-    public CookingRecipeBuilder input(TagKey<Item> input) {
-        return input(ingredientOf(input));
+    public CookingRecipeBuilder input(TagKey<Item> tagKey) {
+        this.input = provider -> provider.tag(tagKey);
+        unlockedBy(tagKey);
+        return this;
     }
 
     public CookingRecipeBuilder input(ItemLike input) {
-        return input(Ingredient.of(input));
+        this.input = provider -> Ingredient.of(input);
+        unlockedBy(input);
+        return this;
     }
 
     public CookingRecipeBuilder input(Ingredient input) {
-        this.input = input;
+        this.input = provider -> input;
         unlockedBy(input);
+        return this;
+    }
+
+
+    public CookingRecipeBuilder input(RecipeMaterial input) {
+        final var self = this;
+        input.consume(
+                new RecipeMaterial.Consumer() {
+                    @Override
+                    public void apply(TagKey<Item> tag) {
+                        self.input(tag);
+                    }
+
+                    @Override
+                    public void apply(ItemStack... stacks) {
+                        if (stacks.length == 0) {
+                            throwIllegalStateException("No stacks provided for input");
+                        }
+                        self.input(stacks[0].getItem());
+                    }
+
+                    @Override
+                    public void apply(ItemLike... items) {
+                        if (items.length == 0) {
+                            throwIllegalStateException("No stacks provided for input");
+                        }
+                        self.input(items[0]);
+                    }
+
+                    @Override
+                    public void apply(Ingredient ingredient) {
+                        self.input(ingredient);
+                    }
+                }
+        );
         return this;
     }
 
@@ -104,7 +147,8 @@ public class CookingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CookingRecip
         super.validate();
 
         if (!smelting && !blasting && !campfire && !smoker) {
-            throwIllegalStateException("No target (smelting, blasting, campfire or somer) for cooking recipe was selected");
+            throwIllegalStateException(
+                    "No target (smelting, blasting, campfire or somer) for cooking recipe was selected");
         }
 
         if (cookingTime < 0) {
@@ -113,15 +157,15 @@ public class CookingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CookingRecip
     }
 
     @Override
-    public void build(RecipeOutput ctx) {
+    public void build(RecipeBuilder.Context context) {
         if (smelting) {
             buildRecipe(
-                    ctx, "smelting",
+                    context, "smelting",
                     SimpleCookingRecipeBuilder.smelting(
-                            input,
+                            input.createIngredient(context),
                             category,
-                            cookingBookCategory(),
-                            outputTemplate(),
+                            CookingBookCategory.MISC,
+                            outputItem,
                             xp,
                             cookingTime
                     )
@@ -130,12 +174,12 @@ public class CookingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CookingRecip
 
         if (blasting) {
             buildRecipe(
-                    ctx, "blasting",
+                    context, "blasting",
                     SimpleCookingRecipeBuilder.blasting(
-                            input,
+                            input.createIngredient(context),
                             category,
-                            cookingBookCategory(),
-                            outputTemplate(),
+                            CookingBookCategory.MISC,
+                            outputItem,
                             xp,
                             cookingTime / 2
                     )
@@ -144,11 +188,11 @@ public class CookingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CookingRecip
 
         if (campfire) {
             buildRecipe(
-                    ctx, "campfire",
+                    context, "campfire",
                     SimpleCookingRecipeBuilder.campfireCooking(
-                            input,
+                            input.createIngredient(context),
                             category,
-                            outputTemplate(),
+                            outputItem,
                             xp,
                             cookingTime * 3
                     )
@@ -157,11 +201,11 @@ public class CookingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CookingRecip
 
         if (smoker) {
             buildRecipe(
-                    ctx, "smoker",
+                    context, "smoker",
                     SimpleCookingRecipeBuilder.smoking(
-                            input,
+                            input.createIngredient(context),
                             category,
-                            outputTemplate(),
+                            outputItem,
                             xp,
                             cookingTime / 2
                     )
@@ -169,20 +213,16 @@ public class CookingRecipeBuilderImpl extends BaseRecipeBuilderImpl<CookingRecip
         }
     }
 
-    private CookingBookCategory cookingBookCategory() {
-        return switch (category) {
-            case FOOD -> CookingBookCategory.FOOD;
-            case BUILDING_BLOCKS, DECORATIONS, REDSTONE -> CookingBookCategory.BLOCKS;
-            default -> CookingBookCategory.MISC;
-        };
-    }
-
-    private void buildRecipe(RecipeOutput ctx, String suffix, SimpleCookingRecipeBuilder builder) {
-        Identifier loc = id.withSuffix("_" + suffix);
+    private void buildRecipe(
+            RecipeBuilder.Context context,
+            String suffix,
+            SimpleCookingRecipeBuilder builder
+    ) {
+        Identifier loc = key.identifier().withSuffix("_" + suffix);
 
         for (var item : unlocks.entrySet()) {
-            builder.unlockedBy(item.getKey(), item.getValue());
+            builder.unlockedBy(item.getKey(), item.getValue().createCriterion(context));
         }
-        builder.save(ctx, recipeKey(loc));
+        builder.save(context.recipeOutput(), ResourceKey.create(Registries.RECIPE, loc));
     }
 }

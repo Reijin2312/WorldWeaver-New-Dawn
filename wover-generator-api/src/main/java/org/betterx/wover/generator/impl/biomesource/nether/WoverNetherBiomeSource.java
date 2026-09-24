@@ -1,185 +1,152 @@
 package org.betterx.wover.generator.impl.biomesource.nether;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import org.betterx.wover.common.generator.api.biomesource.BiomeSourceWithConfig;
 import org.betterx.wover.generator.api.biomesource.WoverBiomePicker;
 import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 import org.betterx.wover.generator.api.biomesource.nether.WoverNetherConfig;
-import org.betterx.wover.generator.api.client.biomesource.client.BiomeSourceConfigPanel;
-import org.betterx.wover.generator.api.client.biomesource.client.BiomeSourceWithConfigScreen;
 import org.betterx.wover.generator.api.map.BiomeMap;
 import org.betterx.wover.generator.api.map.MapBuilderFunction;
-import org.betterx.wover.generator.impl.client.NetherConfigPage;
 import org.betterx.wover.generator.impl.map.MapStack;
-
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.client.gui.screens.Screen;
+import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeResolver;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Biomes;
-import net.minecraft.world.level.biome.Climate;
-
-
-import java.util.List;
+import net.minecraft.world.level.biome.Climate.Sampler;
 import org.jetbrains.annotations.NotNull;
 
-public class WoverNetherBiomeSource extends WoverBiomeSource implements
-        BiomeSourceWithConfig<WoverNetherBiomeSource, WoverNetherConfig>,
-        BiomeSourceWithConfigScreen<WoverNetherBiomeSource, WoverNetherConfig> {
-    public static final MapCodec<WoverNetherBiomeSource> CODEC = RecordCodecBuilder
-            .mapCodec(instance -> instance
-                    .group(
-                            Codec
-                                    .LONG
-                                    .fieldOf("seed")
-                                    .stable()
-                                    .forGetter(source -> source.currentSeed),
-                            WoverNetherConfig
-                                    .CODEC
-                                    .fieldOf("config").orElse(WoverNetherConfig.DEFAULT)
-                                    .forGetter(o -> o.config)
-                    )
-                    .apply(instance, instance.stable(WoverNetherBiomeSource::new))
-            );
-    public static final List<TagKey<Biome>> TAGS = List.of(BiomeTags.IS_NETHER);
-    private BiomeMap biomeMap;
-    private WoverBiomePicker biomePicker;
-    private WoverNetherConfig config;
+public class WoverNetherBiomeSource extends WoverBiomeSource implements BiomeSourceWithConfig<WoverNetherBiomeSource, WoverNetherConfig> {
+   public static final MapCodec<WoverNetherBiomeSource> CODEC = RecordCodecBuilder.mapCodec(
+      instance -> instance.group(
+            Codec.LONG.fieldOf("seed").stable().forGetter(source -> source.currentSeed),
+            WoverNetherConfig.CODEC.fieldOf("config").orElse(WoverNetherConfig.DEFAULT).forGetter(o -> o.config)
+         )
+         .apply(instance, instance.stable(WoverNetherBiomeSource::new))
+   );
+   public static final List<TagKey<Biome>> TAGS = List.of(BiomeTags.IS_NETHER);
+   private BiomeMap biomeMap;
+   private WoverBiomePicker biomePicker;
+   private WoverNetherConfig config;
 
-    public WoverNetherBiomeSource(
-            WoverNetherConfig config
-    ) {
-        this(0, config, false);
-    }
+   public WoverNetherBiomeSource(WoverNetherConfig config) {
+      this(0L, config, false);
+   }
 
-    private WoverNetherBiomeSource(
-            long seed,
-            WoverNetherConfig config
-    ) {
-        this(seed, config, true);
-    }
+   private WoverNetherBiomeSource(long seed, WoverNetherConfig config) {
+      this(seed, config, true);
+   }
 
+   private WoverNetherBiomeSource(long seed, WoverNetherConfig config, boolean initMaps) {
+      super(seed);
+      this.config = config;
+      this.rebuildBiomes(false);
+      if (initMaps) {
+         this.initMap(seed);
+      }
+   }
 
-    private WoverNetherBiomeSource(
-            long seed,
-            WoverNetherConfig config,
-            boolean initMaps
-    ) {
-        super(seed);
-        this.config = config;
-        rebuildBiomes(false);
-        if (initMaps) {
-            initMap(seed);
-        }
-    }
+   @Override
+   protected List<WoverBiomeSource.TagToPicker> createFreshPickerMap() {
+      this.biomePicker = new WoverBiomePicker(this.fallbackBiome());
+      return List.of(new WoverBiomeSource.TagToPicker(BiomeTags.IS_NETHER, this.biomePicker));
+   }
 
-    @Override
-    protected List<TagToPicker> createFreshPickerMap() {
-        this.biomePicker = new WoverBiomePicker(fallbackBiome());
-        return List.of(new TagToPicker(BiomeTags.IS_NETHER, biomePicker));
-    }
+   @Override
+   protected TagKey<Biome> defaultBiomeTag() {
+      return BiomeTags.IS_NETHER;
+   }
 
-    @Override
-    protected TagKey<Biome> defaultBiomeTag() {
-        return BiomeTags.IS_NETHER;
-    }
+   @Override
+   protected List<TagKey<Biome>> acceptedTags() {
+      return TAGS;
+   }
 
-    @Override
-    protected List<TagKey<Biome>> acceptedTags() {
-        return TAGS;
-    }
+   @Override
+   protected TagKey<Biome> tagForUnknownBiome(Holder<Biome> biomeHolder, ResourceKey<Biome> biomeKey) {
+      return this.defaultBiomeTag();
+   }
 
-    @Override
-    protected TagKey<Biome> tagForUnknownBiome(Holder<Biome> biomeHolder, ResourceKey<Biome> biomeKey) {
-        return defaultBiomeTag();
-    }
+   @Override
+   protected ResourceKey<Biome> fallbackBiome() {
+      return Biomes.NETHER_WASTES;
+   }
 
-    @Override
-    protected ResourceKey<Biome> fallbackBiome() {
-        return Biomes.NETHER_WASTES;
-    }
+   @Override
+   public String toShortString() {
+      return "WoVer - Nether BiomeSource (" + Integer.toHexString(this.hashCode()) + ")";
+   }
 
-    @Override
-    public String toShortString() {
-        return "WoVer - Nether BiomeSource (" + Integer.toHexString(hashCode()) + ")";
-    }
+   public String toString() {
+      return this.toShortString()
+         + "\n    biomes     = "
+         + this.possibleBiomes().size()
+         + "\n    namespaces = "
+         + this.getNamespaces()
+         + "\n    seed       = "
+         + this.currentSeed
+         + "\n    height     = "
+         + this.maxHeight
+         + "\n    config     = "
+         + this.config;
+   }
 
-    @Override
-    public String toString() {
-        return toShortString() +
-                "\n    biomes     = " + possibleBiomes().size() +
-                "\n    namespaces = " + getNamespaces() +
-                "\n    seed       = " + currentSeed +
-                "\n    height     = " + maxHeight +
-                "\n    config     = " + config;
-    }
+   @Override
+   protected void onInitMap(long newSeed) {
+      MapBuilderFunction mapConstructor = this.config.mapVersion.mapBuilder;
+      if (this.maxHeight > this.config.biomeSizeVertical * 1.5 && this.config.useVerticalBiomes) {
+         this.biomeMap = new MapStack(newSeed, this.config.biomeSize, this.biomePicker, this.config.biomeSizeVertical, this.maxHeight, mapConstructor);
+      } else {
+         this.biomeMap = mapConstructor.create(newSeed, this.config.biomeSize, this.biomePicker);
+      }
+   }
 
-    @Override
-    protected void onInitMap(long newSeed) {
-        MapBuilderFunction mapConstructor = config.mapVersion.mapBuilder;
-        if (maxHeight > config.biomeSizeVertical * 1.5 && config.useVerticalBiomes) {
-            this.biomeMap = new MapStack(
-                    newSeed,
-                    config.biomeSize,
-                    biomePicker,
-                    config.biomeSizeVertical,
-                    maxHeight,
-                    mapConstructor
-            );
-        } else {
-            this.biomeMap = mapConstructor.create(
-                    newSeed,
-                    config.biomeSize,
-                    biomePicker
-            );
-        }
-    }
+   @Override
+   protected void onHeightChange(int newHeight) {
+      this.initMap(this.currentSeed);
+   }
 
-    @Override
-    protected void onHeightChange(int newHeight) {
-        initMap(currentSeed);
-    }
+   @NotNull
+   protected MapCodec<? extends BiomeSource> codec() {
+      return CODEC;
+   }
 
-    @Override
-    protected @NotNull MapCodec<? extends BiomeSource> codec() {
-        return CODEC;
-    }
+   @NotNull
+   public BiomeResolver createResolver(Sampler sampler) {
+      return (biomeX, biomeY, biomeZ) -> this.getNoiseBiome(biomeX, biomeY, biomeZ);
+   }
 
-    @Override
-    public @NotNull Holder<Biome> getNoiseBiome(int biomeX, int biomeY, int biomeZ, Climate.Sampler var4) {
-        if (!wasBound()) reloadBiomes(false);
+   @NotNull
+   private Holder<Biome> getNoiseBiome(int biomeX, int biomeY, int biomeZ) {
+      if (!this.wasBound()) {
+         this.reloadBiomes(false);
+      }
 
-        if (biomeMap == null)
-            return applyFallbackBiomeSource(this.possibleBiomes().stream().findFirst().get(), biomeX, biomeY, biomeZ, var4);
+      if (this.biomeMap == null) {
+         return (Holder<Biome>)this.possibleBiomes().stream().findFirst().get();
+      } else {
+         if ((biomeX & 63) == 0 && (biomeZ & 63) == 0) {
+            this.biomeMap.clearCache();
+         }
 
-        if ((biomeX & 63) == 0 && (biomeZ & 63) == 0) {
-            biomeMap.clearCache();
-        }
-        WoverBiomePicker.PickableBiome bb = biomeMap.getBiome(biomeX << 2, biomeY << 2, biomeZ << 2);
-        return applyFallbackBiomeSource(bb.biome, biomeX, biomeY, biomeZ, var4);
-    }
+         WoverBiomePicker.PickableBiome bb = this.biomeMap.getBiome(biomeX << 2, biomeY << 2, biomeZ << 2);
+         return bb.biome;
+      }
+   }
 
+   public WoverNetherConfig getBiomeSourceConfig() {
+      return this.config;
+   }
 
-    @Override
-    public WoverNetherConfig getBiomeSourceConfig() {
-        return config;
-    }
-
-    @Override
-    public void setBiomeSourceConfig(WoverNetherConfig newConfig) {
-        this.config = newConfig;
-        initMap(currentSeed);
-    }
-
-    @Override
-    public BiomeSourceConfigPanel<WoverNetherBiomeSource, WoverNetherConfig> biomeSourceConfigPanel(
-            @NotNull Screen parent
-    ) {
-        return new NetherConfigPage(config);
-    }
+   public void setBiomeSourceConfig(WoverNetherConfig newConfig) {
+      this.config = newConfig;
+      this.initMap(this.currentSeed);
+   }
 }
+

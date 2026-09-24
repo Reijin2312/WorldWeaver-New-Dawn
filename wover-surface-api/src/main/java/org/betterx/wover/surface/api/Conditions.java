@@ -10,7 +10,12 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.valueproviders.FloatProvider;
 import net.minecraft.util.valueproviders.UniformFloat;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
 /**
@@ -142,8 +147,8 @@ public class Conditions {
      * @param maxThreshold The maximum threshold that the noise value has to be below to be true.
      * @return A condition that is true if the noise value at the current position is between both thresholds.
      */
-    public static SurfaceRules.ConditionSource roughNoise(
-            ResourceKey<NormalNoise.NoiseParameters> noise,
+    public static MaterialCondition roughNoise(
+            ResourceKey<NormalNoise> noise,
             FloatProvider roughness,
             double minThreshold,
             double maxThreshold
@@ -154,7 +159,7 @@ public class Conditions {
     /**
      * Generates a 3D condition that is true if the noise value is above the min threshold.
      * <p>
-     * This will create the same {@link net.minecraft.world.level.levelgen.SurfaceRules.ConditionSource}
+     * This will create the same {@link net.minecraft.world.level.levelgen.MaterialCondition}
      * as {@link #roughNoise(ResourceKey, FloatProvider, double, double)} with the max threshold
      * set to {@link Double#MAX_VALUE}.
      *
@@ -163,8 +168,8 @@ public class Conditions {
      * @param minThreshold The minimum threshold that the noise value has to be above to be true.
      * @return A condition that is true if the noise value at the current position is above the threshold.
      */
-    public static SurfaceRules.ConditionSource roughNoise(
-            ResourceKey<NormalNoise.NoiseParameters> noise,
+    public static MaterialCondition roughNoise(
+            ResourceKey<NormalNoise> noise,
             FloatProvider roughness,
             double minThreshold
     ) {
@@ -174,7 +179,7 @@ public class Conditions {
     /**
      * Generates a 3D condition that is true if the noise value is above the min threshold.
      * <p>
-     * This will create the same {@link net.minecraft.world.level.levelgen.SurfaceRules.ConditionSource}
+     * This will create the same {@link net.minecraft.world.level.levelgen.MaterialCondition}
      * as {@link #roughNoise(ResourceKey, FloatProvider, double, double)} with the max threshold
      * set to {@link Double#MAX_VALUE} and the roughness set to {@code UniformFloat.of(-0.2, 0.4)}.
      *
@@ -182,8 +187,8 @@ public class Conditions {
      * @param minThreshold The minimum threshold that the noise value has to be above to be true.
      * @return A condition that is true if the noise value at the current position is above the threshold.
      */
-    public static SurfaceRules.ConditionSource roughNoise(
-            ResourceKey<NormalNoise.NoiseParameters> noise,
+    public static MaterialCondition roughNoise(
+            ResourceKey<NormalNoise> noise,
             double minThreshold
     ) {
         return new RoughNoiseConditionImpl(noise, UniformFloat.of(-0.2f, 0.4f), minThreshold, Double.MAX_VALUE);

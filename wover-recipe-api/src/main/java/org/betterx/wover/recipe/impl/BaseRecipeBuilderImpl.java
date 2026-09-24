@@ -1,10 +1,10 @@
 package org.betterx.wover.recipe.impl;
 
 import org.betterx.wover.recipe.api.BaseRecipeBuilder;
+import org.betterx.wover.recipe.api.RecipeBuilder;
 
 import net.minecraft.advancements.triggers.Criterion;
 import net.minecraft.advancements.triggers.InventoryChangeTrigger;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.recipes.RecipeCategory;
@@ -13,7 +13,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.ItemLike;
@@ -27,26 +26,36 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public abstract class BaseRecipeBuilderImpl<I extends BaseRecipeBuilder<I>> implements BaseRecipeBuilder<I> {
+    public interface UnlockCriterionFactory {
+        Criterion<?> createCriterion(RecipeBuilder.Context context);
+    }
+
     protected RecipeCategory category;
     protected String group;
     protected boolean shouldUnlockAdvancements;
-    protected @NotNull ItemStackTemplate output;
-    protected final @NotNull Identifier id;
+    protected final @NotNull Item outputItem;
+    protected int outputCount;
+    protected final @NotNull ResourceKey<Recipe<?>> key;
 
-    protected BaseRecipeBuilderImpl(@NotNull Identifier id, @NotNull ItemLike output) {
-        this(id, new ItemStackTemplate(output.asItem(), 1));
+    protected BaseRecipeBuilderImpl(@NotNull Identifier key, @NotNull ItemLike output) {
+        this(key, output.asItem(), 1);
     }
 
-    protected BaseRecipeBuilderImpl(@NotNull Identifier id, @NotNull ItemStack output) {
-        this(id, ItemStackTemplate.fromNonEmptyStack(output));
+    protected BaseRecipeBuilderImpl(@NotNull Identifier key, @NotNull ItemStack output) {
+        this(key, output.getItem(), output.getCount());
     }
 
-    protected BaseRecipeBuilderImpl(@NotNull Identifier id, @NotNull ItemStackTemplate output) {
-        this.id = id;
+    private BaseRecipeBuilderImpl(@NotNull Identifier key, @NotNull Item outputItem, int outputCount) {
+        this.key = ResourceKey.create(Registries.RECIPE, key);
         this.category = RecipeCategory.MISC;
-        this.output = output;
+        this.outputItem = outputItem;
+        this.outputCount = outputCount;
         this.unlocks = new HashMap<>();
         this.shouldUnlockAdvancements = true;
+    }
+
+    public ResourceKey<Recipe<?>> key() {
+        return key;
     }
 
     public I shouldUnlockAdvancements(boolean shouldUnlockAdvancements) {
@@ -55,7 +64,7 @@ public abstract class BaseRecipeBuilderImpl<I extends BaseRecipeBuilder<I>> impl
     }
 
     public I outputCount(int count) {
-        this.output = this.output.withCount(count);
+        this.outputCount = count;
         return (I) this;
     }
 
@@ -70,30 +79,47 @@ public abstract class BaseRecipeBuilderImpl<I extends BaseRecipeBuilder<I>> impl
         return (I) this;
     }
 
-    protected ItemStackTemplate outputTemplate() {
-        return output;
-    }
-
-    protected Item outputItem() {
-        return output.item().value();
-    }
-
-    protected int outputCount() {
-        return output.count();
-    }
-
     // Advancements
-    protected final Map<String, Criterion<?>> unlocks;
+    protected final Map<String, UnlockCriterionFactory> unlocks;
 
     public I unlocks(String name, Criterion<?> criterion) {
-        this.unlocks.put(name, criterion);
+        this.unlocks.put(name, (provider) -> criterion);
+        return (I) this;
+    }
+
+    public I unlocks(String name, UnlockCriterionFactory criterionFactory) {
+        this.unlocks.put(name, criterionFactory);
+        return (I) this;
+    }
+
+    /**
+     * The Recipe will be unlocked by one of the passed Items. As sonn als players have one in their Inventory
+     * the recipe will unlock. Those Items are mostly the input Items for the recipe.
+     *
+     * @param name  The name for this unlock-Criteria
+     * @param items {@link Item}s or {@link Block}s that will unlock the recipe.
+     */
+    public I unlocks(String name, ItemLike... items) {
+        return unlocks(name, InventoryChangeTrigger.TriggerInstance.hasItems(items));
+    }
+
+    public I unlockedBy(Ingredient ingredient) {
+        ingredient.items().forEach(item -> {
+
+            this.unlocks(
+                    "has_" + item.value().getDescriptionId(),
+                    (context) -> context.has(item.value())
+            );
+
+        });
+
         return (I) this;
     }
 
     public I unlockedBy(ItemLike item) {
         this.unlocks(
                 "has_" + item.asItem().getDescriptionId(),
-                WoverRecipeProviderAccess.has(item.asItem())
+                (context) -> context.has(item.asItem())
         );
 
         return (I) this;
@@ -102,31 +128,10 @@ public abstract class BaseRecipeBuilderImpl<I extends BaseRecipeBuilder<I>> impl
     public I unlockedBy(TagKey<Item> tag) {
         this.unlocks(
                 "has_tag_" + tag.location().getNamespace() + "_" + tag.location().getPath(),
-                WoverRecipeProviderAccess.has(tag)
+                (context) -> context.has(tag)
         );
 
         return (I) this;
-    }
-
-    protected I unlockedBy(Ingredient ingredient) {
-        ItemLike[] items = ingredient.items().map(Holder::value).toArray(ItemLike[]::new);
-        if (items.length > 0) {
-            unlockedBy(items);
-        }
-        return (I) this;
-    }
-
-    protected static Ingredient ingredientOf(TagKey<Item> tag) {
-        var lookup = WoverRecipeProviderAccess.itemLookup();
-        if (lookup.get(tag).isPresent()) {
-            return Ingredient.of(lookup.getOrThrow(tag));
-        }
-
-        return Ingredient.of(BuiltInRegistries.ITEM.getOrThrow(tag));
-    }
-
-    protected static ResourceKey<Recipe<?>> recipeKey(Identifier id) {
-        return ResourceKey.create(Registries.RECIPE, id);
     }
 
     /**
@@ -154,17 +159,6 @@ public abstract class BaseRecipeBuilderImpl<I extends BaseRecipeBuilder<I>> impl
     /**
      * The Recipe will be unlocked by one of the passed Items. As sonn als players have one in their Inventory
      * the recipe will unlock. Those Items are mostly the input Items for the recipe.
-     *
-     * @param name  The name for this unlock-Criteria
-     * @param items {@link Item}s or {@link Block}s that will unlock the recipe.
-     */
-    public I unlocks(String name, ItemLike... items) {
-        return unlocks(name, InventoryChangeTrigger.TriggerInstance.hasItems(items));
-    }
-
-    /**
-     * The Recipe will be unlocked by one of the passed Items. As sonn als players have one in their Inventory
-     * the recipe will unlock. Those Items are mostly the input Items for the recipe.
      * <p>
      * This method will automatically get the Items from the stacl and call {@link #unlockedBy(ItemLike...)}
      *
@@ -181,11 +175,11 @@ public abstract class BaseRecipeBuilderImpl<I extends BaseRecipeBuilder<I>> impl
 
     // Validation and Building
     protected void throwIllegalStateException(String message) {
-        throw new IllegalStateException(message + "(" + this.id + ")");
+        throw new IllegalStateException(message + "(" + this.key + ")");
     }
 
     protected void validate() {
-        if (output.count() <= 0) {
+        if (outputCount <= 0) {
             throwIllegalStateException("Output-Count is zero");
         }
         if (category == null) {

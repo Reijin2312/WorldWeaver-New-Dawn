@@ -4,21 +4,21 @@ import net.minecraft.advancements.predicates.ItemPredicate;
 import net.minecraft.advancements.triggers.Criterion;
 import net.minecraft.advancements.triggers.InventoryChangeTrigger;
 import net.minecraft.core.HolderGetter;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.data.worldgen.BootstrapContextAccess;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
 
 public final class WoverRecipeProviderAccess {
-    private static final ThreadLocal<HolderLookup.Provider> LOOKUP_CONTEXT = new ThreadLocal<>();
+    private static final ThreadLocal<BootstrapContextAccess> LOOKUP_CONTEXT = new ThreadLocal<>();
 
     private WoverRecipeProviderAccess() {
     }
 
-    public static void withLookup(HolderLookup.Provider lookup, Runnable action) {
-        HolderLookup.Provider previous = LOOKUP_CONTEXT.get();
+    public static void withLookup(BootstrapContextAccess lookup, Runnable action) {
+        BootstrapContextAccess previous = LOOKUP_CONTEXT.get();
         LOOKUP_CONTEXT.set(lookup);
         try {
             action.run();
@@ -32,12 +32,9 @@ public final class WoverRecipeProviderAccess {
     }
 
     public static HolderGetter<Item> itemLookup() {
-        HolderLookup.Provider provider = LOOKUP_CONTEXT.get();
+        BootstrapContextAccess provider = LOOKUP_CONTEXT.get();
         if (provider != null) {
-            var lookup = provider.lookup(Registries.ITEM);
-            if (lookup.isPresent()) {
-                return (HolderGetter<Item>) lookup.get();
-            }
+            return provider.lookup(Registries.ITEM);
         }
 
         return BuiltInRegistries.ITEM;

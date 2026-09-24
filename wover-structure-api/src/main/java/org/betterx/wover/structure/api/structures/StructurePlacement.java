@@ -265,17 +265,11 @@ public enum StructurePlacement implements StringRepresentable {
     }
 
     public static boolean hasValidBiomeAt(Structure.GenerationContext ctx, int x, int y, int z) {
-        return ctx
-                .validBiome()
-                .test(ctx.chunkGenerator()
-                         .getBiomeSource()
-                         .getNoiseBiome(
-                                 QuartPos.fromBlock(x),
-                                 QuartPos.fromBlock(y),
-                                 QuartPos.fromBlock(z),
-                                 ctx.randomState().sampler()
-                         )
-                );
+        return ctx.validBiome().test(ctx.biomeResolver().getNoiseBiome(
+                QuartPos.fromBlock(x),
+                QuartPos.fromBlock(y),
+                QuartPos.fromBlock(z)
+        ));
     }
 
     @NotNull

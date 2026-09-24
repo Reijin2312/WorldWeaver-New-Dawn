@@ -12,7 +12,12 @@ import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -55,7 +60,7 @@ public class SurfaceRuleRegistryImpl {
             @NotNull BootstrapContext<AssignedSurfaceRule> ctx,
             @NotNull ResourceKey<AssignedSurfaceRule> key,
             @NotNull ResourceKey<Biome> biomeKey,
-            @NotNull SurfaceRules.RuleSource rules,
+            @NotNull MaterialRule rules,
             int priority
     ) {
         if (biomeKey == null) {

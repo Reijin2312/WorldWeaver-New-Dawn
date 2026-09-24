@@ -13,7 +13,12 @@ import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -71,7 +76,7 @@ public class SurfaceRuleRegistry {
      * @param ctx      The Bootstrap Context
      * @param key      The ResourceKey of the SurfaceRule
      * @param biomeKey The ResourceKey of the Biome you want to register the rule for
-     * @param rules    The RuleSource of the SurfaceRule
+     * @param rules    The MaterialRule of the SurfaceRule
      * @param priority The priority of the SurfaceRule.
      * @return A Holder for the SurfaceRule wrapped in a {@link AssignedSurfaceRule}
      */
@@ -79,7 +84,7 @@ public class SurfaceRuleRegistry {
             @NotNull BootstrapContext<AssignedSurfaceRule> ctx,
             @NotNull ResourceKey<AssignedSurfaceRule> key,
             @NotNull ResourceKey<Biome> biomeKey,
-            @NotNull SurfaceRules.RuleSource rules,
+            @NotNull MaterialRule rules,
             int priority
     ) {
         return SurfaceRuleRegistryImpl.register(ctx, key, biomeKey, rules, priority);
@@ -87,20 +92,20 @@ public class SurfaceRuleRegistry {
 
     /**
      * Registers a SurfaceRule for a Biome with the default priority of PriorityLinkedList.DEFAULT_PRIORITY.
-     * See {@link #register(BootstrapContext, ResourceKey, ResourceKey, SurfaceRules.RuleSource, int)} for mor Details.
+     * See {@link #register(BootstrapContext, ResourceKey, ResourceKey, MaterialRule, int)} for mor Details.
      *
      * @param ctx      The Bootstrap Context
      * @param key      The ResourceKey of the SurfaceRule
      * @param biomeKey The ResourceKey of the Biome you want to register the rule for
-     * @param rules    The RuleSource of the SurfaceRule
+     * @param rules    The MaterialRule of the SurfaceRule
      * @return A Holder for the SurfaceRule wrapped in a {@link AssignedSurfaceRule}
-     * @see #register(BootstrapContext, ResourceKey, ResourceKey, SurfaceRules.RuleSource, int)
+     * @see #register(BootstrapContext, ResourceKey, ResourceKey, MaterialRule, int)
      */
     public static Holder<AssignedSurfaceRule> register(
             @NotNull BootstrapContext<AssignedSurfaceRule> ctx,
             @NotNull ResourceKey<AssignedSurfaceRule> key,
             @NotNull ResourceKey<Biome> biomeKey,
-            @NotNull SurfaceRules.RuleSource rules
+            @NotNull MaterialRule rules
     ) {
         return SurfaceRuleRegistryImpl.register(ctx, key, biomeKey, rules, PriorityLinkedList.DEFAULT_PRIORITY);
     }

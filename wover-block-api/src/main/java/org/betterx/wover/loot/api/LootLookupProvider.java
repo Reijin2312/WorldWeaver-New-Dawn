@@ -23,13 +23,12 @@ import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
 import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
-import net.minecraft.world.level.storage.loot.entries.LootPoolSingletonContainer;
+import net.minecraft.world.level.storage.loot.entries.UniformContainerBase;
 import net.minecraft.world.level.storage.loot.functions.ApplyBonusCount;
 import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
 import net.minecraft.world.level.storage.loot.predicates.*;
-import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
-import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
-import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProvider;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders;
 
 import java.util.List;
 import org.jetbrains.annotations.Nullable;
@@ -45,16 +44,16 @@ public class LootLookupProvider {
     public static final float[] VANILLA_LEAVES_SAPLING_CHANCES = new float[]{0.05F, 0.0625F, 0.083333336F, 0.1F};
 
     public LootItemCondition.Builder hasSilkTouch() {
-        return vanillaBlockLoot.hasSilkTouch();
+        return new AnyOfCondition.Builder().or(vanillaBlockLoot.hasSilkTouch());
     }
 
     private static boolean isAir(ItemLike itemLike) {
         return itemLike == null || itemLike.asItem() == Items.AIR;
     }
 
-    public record DropInfo(ItemLike item, NumberProvider numberProvider) {
+    public record DropInfo(ItemLike item, Holder<ContextIntProvider> numberProvider) {
         public DropInfo(ItemLike item, int count) {
-            this(item, ConstantValue.exactly(count));
+            this(item, ContextIntProviders.exactly(count));
         }
     }
 
@@ -85,7 +84,7 @@ public class LootLookupProvider {
     }
 
     public LootItemCondition.Builder silkTouchCondition() {
-        return vanillaBlockLoot.hasSilkTouch();
+        return new AnyOfCondition.Builder().or(vanillaBlockLoot.hasSilkTouch());
     }
 
     public LootItemCondition.Builder shearsCondition() {
@@ -127,12 +126,12 @@ public class LootLookupProvider {
     public LootTable.Builder dropWithSilkTouchOrHoeOrShears(
             ItemLike withSilkTouch
     ) {
-        return dropWithSilkTouchOrHoeOrShears(withSilkTouch, ConstantValue.exactly(1.0f));
+        return dropWithSilkTouchOrHoeOrShears(withSilkTouch, ContextIntProviders.exactly(1));
     }
 
     public LootTable.Builder dropWithSilkTouchOrHoeOrShears(
             ItemLike withSilkTouch,
-            NumberProvider rolls
+            Holder<ContextIntProvider> rolls
     ) {
         if (isAir(withSilkTouch)) {
             return LootTable.lootTable();
@@ -158,14 +157,14 @@ public class LootLookupProvider {
                 .withPool(LootPool
                         .lootPool()
                         .when(vanillaBlockLoot.hasShearsOrSilkTouch())
-                        .setRolls(ConstantValue.exactly(1.0f))
+                        .setRolls(ContextIntProviders.exactly(1))
                         .add(LootItem.lootTableItem(withSilkTouch)));
     }
 
     public LootTable.Builder dropWithSilkTouch(
             Block withSilkTouch,
             ItemLike withoutSilkTouch,
-            NumberProvider numberProvider
+            Holder<ContextIntProvider> numberProvider
     ) {
         return vanillaBlockLoot.createSingleItemTableWithSilkTouch(withSilkTouch, withoutSilkTouch, numberProvider);
     }
@@ -178,10 +177,10 @@ public class LootLookupProvider {
 
         var mainBuilder = LootTable.lootTable();
         for (DropInfo dropInfo : withoutSilkTouch) {
-            LootPoolSingletonContainer.Builder<? extends LootPoolSingletonContainer.Builder<?>> item = LootItem
+            UniformContainerBase.Builder<? extends UniformContainerBase.Builder<?>> item = LootItem
                     .lootTableItem(dropInfo.item)
                     .apply(SetItemCountFunction.setCount(dropInfo.numberProvider));
-            createSelfDropDispatchTable(mainBuilder, withSilkTouch, vanillaBlockLoot.hasSilkTouch(), vanillaBlockLoot.applyExplosionDecay(withSilkTouch, item));
+            createSelfDropDispatchTable(mainBuilder, withSilkTouch, silkTouchCondition(), vanillaBlockLoot.applyExplosionDecay(withSilkTouch, item));
         }
 
         return mainBuilder;
@@ -195,7 +194,7 @@ public class LootLookupProvider {
     ) {
         tableBuilder.withPool(LootPool
                 .lootPool()
-                .setRolls(ConstantValue.exactly(1.0F))
+                .setRolls(ContextIntProviders.exactly(1))
                 .add(LootItem.lootTableItem(block).when(builder).otherwise(builder2)));
     }
 
@@ -216,7 +215,7 @@ public class LootLookupProvider {
         return vanillaBlockLoot.createOreDrop(oreBlock, ore);
     }
 
-    public LootTable.Builder dropOre(Block oreBlock, Item ore, NumberProvider numberProvider) {
+    public LootTable.Builder dropOre(Block oreBlock, Item ore, Holder<ContextIntProvider> numberProvider) {
         return vanillaBlockLoot.createSilkTouchDispatchTable(
                 oreBlock,
                 vanillaBlockLoot.applyExplosionDecay(
@@ -248,7 +247,7 @@ public class LootLookupProvider {
     public <T extends Comparable<T> & StringRepresentable> LootTable.Builder dropWithSilkTouchAndCondition(
             Block withSilkTouch,
             ItemLike withoutSilkTouch,
-            NumberProvider numberProvider,
+            Holder<ContextIntProvider> numberProvider,
             Property<T> property,
             T comparable
     ) {
@@ -257,11 +256,10 @@ public class LootLookupProvider {
                 vanillaBlockLoot.applyExplosionCondition(
                         withSilkTouch,
                         LootItem.lootTableItem(withoutSilkTouch)
-                                .when(LootItemBlockStatePropertyCondition
-                                        .hasBlockStateProperties(withSilkTouch)
-                                        .setProperties(StatePropertiesPredicate.Builder
-                                                .properties()
-                                                .hasProperty(property, comparable))
+                                .when(MatchBlock.blockMatches(
+                                        provider.lookupOrThrow(Registries.BLOCK),
+                                        withSilkTouch,
+                                        StatePropertiesPredicate.Builder.properties().hasProperty(property, comparable))
                                 )
                                 .apply(SetItemCountFunction.setCount(numberProvider))
                 )
@@ -277,27 +275,26 @@ public class LootLookupProvider {
                 LootPool
                         .lootPool()
                         .when(vanillaBlockLoot.hasSilkTouch())
-                        .setRolls(ConstantValue.exactly(1.0F))
+                        .setRolls(ContextIntProviders.exactly(1))
                         .add(LootItem.lootTableItem(withSilkTouch)
-                                     .when(LootItemBlockStatePropertyCondition
-                                             .hasBlockStateProperties(withSilkTouch)
-                                             .setProperties(StatePropertiesPredicate.Builder
-                                                     .properties()
-                                                     .hasProperty(property, comparable))
+                                     .when(MatchBlock.blockMatches(
+                                             provider.lookupOrThrow(Registries.BLOCK),
+                                             withSilkTouch,
+                                             StatePropertiesPredicate.Builder.properties().hasProperty(property, comparable))
                                      )
                         )
         );
     }
 
     public LootTable.Builder dropPlant(Block plantBlock, ItemLike sapling) {
-        return dropPlant(plantBlock, sapling, 0.125F, ConstantValue.exactly(1), 2);
+        return dropPlant(plantBlock, sapling, 0.125F, ContextIntProviders.exactly(1), 2);
     }
 
     public LootTable.Builder dropPlant(
             Block plantBlock,
             ItemLike sapling,
             float saplingChance,
-            NumberProvider saplingCount,
+            Holder<ContextIntProvider> saplingCount,
             int fortuneBonus
     ) {
         return vanillaBlockLoot.createShearsDispatchTable(plantBlock, vanillaBlockLoot.applyExplosionDecay(plantBlock, (LootItem
@@ -314,7 +311,7 @@ public class LootLookupProvider {
             Property<T> property,
             T comparable
     ) {
-        return this.dropPlant(plantBlock, fruit, ConstantValue.exactly(1), seed, ConstantValue.exactly(1), 0.571f, 3, property, comparable);
+        return this.dropPlant(plantBlock, fruit, ContextIntProviders.exactly(1), seed, ContextIntProviders.exactly(1), 0.571f, 3, property, comparable);
     }
 
     public LootTable.Builder dropPlant(
@@ -324,49 +321,51 @@ public class LootLookupProvider {
             IntegerProperty property,
             int comparable
     ) {
-        return this.dropPlant(plantBlock, fruit, ConstantValue.exactly(1), seed, ConstantValue.exactly(1), 0.571f, 3, property, comparable);
+        return this.dropPlant(plantBlock, fruit, ContextIntProviders.exactly(1), seed, ContextIntProviders.exactly(1), 0.571f, 3, property, comparable);
     }
 
     public <T extends Comparable<T> & StringRepresentable> LootTable.Builder dropPlant(
             Block plantBlock,
             ItemLike fruit,
-            NumberProvider fruitCount,
+            Holder<ContextIntProvider> fruitCount,
             ItemLike seed,
-            NumberProvider seedCount,
+            Holder<ContextIntProvider> seedCount,
             float probability,
             int extraRounds,
             Property<T> property,
             T comparable
     ) {
-        LootItemCondition.Builder condition = LootItemBlockStatePropertyCondition
-                .hasBlockStateProperties(plantBlock)
-                .setProperties(StatePropertiesPredicate.Builder.properties().hasProperty(property, comparable));
+        LootItemCondition.Builder condition = MatchBlock.blockMatches(
+                provider.lookupOrThrow(Registries.BLOCK),
+                plantBlock,
+                StatePropertiesPredicate.Builder.properties().hasProperty(property, comparable));
         return dropPlant(plantBlock, fruit, fruitCount, seed, seedCount, probability, extraRounds, condition);
     }
 
     public LootTable.Builder dropPlant(
             Block plantBlock,
             ItemLike fruit,
-            NumberProvider fruitCount,
+            Holder<ContextIntProvider> fruitCount,
             ItemLike seed,
-            NumberProvider seedCount,
+            Holder<ContextIntProvider> seedCount,
             float probability,
             int extraRounds,
             IntegerProperty property,
             int comparable
     ) {
-        LootItemCondition.Builder condition = LootItemBlockStatePropertyCondition
-                .hasBlockStateProperties(plantBlock)
-                .setProperties(StatePropertiesPredicate.Builder.properties().hasProperty(property, comparable));
+        LootItemCondition.Builder condition = MatchBlock.blockMatches(
+                provider.lookupOrThrow(Registries.BLOCK),
+                plantBlock,
+                StatePropertiesPredicate.Builder.properties().hasProperty(property, comparable));
         return dropPlant(plantBlock, fruit, fruitCount, seed, seedCount, probability, extraRounds, condition);
     }
 
     public LootTable.Builder dropPlant(
             Block plantBlock,
             ItemLike fruit,
-            NumberProvider fruitCount,
+            Holder<ContextIntProvider> fruitCount,
             ItemLike seed,
-            NumberProvider seedCount,
+            Holder<ContextIntProvider> seedCount,
             float probability,
             int extraRounds,
             LootItemCondition.Builder condition
@@ -417,7 +416,7 @@ public class LootLookupProvider {
             Block leaveBlock,
             ItemLike saplingBlock,
             @Nullable ItemLike stickBlock,
-            @Nullable NumberProvider stickCount,
+            @Nullable Holder<ContextIntProvider> stickCount,
             int fortuneRate,
             int dropRate
     ) {
@@ -441,11 +440,11 @@ public class LootLookupProvider {
                 );
         if (stickBlock != null) {
             if (stickCount == null) {
-                stickCount = UniformGenerator.between(1.0f, 2.0f);
+                stickCount = ContextIntProviders.between(1, 2);
             }
             baseBuilder = baseBuilder.withPool(
                     LootPool.lootPool()
-                            .setRolls(ConstantValue.exactly(1.0f))
+                            .setRolls(ContextIntProviders.exactly(1))
                             .when(vanillaBlockLoot.doesNotHaveShearsOrSilkTouch())
                             .add(vanillaBlockLoot
                                     .applyExplosionDecay(
@@ -466,11 +465,11 @@ public class LootLookupProvider {
     public LootTable.Builder dropDoublePlant(Block block) {
         return LootTable.lootTable().withPool(
                 LootPool.lootPool()
-                        .setRolls(ConstantValue.exactly(1.0F))
+                        .setRolls(ContextIntProviders.exactly(1))
                         .add(vanillaBlockLoot.applyExplosionCondition(
                                 block,
                                 LootItem.lootTableItem(block)
-                                        .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                                        .apply(SetItemCountFunction.setCount(ContextIntProviders.exactly(2)))
                         ))
         );
     }

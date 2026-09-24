@@ -6,128 +6,104 @@ import org.betterx.wover.biome.impl.BiomeBootstrapContextImpl;
 import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.datagen.api.AbstractMultiProvider;
 import org.betterx.wover.datagen.api.PackBuilder;
-import org.betterx.wover.datagen.api.WoverMultiProvider;
-import org.betterx.wover.datagen.api.WoverTagProvider;
+import org.betterx.wover.datagen.api.WoverTagProvider.ForBiomes;
 import org.betterx.wover.datagen.api.provider.WoverBiomeDataProvider;
 import org.betterx.wover.datagen.api.provider.WoverBiomeOnlyProvider;
 import org.betterx.wover.datagen.api.provider.WoverSurfaceRuleProvider;
 import org.betterx.wover.surface.api.AssignedSurfaceRule;
 import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
-
+import java.util.List;
+import java.util.Objects;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.biome.Biome;
-
-import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * A {@link WoverMultiProvider} for {@link Biome}s and {@link BiomeData}.
- */
 public abstract class WoverBiomeProvider extends AbstractMultiProvider {
-    private BiomeBootstrapContextImpl context;
+   private BiomeBootstrapContextImpl context;
 
-    /**
-     * Creates a new instance of {@link WoverBiomeProvider}.
-     *
-     * @param modCore The {@link ModCore} of the Mod.
-     */
-    public WoverBiomeProvider(@NotNull ModCore modCore) {
-        super(modCore);
-    }
+   public WoverBiomeProvider(@NotNull ModCore modCore) {
+      super(modCore);
+   }
 
-    /**
-     * Creates a new instance of {@link WoverBiomeProvider}.
-     *
-     * @param modCore    The {@link ModCore} of the Mod.
-     * @param providerId The id of the provider. Every Provider (for the same Registry)
-     */
-    public WoverBiomeProvider(@NotNull ModCore modCore, Identifier providerId) {
-        super(modCore, providerId);
-    }
+   public WoverBiomeProvider(@NotNull ModCore modCore, Identifier providerId) {
+      super(modCore, providerId);
+   }
 
-    /**
-     * Called, when the Elements of the Registry needs to be created and registered.
-     *
-     * @param context The context to add the elements to.
-     */
-    protected abstract void bootstrap(BiomeBootstrapContext context);
+   protected abstract void bootstrap(BiomeBootstrapContext var1);
 
-    private <T> BiomeBootstrapContextImpl initContext(BootstrapContext<T> ctx) {
-        synchronized (this) {
-            if (context == null) {
-                context = new BiomeBootstrapContextImpl();
-                context.setLookupContext(ctx);
-                bootstrap(context);
-            } else {
-                context.setLookupContext(ctx);
-            }
+   private <T> BiomeBootstrapContextImpl initContext(BootstrapContext<T> ctx) {
+      synchronized (this) {
+         if (this.context == null) {
+            this.context = new BiomeBootstrapContextImpl();
+            this.context.setLookupContext(ctx);
+            this.bootstrap(this.context);
+         } else {
+            this.context.setLookupContext(ctx);
+         }
 
-            return context;
-        }
-    }
+         return this.context;
+      }
+   }
 
-    private void bootstrapBiomes(BootstrapContext<Biome> ctx) {
-        final BiomeBootstrapContextImpl context = initContext(ctx);
-        context.bootstrapBiome(ctx);
-    }
+   private void bootstrapBiomes(BootstrapContext<Biome> ctx) {
+      BiomeBootstrapContextImpl context = this.initContext(ctx);
+      context.bootstrapBiome(ctx);
+   }
 
-    private void bootstrapData(BootstrapContext<BiomeData> ctx) {
-        final BiomeBootstrapContextImpl context = initContext(ctx);
-        context.bootstrapBiomeData(ctx);
-    }
+   private void bootstrapData(BootstrapContext<BiomeData> ctx) {
+      BiomeBootstrapContextImpl context = this.initContext(ctx);
+      context.bootstrapBiomeData(ctx);
+   }
 
-    private void bootstrapSurface(BootstrapContext<AssignedSurfaceRule> ctx) {
-        final BiomeBootstrapContextImpl context = initContext(ctx);
-        context.bootstrapSurfaceRules(ctx);
-    }
+   private void bootstrapSurface(BootstrapContext<AssignedSurfaceRule> ctx) {
+      BiomeBootstrapContextImpl context = this.initContext(ctx);
+      context.bootstrapSurfaceRules(ctx);
+   }
 
-    private void prepareBiomeTags(TagBootstrapContext<Biome> ctx) {
-        final BiomeBootstrapContextImpl context = initContext(null);
-        context.prepareTags(ctx);
-    }
+   private void prepareBiomeTags(TagBootstrapContext<Biome> ctx) {
+      BiomeBootstrapContextImpl context = this.initContext(null);
+      context.prepareTags(ctx);
+   }
 
-    /**
-     * Registers all providers
-     *
-     * @param pack The {@link PackBuilder} to register the providers to.
-     */
-    @Override
-    public void registerAllProviders(PackBuilder pack) {
-        pack.addRegistryProvider(modCore ->
-                new WoverBiomeOnlyProvider(modCore, providerId) {
-                    @Override
-                    protected void bootstrap(BootstrapContext<Biome> context) {
-                        bootstrapBiomes(context);
-                    }
-                }
-        );
+   public void registerAllProviders(PackBuilder pack) {
+      pack.addRegistryProvider(modCore -> new WoverBiomeOnlyProvider(modCore, this.providerId) {
+         {
+            Objects.requireNonNull(WoverBiomeProvider.this);
+         }
 
-        pack.addRegistryProvider(modCore ->
-                new WoverBiomeDataProvider(modCore, providerId) {
-                    @Override
-                    protected void bootstrap(BootstrapContext<BiomeData> context) {
-                        bootstrapData(context);
-                    }
-                }
-        );
+         protected void bootstrap(BootstrapContext<Biome> context) {
+            WoverBiomeProvider.this.bootstrapBiomes(context);
+         }
+      });
+      pack.addRegistryProvider(modCore -> new WoverBiomeDataProvider(modCore, this.providerId) {
+         {
+            Objects.requireNonNull(WoverBiomeProvider.this);
+         }
 
-        pack.addRegistryProvider(modCore ->
-                new WoverSurfaceRuleProvider(modCore, providerId) {
-                    @Override
-                    protected void bootstrap(BootstrapContext<AssignedSurfaceRule> context) {
-                        bootstrapSurface(context);
-                    }
-                }
-        );
+         @Override
+         protected void bootstrap(BootstrapContext<BiomeData> context) {
+            WoverBiomeProvider.this.bootstrapData(context);
+         }
+      });
+      pack.addRegistryProvider(modCore -> new WoverSurfaceRuleProvider(modCore, this.providerId) {
+         {
+            Objects.requireNonNull(WoverBiomeProvider.this);
+         }
 
-        pack.addProvider(modCore ->
-                new WoverTagProvider.ForBiomes(modCore, List.of(modCore.namespace, modCore.modId)) {
-                    @Override
-                    public void prepareTags(TagBootstrapContext<Biome> provider) {
-                        prepareBiomeTags(provider);
-                    }
-                }
-        );
-    }
+         @Override
+         protected void bootstrap(BootstrapContext<AssignedSurfaceRule> context) {
+            WoverBiomeProvider.this.bootstrapSurface(context);
+         }
+      });
+      pack.addProvider(modCore -> new ForBiomes(modCore, List.of(modCore.namespace, modCore.modId)) {
+         {
+            Objects.requireNonNull(WoverBiomeProvider.this);
+         }
+
+         public void prepareTags(TagBootstrapContext<Biome> provider) {
+            WoverBiomeProvider.this.prepareBiomeTags(provider);
+         }
+      });
+   }
 }

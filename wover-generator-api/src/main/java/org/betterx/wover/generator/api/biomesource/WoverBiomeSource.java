@@ -1,412 +1,201 @@
 package org.betterx.wover.generator.api.biomesource;
 
+import com.google.common.base.Stopwatch;
 import org.betterx.wover.biome.api.data.BiomeData;
 import org.betterx.wover.biome.impl.modification.BiomeTagModificationWorker;
 import org.betterx.wover.common.generator.api.biomesource.BiomeSourceWithNoiseRelatedSettings;
 import org.betterx.wover.common.generator.api.biomesource.BiomeSourceWithSeed;
 import org.betterx.wover.common.generator.api.biomesource.MergeableBiomeSource;
 import org.betterx.wover.common.generator.api.biomesource.ReloadableBiomeSource;
-import org.betterx.wover.common.generator.impl.compat.LithostitchedBiomeSourceCompat;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.generator.impl.biomesource.WoverBiomeSourceImpl;
-import org.betterx.wover.generator.impl.biomesource.nether.WoverNetherBiomeSource;
-import org.betterx.wover.generator.impl.compat.ElysiumBiomeSourceCompat;
-import org.betterx.wover.generator.impl.compat.IncisionBiomeSourceCompat;
-import org.betterx.wover.generator.impl.compat.RegionsUnexploredBiomeConfigCompat;
-import org.betterx.wover.generator.impl.compat.TerraBlenderBiomeSourceCompat;
 import org.betterx.wover.state.api.WorldState;
-
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
-import net.minecraft.world.level.biome.Climate;
-import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.dimension.DimensionType;
-import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
-
-import com.google.common.base.Stopwatch;
-
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public abstract class WoverBiomeSource extends BiomeSource implements
-        ReloadableBiomeSource,
-        BiomeSourceWithNoiseRelatedSettings,
-        BiomeSourceWithSeed,
-        MergeableBiomeSource<WoverBiomeSource> {
-    private volatile boolean didCreatePickers;
-    private Set<Holder<Biome>> ownedPossibleBiomes;
-    private Set<Holder<Biome>> externalPossibleBiomes;
-    Set<Holder<Biome>> dynamicPossibleBiomes;
-    @Nullable
-    private BiomeSource fallbackBiomeSource;
-    private Set<ResourceKey<Biome>> managedPossibleBiomeKeys;
-    private Set<ResourceKey<Biome>> disabledExternalBiomeKeys;
-    protected long currentSeed;
-    protected int maxHeight;
+public abstract class WoverBiomeSource
+   extends BiomeSource
+   implements ReloadableBiomeSource,
+   BiomeSourceWithNoiseRelatedSettings,
+   BiomeSourceWithSeed,
+   MergeableBiomeSource<WoverBiomeSource> {
+   private volatile boolean didCreatePickers = false;
+   Set<Holder<Biome>> dynamicPossibleBiomes = Set.of();
+   protected long currentSeed;
+   protected int maxHeight;
 
-    @FunctionalInterface
-    public interface PickerAdder {
-        boolean add(BiomeData bclBiome, TagKey<Biome> type, WoverBiomePicker picker);
-    }
+   public WoverBiomeSource(long seed) {
+      this.currentSeed = seed;
+   }
 
-    @FunctionalInterface
-    public interface PickerMapFactory {
-        List<TagToPicker> create(Registry<BiomeData> biomeDataRegistry);
-    }
+   @NotNull
+   protected Stream<Holder<Biome>> collectPossibleBiomes() {
+      this.reloadBiomes();
+      return this.dynamicPossibleBiomes.stream();
+   }
 
-    public record TagToPicker(TagKey<Biome> tag, WoverBiomePicker picker) {
-    }
+   public final void setSeed(long seed) {
+      if (seed != this.currentSeed) {
+         LibWoverWorldGenerator.C.log.debug(this.toShortString() + "\n    --> new seed = " + seed);
+         this.currentSeed = seed;
+         this.initMap(seed);
+      }
+   }
 
-    public WoverBiomeSource(long seed) {
-        didCreatePickers = false;
-        ownedPossibleBiomes = Set.of();
-        externalPossibleBiomes = Set.of();
-        dynamicPossibleBiomes = Set.of();
-        fallbackBiomeSource = null;
-        managedPossibleBiomeKeys = Set.of();
-        disabledExternalBiomeKeys = Set.of();
-        currentSeed = seed;
-    }
+   public final void setMaxHeight(int maxHeight) {
+      if (this.maxHeight != maxHeight) {
+         LibWoverWorldGenerator.C.log.debug(this.toShortString() + "\n    --> new height = " + maxHeight);
+         this.maxHeight = maxHeight;
+         this.onHeightChange(maxHeight);
+      }
+   }
 
-    @Override
-    protected @NotNull Stream<Holder<Biome>> collectPossibleBiomes() {
-        reloadBiomes();
-        return dynamicPossibleBiomes.stream();
-    }
+   protected boolean wasBound() {
+      return this.didCreatePickers;
+   }
 
-    @Override
-    final public void setSeed(long seed) {
-        if (seed != currentSeed) {
-            LibWoverWorldGenerator.C.log.debug(this.toShortString() + "\n    --> new seed = " + seed);
-            this.currentSeed = seed;
-            initMap(seed);
-        }
-    }
+   protected abstract List<TagKey<Biome>> acceptedTags();
 
-    /**
-     * Set world height
-     *
-     * @param maxHeight height of the World.
-     */
-    final public void setMaxHeight(int maxHeight) {
-        if (this.maxHeight != maxHeight) {
-            LibWoverWorldGenerator.C.log.debug(this.toShortString() + "\n    --> new height = " + maxHeight);
-            this.maxHeight = maxHeight;
-            onHeightChange(maxHeight);
-        }
-    }
+   protected abstract ResourceKey<Biome> fallbackBiome();
 
-    protected boolean wasBound() {
-        return didCreatePickers;
-    }
+   public abstract String toShortString();
 
-    protected abstract List<TagKey<Biome>> acceptedTags();
+   protected abstract void onInitMap(long var1);
 
-    protected abstract ResourceKey<Biome> fallbackBiome();
+   protected abstract void onHeightChange(int var1);
 
-    public abstract String toShortString();
+   protected TagKey<Biome> defaultBiomeTag() {
+      return this.acceptedTags().get(0);
+   }
 
-    protected abstract void onInitMap(long newSeed);
-    protected abstract void onHeightChange(int newHeight);
+   protected List<WoverBiomeSource.TagToPicker> createFreshPickerMap() {
+      return this.acceptedTags().stream().map(tag -> new WoverBiomeSource.TagToPicker((TagKey<Biome>)tag, new WoverBiomePicker(this.fallbackBiome()))).toList();
+   }
 
-    protected TagKey<Biome> defaultBiomeTag() {
-        return acceptedTags().get(0);
-    }
+   public void onLoadGeneratorSettings(NoiseGeneratorSettings generator) {
+      this.setMaxHeight(generator.noiseSettings().height());
+   }
 
-    protected List<TagToPicker> createFreshPickerMap() {
-        return acceptedTags().stream()
-                             .map(tag -> new TagToPicker(tag, new WoverBiomePicker(fallbackBiome())))
-                             .toList();
-    }
+   protected void onFinishBiomeRebuild(List<WoverBiomeSource.TagToPicker> pickerMap) {
+      for (WoverBiomeSource.TagToPicker tagToPicker : pickerMap) {
+         tagToPicker.picker.rebuild();
+      }
+   }
 
-    @Override
-    public void onLoadGeneratorSettings(NoiseGeneratorSettings generator) {
-        this.setMaxHeight(generator.noiseSettings().height());
-    }
+   @NotNull
+   protected String getNamespaces() {
+      return WoverBiomeSourceImpl.getNamespaces(this.possibleBiomes());
+   }
 
-    protected void onFinishBiomeRebuild(List<TagToPicker> pickerMap) {
-        for (TagToPicker tagToPicker : pickerMap) {
-            tagToPicker.picker.rebuild();
-        }
-    }
+   protected TagKey<Biome> tagForUnknownBiome(Holder<Biome> biomeHolder, ResourceKey<Biome> biomeKey) {
+      for (TagKey<Biome> type : this.acceptedTags()) {
+         if (biomeHolder.is(type)) {
+            return type;
+         }
+      }
 
-    @NotNull
-    protected String getNamespaces() {
-        return WoverBiomeSourceImpl.getNamespaces(possibleBiomes());
-    }
+      return this.defaultBiomeTag();
+   }
 
-    protected TagKey<Biome> tagForUnknownBiome(
-            Holder<Biome> biomeHolder,
-            ResourceKey<Biome> biomeKey
-    ) {
-        for (TagKey<Biome> type : acceptedTags()) {
-            if (biomeHolder.is(type)) {
-                return type;
+   protected boolean addToPicker(BiomeData biomeData, TagKey<Biome> type, WoverBiomePicker picker) {
+      picker.addBiome(biomeData);
+      return true;
+   }
+
+   protected final synchronized void rebuildBiomes(boolean force) {
+      if (force || !this.didCreatePickers) {
+         LibWoverWorldGenerator.C.log.verbose("Updating Pickers for " + this.toShortString());
+         List<WoverBiomeSource.TagToPicker> pickers = this.createFreshPickerMap();
+         this.dynamicPossibleBiomes = WoverBiomeSourceImpl.populateBiomePickers(pickers, this::addToPicker);
+         if (this.dynamicPossibleBiomes == null) {
+            this.dynamicPossibleBiomes = Set.of();
+         }
+
+         this.didCreatePickers = true;
+         this.onFinishBiomeRebuild(pickers);
+      }
+   }
+
+   protected synchronized void reloadBiomes(boolean force) {
+      this.rebuildBiomes(force);
+      this.initMap(this.currentSeed);
+   }
+
+   public void reloadBiomes() {
+      this.reloadBiomes(true);
+   }
+
+   protected final void initMap(long seed) {
+      LibWoverWorldGenerator.C.log.debug(this.toShortString() + "\n    --> Map Update");
+      this.onInitMap(seed);
+   }
+
+   public WoverBiomeSource mergeWithBiomeSource(BiomeSource inputBiomeSource) {
+      Stopwatch sw = Stopwatch.createStarted();
+      RegistryAccess access = WorldState.registryAccess();
+      if (access == null) {
+         access = WorldState.allStageRegistryAccess();
+         if (access == null) {
+            LibWoverWorldGenerator.C.log.error("Unable to merge Biome Sources");
+            return this;
+         }
+
+         LibWoverWorldGenerator.C.log.verbose("Registries were not finalized before merging biome sources!");
+      }
+
+      Registry<Biome> biomes = access.lookupOrThrow(Registries.BIOME);
+      BiomeTagModificationWorker biomeTagWorker = new BiomeTagModificationWorker();
+      int biomesAdded = 0;
+
+      try {
+         for (Holder<Biome> biomeHolder : inputBiomeSource.possibleBiomes()) {
+            if (biomeHolder.unwrapKey().isPresent()) {
+               ResourceKey<Biome> key = (ResourceKey<Biome>)biomeHolder.unwrapKey().orElseThrow();
+               TagKey<Biome> tag = this.tagForUnknownBiome(biomeHolder, key);
+               if (tag != null && !biomeHolder.is(tag)) {
+                  biomeTagWorker.addBiomeToTag(tag, biomes, key, biomeHolder);
+                  biomesAdded++;
+               }
             }
-        }
-        return defaultBiomeTag();
-    }
+         }
 
-    protected boolean addToPicker(BiomeData biomeData, TagKey<Biome> type, WoverBiomePicker picker) {
-        picker.addBiome(biomeData);
-        return true;
-    }
+         biomeTagWorker.finished();
+      } catch (RuntimeException var11) {
+         LibWoverWorldGenerator.C.log.error("Error while rebuilding BiomeSources!", var11);
+      } catch (Exception var12) {
+         LibWoverWorldGenerator.C.log.error("Error while rebuilding BiomeSources!", var12);
+      }
 
-    private void rememberManagedPossibleBiomeKeys() {
-        if (!managedPossibleBiomeKeys.isEmpty() || ownedPossibleBiomes == null || ownedPossibleBiomes.isEmpty()) {
-            return;
-        }
+      this.reloadBiomes();
+      if (biomesAdded > 0) {
+         LibWoverWorldGenerator.C.log.info("Merged {} biomes to {} in {}", new Object[]{biomesAdded, this.toShortString(), sw});
+      }
 
-        HashSet<ResourceKey<Biome>> keys = new HashSet<>();
-        for (Holder<Biome> biomeHolder : ownedPossibleBiomes) {
-            biomeHolder.unwrapKey().ifPresent(keys::add);
-        }
-        this.managedPossibleBiomeKeys = keys;
-    }
+      return this;
+   }
 
-    private boolean isWoverManagedBiome(@Nullable Holder<Biome> biomeHolder) {
-        if (biomeHolder == null) {
-            return false;
-        }
+   @FunctionalInterface
+   public interface PickerAdder {
+      boolean add(BiomeData var1, TagKey<Biome> var2, WoverBiomePicker var3);
+   }
 
-        if (biomeHolder.unwrapKey().isPresent()) {
-            return managedPossibleBiomeKeys.contains(biomeHolder.unwrapKey().orElseThrow());
-        }
+   @FunctionalInterface
+   public interface PickerMapFactory {
+      List<WoverBiomeSource.TagToPicker> create(Registry<BiomeData> var1);
+   }
 
-        return ownedPossibleBiomes.contains(biomeHolder);
-    }
-
-    protected boolean isRealExternalBiome(@Nullable Holder<Biome> biomeHolder) {
-        ResourceKey<Biome> key = biomeHolder == null ? null : biomeHolder.unwrapKey().orElse(null);
-        if (key == null || isWoverManagedBiome(biomeHolder) || disabledExternalBiomeKeys.contains(key)) {
-            return false;
-        }
-
-        Identifier id = key.identifier();
-        String namespace = id.getNamespace();
-        String path = id.getPath();
-        if ("minecraft".equals(namespace)
-                || "bclib".equals(namespace)
-                || "betternether".equals(namespace)
-                || "betterend".equals(namespace)
-                || "wover".equals(namespace)
-                || "worldweaver".equals(namespace)
-                || namespace.startsWith("wover-")) {
-            return false;
-        }
-
-        if ("terrablender".equals(namespace) && "deferred_placeholder".equals(path)) {
-            return false;
-        }
-
-        return !path.contains("placeholder")
-                && !path.contains("deferred")
-                && !path.contains("internal")
-                && !path.contains("technical");
-    }
-
-    protected final Holder<Biome> applyFallbackBiomeSource(
-            Holder<Biome> biome,
-            int biomeX,
-            int biomeY,
-            int biomeZ,
-            Climate.Sampler sampler
-    ) {
-        final BiomeSource fallbackSource = this.fallbackBiomeSource;
-        if (fallbackSource == null || fallbackSource == this) {
-            return biome;
-        }
-
-        try {
-            final Holder<Biome> fallbackBiome = fallbackSource.getNoiseBiome(biomeX, biomeY, biomeZ, sampler);
-            if (isRealExternalBiome(fallbackBiome)) {
-                return fallbackBiome;
-            }
-        } catch (Throwable ignored) {
-            // If the fallback source is not ready yet, keep Wover's result.
-        }
-
-        return biome;
-    }
-
-    private void setFallbackBiomeSource(BiomeSource source) {
-        if (source == this || source instanceof WoverBiomeSource) {
-            return;
-        }
-        if (this instanceof WoverNetherBiomeSource) {
-            source = IncisionBiomeSourceCompat.prepare(source);
-        }
-        this.fallbackBiomeSource = source;
-        try {
-            this.externalPossibleBiomes = Set.copyOf(source.possibleBiomes());
-        } catch (RuntimeException e) {
-            LibWoverWorldGenerator.C.log.warn("Unable to read external possible biomes for {}", toShortString(), e);
-            this.externalPossibleBiomes = Set.of();
-        }
-    }
-
-    private void updateCombinedPossibleBiomes() {
-        LinkedHashSet<Holder<Biome>> combined = new LinkedHashSet<>(ownedPossibleBiomes);
-        addRequiredPossibleBiomes(combined);
-        combined.addAll(externalPossibleBiomes);
-        this.dynamicPossibleBiomes = Set.copyOf(combined);
-        LithostitchedBiomeSourceCompat.replacePossibleBiomes(this, dynamicPossibleBiomes);
-    }
-
-    /**
-     * Adds biome holders which must remain declared even when they are not represented by a WoVer picker entry.
-     * ChunkGenerator uses this complete set to build feature ordering.
-     */
-    protected void addRequiredPossibleBiomes(Set<Holder<Biome>> biomes) {
-    }
-
-    private void refreshDisabledExternalBiomeKeys() {
-        this.disabledExternalBiomeKeys = RegionsUnexploredBiomeConfigCompat.disabledBiomes();
-        if (!disabledExternalBiomeKeys.isEmpty()) {
-            this.externalPossibleBiomes = externalPossibleBiomes.stream()
-                                                                 .filter(holder -> holder.unwrapKey()
-                                                                                         .map(key -> !disabledExternalBiomeKeys.contains(key))
-                                                                                         .orElse(true))
-                                                                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
-            LibWoverWorldGenerator.C.log.info(
-                    "Filtered {} disabled Regions Unexplored biome(s) from the external source for {}",
-                    disabledExternalBiomeKeys.size(),
-                    toShortString()
-            );
-        }
-    }
-
-    public boolean initializeExternalBiomeSource(
-            long seed,
-            RegistryAccess registryAccess,
-            Holder<DimensionType> dimensionType,
-            ResourceKey<LevelStem> dimensionKey,
-            ChunkGenerator settingsOwner
-    ) {
-        BiomeSource source = this.fallbackBiomeSource;
-        if (source == null) {
-            return false;
-        }
-
-        boolean initialized = ElysiumBiomeSourceCompat.initialize(source, seed, dimensionKey);
-        initialized |= TerraBlenderBiomeSourceCompat.initialize(
-                source,
-                registryAccess,
-                dimensionType,
-                dimensionKey,
-                settingsOwner,
-                seed
-        );
-        this.externalPossibleBiomes = Set.copyOf(source.possibleBiomes());
-        refreshDisabledExternalBiomeKeys();
-        updateCombinedPossibleBiomes();
-        LibWoverWorldGenerator.C.log.info(
-                "External biome source for {}: source={}, initialized={}, possibleBiomes={}",
-                dimensionKey.identifier(),
-                source.getClass().getName(),
-                initialized,
-                externalPossibleBiomes.size()
-        );
-        return initialized;
-    }
-
-
-    protected final synchronized void rebuildBiomes(boolean force) {
-        if (!force && didCreatePickers) return;
-
-        LibWoverWorldGenerator.C.log.verbose("Updating Pickers for " + this.toShortString());
-
-        final List<TagToPicker> pickers = createFreshPickerMap();
-        this.ownedPossibleBiomes = WoverBiomeSourceImpl.populateBiomePickers(
-                pickers,
-                this::addToPicker
-        );
-
-        if (this.ownedPossibleBiomes == null) {
-            this.ownedPossibleBiomes = Set.of();
-        }
-        rememberManagedPossibleBiomeKeys();
-        updateCombinedPossibleBiomes();
-        this.didCreatePickers = true;
-
-        onFinishBiomeRebuild(pickers);
-    }
-
-    protected synchronized void reloadBiomes(boolean force) {
-        rebuildBiomes(force);
-        this.initMap(currentSeed);
-    }
-
-    @Override
-    public void reloadBiomes() {
-        reloadBiomes(true);
-    }
-
-    protected final void initMap(long seed) {
-        LibWoverWorldGenerator.C.log.debug(this.toShortString() + "\n    --> Map Update");
-        onInitMap(seed);
-    }
-
-    @Override
-    public WoverBiomeSource mergeWithBiomeSource(BiomeSource inputBiomeSource) {
-        if (managedPossibleBiomeKeys.isEmpty()) {
-            rebuildBiomes(false);
-            rememberManagedPossibleBiomeKeys();
-        }
-        setFallbackBiomeSource(inputBiomeSource);
-
-        Stopwatch sw = Stopwatch.createStarted();
-        RegistryAccess access = WorldState.registryAccess();
-        if (access == null) {
-            access = WorldState.allStageRegistryAccess();
-            if (access != null) {
-                LibWoverWorldGenerator.C.log.verbose("Registries were not finalized before merging biome sources!");
-            } else {
-                LibWoverWorldGenerator.C.log.error("Unable to merge Biome Sources");
-                return this;
-            }
-        }
-        final Registry<Biome> biomes = access.lookupOrThrow(Registries.BIOME);
-
-        final BiomeTagModificationWorker biomeTagWorker = new BiomeTagModificationWorker();
-        int biomesAdded = 0;
-        try {
-            for (Holder<Biome> biomeHolder : inputBiomeSource.possibleBiomes()) {
-                if (biomeHolder.unwrapKey().isPresent()) {
-                    final ResourceKey<Biome> key = biomeHolder.unwrapKey().orElseThrow();
-                    TagKey<Biome> tag = tagForUnknownBiome(biomeHolder, key);
-
-                    if (tag != null && !biomeHolder.is(tag)) {
-                        biomeTagWorker.addBiomeToTag(tag, biomes, key, biomeHolder);
-                        biomesAdded++;
-                    }
-                }
-            }
-
-            biomeTagWorker.finished();
-        } catch (RuntimeException e) {
-            LibWoverWorldGenerator.C.log.error("Error while rebuilding BiomeSources!", e);
-        } catch (Exception e) {
-            LibWoverWorldGenerator.C.log.error("Error while rebuilding BiomeSources!", e);
-        }
-
-        this.reloadBiomes();
-        if (biomesAdded > 0) {
-            LibWoverWorldGenerator.C.log.info("Merged {} biomes to {} in {}", biomesAdded, toShortString(), sw);
-        }
-        return this;
-    }
+   public record TagToPicker(TagKey<Biome> tag, WoverBiomePicker picker) {
+   }
 }
+

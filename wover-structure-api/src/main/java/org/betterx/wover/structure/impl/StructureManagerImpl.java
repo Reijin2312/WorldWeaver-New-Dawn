@@ -100,17 +100,11 @@ public class StructureManagerImpl {
 
     public static boolean isValidBiome(Structure.GenerationContext context, int yPos) {
         BlockPos blockPos = context.chunkPos().getMiddleBlockPosition(yPos);
-        return context.validBiome().test(
-                context
-                        .chunkGenerator()
-                        .getBiomeSource()
-                        .getNoiseBiome(
-                                QuartPos.fromBlock(blockPos.getX()),
-                                QuartPos.fromBlock(blockPos.getY()),
-                                QuartPos.fromBlock(blockPos.getZ()),
-                                context.randomState().sampler()
-                        )
-        );
+        return context.validBiome().test(context.biomeResolver().getNoiseBiome(
+                QuartPos.fromBlock(blockPos.getX()),
+                QuartPos.fromBlock(blockPos.getY()),
+                QuartPos.fromBlock(blockPos.getZ())
+        ));
     }
 
     private static void onBootstrap(BootstrapContext<Structure> context) {

@@ -1,444 +1,206 @@
 package org.betterx.wover.biome.api.modification.predicates;
 
-import de.ambertation.wunderlib.configs.AbstractConfig;
-import org.betterx.wover.biome.impl.modification.predicates.*;
-import org.betterx.wover.config.api.Configs;
-import org.betterx.wover.core.api.ModCore;
-
 import com.mojang.serialization.Codec;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
-import net.minecraft.util.KeyDispatchDataCodec;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.dimension.LevelStem;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
-import net.minecraft.world.level.levelgen.placement.PlacedFeature;
-import net.minecraft.world.level.levelgen.structure.Structure;
-
+import com.mojang.serialization.MapCodec;
+import org.betterx.wover.biome.impl.modification.predicates.Always;
+import org.betterx.wover.biome.impl.modification.predicates.And;
+import org.betterx.wover.biome.impl.modification.predicates.BiomePredicateRegistryImpl;
+import org.betterx.wover.biome.impl.modification.predicates.ConfigIs;
+import org.betterx.wover.biome.impl.modification.predicates.HasFeature;
+import org.betterx.wover.biome.impl.modification.predicates.HasPlacedFeature;
+import org.betterx.wover.biome.impl.modification.predicates.HasStructure;
+import org.betterx.wover.biome.impl.modification.predicates.HasTag;
+import org.betterx.wover.biome.impl.modification.predicates.InDimension;
+import org.betterx.wover.biome.impl.modification.predicates.IsBiome;
+import org.betterx.wover.biome.impl.modification.predicates.IsNamespace;
+import org.betterx.wover.biome.impl.modification.predicates.LocationPathContains;
+import org.betterx.wover.biome.impl.modification.predicates.Not;
+import org.betterx.wover.biome.impl.modification.predicates.Or;
+import org.betterx.wover.biome.impl.modification.predicates.Spawns;
+import org.betterx.wover.core.api.ModCore;
+import de.ambertation.wunderlib.configs.AbstractConfig;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import org.jetbrains.annotations.ApiStatus;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
+import net.minecraft.world.level.levelgen.structure.Structure;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.ApiStatus.Internal;
 
-/**
- * A predicate that can be used to test if a biome matches certain conditions.
- * <p>
- * Predicates can be serialized using {@link #CODEC}, and are managed in the
- * {@link BiomePredicateRegistry}.
- * <p>
- * If you need to, you can add custom predicates as well using
- * {@link BiomePredicateRegistry#register(Identifier, KeyDispatchDataCodec)}.
- */
 public interface BiomePredicate {
-    /**
-     * Creates a predicate that is {@code true} when any one of the passed predicates is {@code true}.
-     * <p>
-     * This predicate is lazy, meaning that it will stop testing predicates once one of them returns
-     * {@code true}.
-     *
-     * @param predicates the predicates to test
-     * @return the or predicate
-     */
-    static BiomePredicate or(BiomePredicate... predicates) {
-        return new Or(List.of(predicates));
-    }
+   Codec<BiomePredicate> CODEC = BiomePredicateRegistryImpl.BIOME_PREDICATES.byNameCodec().dispatch(BiomePredicate::codec, Function.identity());
 
-    /**
-     * Creates a predicate that is {@code true} when all of the passed predicates are {@code true}.
-     * <p>
-     * This predicate is lazy, meaning that it will stop testing predicates once one of them returns
-     * {@code false}.
-     *
-     * @param predicates the predicates to test
-     * @return the and predicate
-     */
-    static BiomePredicate and(BiomePredicate... predicates) {
-        return new And(List.of(predicates));
-    }
+   static BiomePredicate or(BiomePredicate... predicates) {
+      return new Or(List.of(predicates));
+   }
 
-    /**
-     * Alias name for {@link #or(BiomePredicate...)}.
-     *
-     * @param predicates the predicates to test
-     * @return the or predicate
-     * @see #or(BiomePredicate...)
-     */
-    static BiomePredicate anyOf(BiomePredicate... predicates) {
-        return or(predicates);
-    }
-    /**
-     * Alias name for {@link #and(BiomePredicate...)}.
-     *
-     * @param predicates the predicates to test
-     * @return the and predicate
-     * @see #and(BiomePredicate...)
-     */
-    static BiomePredicate allOf(BiomePredicate... predicates) {
-        return and(predicates);
-    }
+   static BiomePredicate and(BiomePredicate... predicates) {
+      return new And(List.of(predicates));
+   }
 
-    /**
-     * Creates a predicate that negates the pass predicate.
-     *
-     * @param predicate the predicate to negate
-     * @return the negated predicate
-     */
-    static BiomePredicate not(BiomePredicate predicate) {
-        return new Not(predicate);
-    }
+   static BiomePredicate anyOf(BiomePredicate... predicates) {
+      return or(predicates);
+   }
 
-    /**
-     * Creates a predicate that is always {@code true}.
-     *
-     * @return the always true predicate
-     */
-    static BiomePredicate always() {
-        return Always.INSTANCE;
-    }
+   static BiomePredicate allOf(BiomePredicate... predicates) {
+      return and(predicates);
+   }
 
-    /**
-     * Creates a predicate that tests if a biome matches the passed key.
-     *
-     * @param key the biome key to compare with
-     * @return the predicate
-     */
-    static BiomePredicate isBiome(ResourceKey<Biome> key) {
-        return new IsBiome(key);
-    }
+   static BiomePredicate not(BiomePredicate predicate) {
+      return new Not(predicate);
+   }
 
-    /**
-     * Creates a predicate that tests if a biome matches any of the passed keys.
-     *
-     * @param keys the biome keys to compare with
-     * @return the predicate
-     */
-    @SafeVarargs
-    static BiomePredicate inBiomes(ResourceKey<Biome>... keys) {
-        return new Or(Arrays.stream(keys).map(biomeKey -> (BiomePredicate) new IsBiome(biomeKey)).toList());
-    }
+   static BiomePredicate always() {
+      return Always.INSTANCE;
+   }
 
-    /**
-     * Creates a predicate that will return {@code true} when the biome does not match any of the passed keys.
-     *
-     * @param keys the biome keys to compare with
-     * @return the predicate
-     */
-    @SafeVarargs
-    static BiomePredicate notInBiomes(ResourceKey<Biome>... keys) {
-        return new Not(inBiomes(keys));
-    }
+   static BiomePredicate isBiome(ResourceKey<Biome> key) {
+      return new IsBiome(key);
+   }
 
-    /**
-     * Creates a predicate that tests if a biome is in the passed dimension.
-     *
-     * @param key the dimension key
-     * @return the predicate
-     */
-    static BiomePredicate inDimension(ResourceKey<LevelStem> key) {
-        return new InDimension(key);
-    }
-    /**
-     * Creates a predicate that tests if a biome is in the overworld.
-     *
-     * @return the predicate
-     */
-    static BiomePredicate inOverworld() {
-        return InDimension.OVERWORLD;
-    }
+   @SafeVarargs
+   static BiomePredicate inBiomes(ResourceKey<Biome>... keys) {
+      return new Or(Arrays.stream(keys).<BiomePredicate>map(IsBiome::new).toList());
+   }
 
-    /**
-     * Creates a predicate that tests if a biome is in the nether.
-     *
-     * @return the predicate
-     */
-    static BiomePredicate inEnd() {
-        return InDimension.END;
-    }
+   @SafeVarargs
+   static BiomePredicate notInBiomes(ResourceKey<Biome>... keys) {
+      return new Not(inBiomes(keys));
+   }
 
-    /**
-     * Creates a predicate that tests if a biome is in the nether.
-     *
-     * @return the predicate
-     */
-    static BiomePredicate inNether() {
-        return InDimension.NETHER;
-    }
+   static BiomePredicate inDimension(ResourceKey<LevelStem> key) {
+      return new InDimension(key);
+   }
 
-    /**
-     * Creates a predicate that tests if a biome has the passed tag.
-     *
-     * @param tag the tag to test
-     * @return the predicate
-     */
-    static BiomePredicate hasTag(TagKey<Biome> tag) {
-        return new HasTag(tag);
-    }
+   static BiomePredicate inOverworld() {
+      return InDimension.OVERWORLD;
+   }
 
-    /**
-     * Creates a predicate that tests if an entity can spawn in the biome
-     *
-     * @param type the entity type
-     * @return the predicate
-     */
-    static BiomePredicate spawns(EntityType<?> type) {
-        return new Spawns(type);
-    }
+   static BiomePredicate inEnd() {
+      return InDimension.END;
+   }
 
-    /**
-     * Creates a predicate that tests if the passed structure can generate in the biome.
-     *
-     * @param key the structure key
-     * @return the predicate
-     */
-    static BiomePredicate hasStructure(ResourceKey<Structure> key) {
-        return new HasStructure(key);
-    }
+   static BiomePredicate inNether() {
+      return InDimension.NETHER;
+   }
 
-    /**
-     * Creates a predicate that tests if the passed feature can generate in the biome.
-     *
-     * @param key the feature key
-     * @return the predicate
-     */
-    static BiomePredicate hasPlacedFeature(ResourceKey<PlacedFeature> key) {
-        return new HasPlacedFeature(key);
-    }
+   static BiomePredicate hasTag(TagKey<Biome> tag) {
+      return new HasTag(tag);
+   }
 
-    /**
-     * Creates a predicate that tests if the passed configured feature can generate in the biome.
-     *
-     * @param key the configured feature key
-     * @return the predicate
-     */
-    static BiomePredicate hasConfiguredFeature(ResourceKey<ConfiguredFeature<?, ?>> key) {
-        return new HasConfiguredFeature(key);
-    }
+   static BiomePredicate spawns(EntityType<?> type) {
+      return new Spawns(type);
+   }
 
-    /**
-     * Creates a predicate that tests if the biome is in the vanilla (<i>minecraft</i>) namespace.
-     *
-     * @return the predicate
-     */
-    static BiomePredicate isVanilla() {
-        return new IsNamespace("minecraft");
-    }
+   static BiomePredicate hasStructure(ResourceKey<Structure> key) {
+      return new HasStructure(key);
+   }
 
-    /**
-     * Creates a predicate that tests if the biome is in the passed mod-namespace.
-     *
-     * @param namespace the namespace
-     * @return the predicate
-     */
-    static BiomePredicate inNamespace(String namespace) {
-        return new IsNamespace(namespace);
-    }
+   static BiomePredicate hasPlacedFeature(ResourceKey<PlacedFeature> key) {
+      return new HasPlacedFeature(key);
+   }
 
-    /**
-     * Creates a predicate that tests if the biome is in the namespace of the passed mod.
-     *
-     * @param core the mod core
-     * @return the predicate
-     */
-    static BiomePredicate inNamespace(ModCore core) {
-        return new IsNamespace(core.namespace);
-    }
+   static BiomePredicate hasFeature(ResourceKey<Feature> key) {
+      return new HasFeature(key);
+   }
 
-    /**
-     * Creates a predicate that returns {@code true} when the biome is not in the passed namespace.
-     *
-     * @param namespace the namespace
-     * @return the predicate
-     */
-    static BiomePredicate notInNamespace(String namespace) {
-        return not(new IsNamespace(namespace));
-    }
+   static BiomePredicate isVanilla() {
+      return new IsNamespace("minecraft");
+   }
 
-    /**
-     * Creates a predicate that returns {@code true} when the biome is not in the namespace of the passed mod.
-     *
-     * @param core the mod core
-     * @return the predicate
-     */
-    static BiomePredicate notInNamespace(ModCore core) {
-        return not(new IsNamespace(core.namespace));
-    }
+   static BiomePredicate inNamespace(String namespace) {
+      return new IsNamespace(namespace);
+   }
 
-    /**
-     * Creates a predicate that returns {@code true} when the biome path contains the passed needle.
-     *
-     * @param needle the string to look for in the path of the biomes location
-     * @return the predicate
-     */
-    static BiomePredicate pathContains(String needle) {
-        return new LocationPathContains(needle);
-    }
+   static BiomePredicate inNamespace(ModCore core) {
+      return new IsNamespace(core.namespace);
+   }
 
-    /**
-     * Creates a predicate that tests if the given value from a config file matches the targetValue.
-     * <p>
-     * The {@link AbstractConfig} that provides the value has to be registered using
-     * {@link org.betterx.wover.config.api.Configs#register(Supplier)} or
-     * {@link org.betterx.wover.config.api.Configs#register(ModCore, String, Configs.ConfigSupplier)}.
-     * Otherwise it will not be found.
-     *
-     * @param value       the value from a config file
-     * @param targetValue the target value to compare against
-     * @return the predicate
-     */
-    static <T, R extends AbstractConfig<?>.Value<T, R>> BiomePredicate hasConfig(
-            AbstractConfig<?>.Value<T, R> value,
-            T targetValue
-    ) {
-        return ConfigIs.of(value, targetValue);
-    }
+   static BiomePredicate notInNamespace(String namespace) {
+      return not(new IsNamespace(namespace));
+   }
 
-    /**
-     * The context object for a {@link BiomePredicate}.
-     * <p>
-     * This object contains all the information that is available to a predicate when it is tested.
-     */
-    final class Context {
-        /**
-         * The registry access object.
-         */
-        @NotNull
-        public final RegistryAccess registryAccess;
-        /**
-         * The key for the Biome that is being tested.
-         */
-        @NotNull
-        public final ResourceKey<Biome> biomeKey;
-        /**
-         * The Biome that is being tested.
-         */
-        @NotNull
-        public final Biome biome;
-        /**
-         * The holder for the Biome that is being tested.
-         */
-        @NotNull
-        public final Holder<Biome> biomeHolder;
+   static BiomePredicate notInNamespace(ModCore core) {
+      return not(new IsNamespace(core.namespace));
+   }
 
-        /**
-         * The biome registry from the {@link #registryAccess}
-         */
-        @NotNull
-        public final Registry<Biome> biomes;
+   static BiomePredicate pathContains(String needle) {
+      return new LocationPathContains(needle);
+   }
 
-        /**
-         * The level stem registry from the {@link #registryAccess}
-         */
-        @NotNull
-        public final Registry<LevelStem> levelStems;
-        /**
-         * The structure registry from the {@link #registryAccess}
-         */
-        @NotNull
-        public final Registry<Structure> structures;
+   static <T, R extends AbstractConfig<?>.Value<T, R>> BiomePredicate hasConfig(AbstractConfig<?>.Value<T, R> value, T targetValue) {
+      return ConfigIs.of(value, targetValue);
+   }
 
-        /**
-         * The placed feature registry from the {@link #registryAccess}
-         */
-        @NotNull
-        public final Registry<PlacedFeature> placedFeatures;
-        /**
-         * The configured feature registry from the {@link #registryAccess}
-         */
-        @NotNull
-        public final Registry<ConfiguredFeature<?, ?>> configuredFeatures;
+   @Internal
+   MapCodec<? extends BiomePredicate> codec();
 
-        private Context(
-                @NotNull RegistryAccess registryAccess,
-                @NotNull Registry<Biome> biomes,
-                @NotNull ResourceKey<Biome> biomeKey,
-                @NotNull Biome biome
-        ) {
-            this.registryAccess = registryAccess;
-            this.biomeKey = biomeKey;
-            this.biomes = biomes;
+   boolean test(BiomePredicate.Context var1);
 
-            this.levelStems = registryAccess.lookupOrThrow(Registries.LEVEL_STEM);
-            this.structures = registryAccess.lookupOrThrow(Registries.STRUCTURE);
-            this.placedFeatures = registryAccess.lookupOrThrow(Registries.PLACED_FEATURE);
-            this.configuredFeatures = registryAccess.lookupOrThrow(Registries.CONFIGURED_FEATURE);
+   public static final class Context {
+      @NotNull
+      public final RegistryAccess registryAccess;
+      @NotNull
+      public final ResourceKey<Biome> biomeKey;
+      @NotNull
+      public final Biome biome;
+      @NotNull
+      public final Holder<Biome> biomeHolder;
+      @NotNull
+      public final Registry<Biome> biomes;
+      @NotNull
+      public final Registry<LevelStem> levelStems;
+      @NotNull
+      public final Registry<Structure> structures;
+      @NotNull
+      public final Registry<PlacedFeature> placedFeatures;
+      @NotNull
+      public final Registry<Feature> features;
 
-            this.biome = biome;
-            this.biomeHolder = biomes.getOrThrow(biomeKey);
-        }
+      private Context(@NotNull RegistryAccess registryAccess, @NotNull Registry<Biome> biomes, @NotNull ResourceKey<Biome> biomeKey, @NotNull Biome biome) {
+         this.registryAccess = registryAccess;
+         this.biomeKey = biomeKey;
+         this.biomes = biomes;
+         this.levelStems = registryAccess.lookupOrThrow(Registries.LEVEL_STEM);
+         this.structures = registryAccess.lookupOrThrow(Registries.STRUCTURE);
+         this.placedFeatures = registryAccess.lookupOrThrow(Registries.PLACED_FEATURE);
+         this.features = registryAccess.lookupOrThrow(Registries.FEATURE);
+         this.biome = biome;
+         this.biomeHolder = biomes.getOrThrow(biomeKey);
+      }
 
-        /**
-         * Creates a new context object for the passed biome key.
-         *
-         * @param registryAccess the registry access object
-         * @param biomeKey       the biome key
-         * @return the context object, or {@code null} if the biome key is not present in the biome registry
-         */
-        @ApiStatus.Internal
-        public static @Nullable Context of(
-                @Nullable RegistryAccess registryAccess,
-                @NotNull ResourceKey<Biome> biomeKey
-        ) {
-            if (registryAccess == null) return null;
-            var biomes = registryAccess.lookupOrThrow(Registries.BIOME);
+      @Internal
+      @Nullable
+      public static BiomePredicate.Context of(@Nullable RegistryAccess registryAccess, @NotNull ResourceKey<Biome> biomeKey) {
+         if (registryAccess == null) {
+            return null;
+         } else {
+            Registry<Biome> biomes = registryAccess.lookupOrThrow(Registries.BIOME);
             return of(registryAccess, biomes, biomeKey);
-        }
+         }
+      }
 
-        /**
-         * Creates a new context object for the passed biome key.
-         *
-         * @param registryAccess the registry access object
-         * @param biomeKey       the biome key
-         * @param biomes         the biome registry
-         * @return the context object, or {@code null} if the biome key is not present in the biome registry
-         */
-        @ApiStatus.Internal
-        @Nullable
-        public static Context of(
-                @Nullable RegistryAccess registryAccess,
-                @Nullable Registry<Biome> biomes,
-                @NotNull ResourceKey<Biome> biomeKey
-
-        ) {
-            if (biomes == null || registryAccess == null) return null;
-            var biome = biomes.get(biomeKey).map(Holder.Reference::value).orElse(null);
-            if (biome == null) return null;
-
-            return new Context(registryAccess, biomes, biomeKey, biome);
-        }
-    }
-
-    /**
-     * Codec for a BiomePredicate that delegates to the
-     * Codec returned by {@link #codec()}.
-     */
-    Codec<BiomePredicate> CODEC = BiomePredicateRegistryImpl
-            .BIOME_PREDICATES.byNameCodec()
-                             .dispatch(
-                                     p -> p.codec().codec(),
-                                     Function.identity()
-                             );
-    /**
-     * The codec for a predicate class.
-     *
-     * @return the codec
-     */
-    @ApiStatus.Internal
-    KeyDispatchDataCodec<? extends BiomePredicate> codec();
-
-    /**
-     * Tests if the predicate is {@code true} for the passed context.
-     *
-     * @param ctx the context object
-     * @return {@code true} if the predicate does pass the test
-     */
-    boolean test(Context ctx);
+      @Internal
+      @Nullable
+      public static BiomePredicate.Context of(@Nullable RegistryAccess registryAccess, @Nullable Registry<Biome> biomes, @NotNull ResourceKey<Biome> biomeKey) {
+         if (biomes != null && registryAccess != null) {
+            Reference<Biome> biome = (Reference<Biome>)biomes.get(biomeKey).orElse(null);
+            return biome != null && biome.isBound() ? new BiomePredicate.Context(registryAccess, biomes, biomeKey, (Biome)biome.value()) : null;
+         } else {
+            return null;
+         }
+      }
+   }
 }

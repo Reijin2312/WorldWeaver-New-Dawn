@@ -11,7 +11,12 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.Noises;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 
 import java.util.List;
 
@@ -67,8 +72,8 @@ public class SurfaceRuleProvider extends WoverRegistryContentProvider<AssignedSu
                 .rule(Rules.switchRules(
                         NumericProviders.randomInt(2),
                         List.of(
-                                SurfaceRules.state(Blocks.DEEPSLATE.defaultBlockState()),
-                                SurfaceRules.state(Blocks.BLACKSTONE.defaultBlockState())
+                                MaterialRules.state(Blocks.DEEPSLATE.defaultBlockState()),
+                                MaterialRules.state(Blocks.BLACKSTONE.defaultBlockState())
                         )
                 ))
                 .register(ctx, TEST_DESERT);
@@ -76,19 +81,19 @@ public class SurfaceRuleProvider extends WoverRegistryContentProvider<AssignedSu
         SurfaceRuleBuilder
                 .start()
                 .biome(Biomes.FLOWER_FOREST)
-                .rule(SurfaceRules.sequence(
-                        SurfaceRules.ifTrue(
-                                SurfaceRules.ON_FLOOR,
-                                SurfaceRules.ifTrue(
+                .rule(MaterialRules.sequence(
+                        MaterialRules.ifTrue(
+                                MaterialRules.ON_FLOOR,
+                                MaterialRules.ifTrue(
                                         Conditions.roughNoise(Noises.NETHERRACK, 0.19),
-                                        SurfaceRules.state(Blocks.PURPLE_CONCRETE.defaultBlockState())
+                                        MaterialRules.state(Blocks.PURPLE_CONCRETE.defaultBlockState())
                                 )
                         ),
-                        SurfaceRules.ifTrue(
+                        MaterialRules.ifTrue(
                                 Conditions.NETHER_VOLUME_NOISE_LARGE,
-                                SurfaceRules.state(Blocks.LIGHT_BLUE_CONCRETE.defaultBlockState())
+                                MaterialRules.state(Blocks.LIGHT_BLUE_CONCRETE.defaultBlockState())
                         ),
-                        SurfaceRules.state(Blocks.WHITE_CONCRETE.defaultBlockState())
+                        MaterialRules.state(Blocks.WHITE_CONCRETE.defaultBlockState())
                 ))
                 .register(ctx, TEST_FLOWER_FORREST);
     }

@@ -4,10 +4,11 @@ import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.datagen.impl.WoverDataGenEntryPointImpl;
 import org.betterx.wover.entrypoint.LibWoverDatagen;
 
-import com.mojang.serialization.Lifecycle;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistrySetBuilder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.core.registries.SingleRegistryBootstrap;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
 import net.minecraft.data.PackOutput;
@@ -125,12 +126,7 @@ public abstract class WoverDataGenEntryPoint {
                 registryContext.addModCore(builder.modCore);
                 registryContext.addRegistryProviders(registryProviders);
                 onBuildRegistry(registryContext.registryBuilder);
-                if (!registryContext.providerAdded) {
-                    event.addProvider(registryContext.createProvider());
-                    registryContext.providerAdded = true;
-                }
             }
-            CompletableFuture<HolderLookup.Provider> registryLookup = registryContext.registryLookup();
 
             List<WoverLootProvider> lootProviders = new ArrayList<>();
             List<WoverRecipeGenerator> recipeGenerators = new ArrayList<>();
@@ -146,8 +142,6 @@ public abstract class WoverDataGenEntryPoint {
                     recipeGenerators.add(recipeGenerator);
                     continue;
                 }
-                event.addProvider(provider.getProvider(packOutput, registryLookup));
-                addMultiProviders(event, provider, packOutput, registryLookup);
             }
 
             if (!lootProviders.isEmpty()) {
@@ -155,35 +149,40 @@ public abstract class WoverDataGenEntryPoint {
                         .stream()
                         .map(WoverLootProvider::toSubProviderEntry)
                         .toList();
-                event.addProvider(new LootTableProvider(
-                        packOutput,
-                        Set.of(),
-                        entries,
-                        registryLookup
-                ));
+                registryContext.registryBuilder.add(
+                        Registries.LOOT_TABLE,
+                        new LootTableProvider(Set.of(), entries)
+                );
             }
 
             if (!recipeGenerators.isEmpty()) {
                 final List<WoverRecipeGenerator> generators = List.copyOf(recipeGenerators);
-                final String recipeName = builder.modCore.modId + " Recipes" +
-                        (builder.location != null ? " [" + builder.location + "]" : "");
-                RecipeProvider.Runner delegate = new RecipeProvider.Runner(packOutput, registryLookup) {
-                    @Override
-                    public String getName() {
-                        return recipeName;
+                registryContext.registryBuilder.add(RecipeProvider.asBootstrap((recipes, advancements) ->
+                    new RecipeProvider(recipes, advancements) {
+                        @Override
+                        protected void buildRecipes() {
+                            generators.forEach(gen -> gen.buildRecipes(recipes, output));
+                        }
                     }
+                ));
+            }
 
-                    @Override
-                    protected RecipeProvider createRecipeProvider(HolderLookup.Provider lookup, RecipeOutput output) {
-                        return new RecipeProvider(lookup, output) {
-                            @Override
-                            protected void buildRecipes() {
-                                generators.forEach(gen -> gen.buildRecipes(lookup, output));
-                            }
-                        };
-                    }
-                };
-                event.addProvider(new NamedDataProvider(recipeName, delegate));
+            if (!registryProviders.isEmpty() || !lootProviders.isEmpty() || !recipeGenerators.isEmpty()) {
+                if (!registryContext.providerAdded) {
+                    event.addProvider(registryContext.createProvider());
+                    registryContext.providerAdded = true;
+                }
+            }
+
+            CompletableFuture<HolderLookup.Provider> registryLookup = registryContext.registryLookup();
+            for (WoverDataProvider<?> provider : builder.providerFactories()) {
+                if (provider instanceof WoverRegistryProvider<?>
+                        || provider instanceof WoverLootProvider
+                        || provider instanceof WoverRecipeGenerator) {
+                    continue;
+                }
+                event.addProvider(provider.getProvider(packOutput, registryLookup));
+                addMultiProviders(event, provider, packOutput, registryLookup);
             }
 
             if (builder.datapackBootstrap != null) {
@@ -236,7 +235,7 @@ public abstract class WoverDataGenEntryPoint {
         Path key = packOutput.getOutputFolder();
         return REGISTRY_CONTEXTS.computeIfAbsent(
                 key,
-                path -> new RegistryPackContext(packOutput, event.getLookupProvider())
+                path -> new RegistryPackContext(packOutput, event.getWorldLookupProvider())
         );
     }
 
@@ -323,7 +322,7 @@ public abstract class WoverDataGenEntryPoint {
 
         private synchronized CompletableFuture<RegistrySetBuilder.PatchedRegistries> patchedRegistries() {
             if (patchedRegistries == null) {
-                patchedRegistries = RegistryPatchGenerator.createLookup(baseLookup, registryBuilder);
+                patchedRegistries = RegistryPatchGenerator.createWorldLookup(baseLookup, registryBuilder);
             }
             return patchedRegistries;
         }
@@ -353,86 +352,49 @@ public abstract class WoverDataGenEntryPoint {
                 List<RegistryBootstrapEntry<?>> entries
         ) {
             for (RegistryBootstrapEntry<?> entry : entries) {
-                addBootstrap(registryKey, entry.lifecycle, entry.bootstrap);
+                addBootstrap(registryKey, entry.bootstrap);
             }
         }
 
         @SuppressWarnings({"rawtypes", "unchecked"})
         private void addBootstrap(
                 ResourceKey registryKey,
-                @Nullable Lifecycle lifecycle,
-                RegistrySetBuilder.RegistryBootstrap bootstrap
+                SingleRegistryBootstrap bootstrap
         ) {
             RegistryBootstrapGroup group = bootstrapGroups.get(registryKey);
             if (group == null) {
-                RegistryBootstrapGroup newGroup = new RegistryBootstrapGroup(lifecycle);
+                RegistryBootstrapGroup newGroup = new RegistryBootstrapGroup();
                 bootstrapGroups.put(registryKey, newGroup);
-                RegistrySetBuilder.RegistryBootstrap combined = context -> {
-                    for (RegistrySetBuilder.RegistryBootstrap entry : newGroup.bootstraps) {
+                SingleRegistryBootstrap combined = context -> {
+                    for (SingleRegistryBootstrap entry : newGroup.bootstraps) {
                         entry.run(context);
                     }
                 };
-                if (newGroup.lifecycle != null) {
-                    registryBuilder.add(registryKey, newGroup.lifecycle, combined);
-                } else {
-                    registryBuilder.add(registryKey, combined);
-                }
+                registryBuilder.add(registryKey, combined);
                 group = newGroup;
             }
             group.bootstraps.add(bootstrap);
         }
 
         private DataProvider createProvider() {
-            return new DeferredRegistryProvider(packOutput, patchedRegistries(), modIds);
-        }
-    }
-
-    private static final class DeferredRegistryProvider implements DataProvider {
-        private final PackOutput output;
-        private final CompletableFuture<RegistrySetBuilder.PatchedRegistries> registries;
-        private final Set<String> modIds;
-
-        private DeferredRegistryProvider(
-                PackOutput output,
-                CompletableFuture<RegistrySetBuilder.PatchedRegistries> registries,
-                Set<String> modIds
-        ) {
-            this.output = output;
-            this.registries = registries;
-            this.modIds = modIds;
-        }
-
-        @Override
-        public CompletableFuture<?> run(CachedOutput cache) {
-            return new DatapackBuiltinEntriesProvider(output, registries, modIds).run(cache);
-        }
-
-        @Override
-        public String getName() {
-            return "Registries";
+            return DatapackBuiltinEntriesProvider.forWorldLayer(
+                    packOutput,
+                    "Registries",
+                    baseLookup,
+                    registryBuilder,
+                    Set.copyOf(modIds)
+            );
         }
     }
 
     private static final class RegistryBootstrapGroup {
-        @Nullable
-        private final Lifecycle lifecycle;
-        private final List<RegistrySetBuilder.RegistryBootstrap<?>> bootstraps = new LinkedList<>();
-
-        private RegistryBootstrapGroup(@Nullable Lifecycle lifecycle) {
-            this.lifecycle = lifecycle;
-        }
+        private final List<SingleRegistryBootstrap<?>> bootstraps = new LinkedList<>();
     }
 
     private static final class RegistryBootstrapEntry<T> {
-        @Nullable
-        private final Lifecycle lifecycle;
-        private final RegistrySetBuilder.RegistryBootstrap<T> bootstrap;
+        private final SingleRegistryBootstrap<T> bootstrap;
 
-        private RegistryBootstrapEntry(
-                @Nullable Lifecycle lifecycle,
-                RegistrySetBuilder.RegistryBootstrap<T> bootstrap
-        ) {
-            this.lifecycle = lifecycle;
+        private RegistryBootstrapEntry(SingleRegistryBootstrap<T> bootstrap) {
             this.bootstrap = bootstrap;
         }
     }
@@ -443,29 +405,18 @@ public abstract class WoverDataGenEntryPoint {
         @Override
         public <T> RegistrySetBuilder add(
                 ResourceKey<? extends Registry<T>> registryKey,
-                RegistrySetBuilder.RegistryBootstrap<T> bootstrap
+                SingleRegistryBootstrap<T> bootstrap
         ) {
-            addEntry(registryKey, null, bootstrap);
-            return this;
-        }
-
-        @Override
-        public <T> RegistrySetBuilder add(
-                ResourceKey<? extends Registry<T>> registryKey,
-                Lifecycle lifecycle,
-                RegistrySetBuilder.RegistryBootstrap<T> bootstrap
-        ) {
-            addEntry(registryKey, lifecycle, bootstrap);
+            addEntry(registryKey, bootstrap);
             return this;
         }
 
         private <T> void addEntry(
                 ResourceKey<? extends Registry<T>> registryKey,
-                @Nullable Lifecycle lifecycle,
-                RegistrySetBuilder.RegistryBootstrap<T> bootstrap
+                SingleRegistryBootstrap<T> bootstrap
         ) {
             entries.computeIfAbsent(registryKey, key -> new LinkedList<>())
-                   .add(new RegistryBootstrapEntry<>(lifecycle, bootstrap));
+                   .add(new RegistryBootstrapEntry<>(bootstrap));
         }
 
         private Map<ResourceKey<?>, List<RegistryBootstrapEntry<?>>> entries() {

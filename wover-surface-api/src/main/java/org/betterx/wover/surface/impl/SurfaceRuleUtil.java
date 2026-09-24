@@ -20,7 +20,15 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.MaterialRules;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
+import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
+import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
+import net.minecraft.world.level.levelgen.material.rule.SequenceRule;
+import net.minecraft.world.level.levelgen.material.rule.ConditionRule;
+import net.minecraft.world.level.levelgen.material.condition.BiomeCondition;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.WorldData;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
@@ -36,7 +44,7 @@ import java.lang.reflect.Method;
 import org.jetbrains.annotations.ApiStatus;
 
 public class SurfaceRuleUtil {
-    private static List<SurfaceRules.RuleSource> getRulesForBiome(HolderGetter<Biome> biomes, ResourceKey<Biome> biomeKey) {
+    private static List<MaterialRule> getRulesForBiome(HolderGetter<Biome> biomes, ResourceKey<Biome> biomeKey) {
         Registry<AssignedSurfaceRule> registry = null;
         if (WorldState.registryAccess() != null)
             registry = WorldState.registryAccess()
@@ -55,10 +63,10 @@ public class SurfaceRuleUtil {
 
         if (list.size() == 0) return List.of();
 
-        return List.of(SurfaceRules.ifTrue(SurfaceRules.isBiome(biomes, biomeKey), new SurfaceRules.SequenceRuleSource(list)));
+        return List.of(MaterialRules.ifTrue(MaterialRules.isBiome(biomes, biomeKey), new SequenceRule(list)));
     }
 
-    private static List<SurfaceRules.RuleSource> getRulesForBiomes(List<Optional<ResourceKey<Biome>>> biomes) {
+    private static List<MaterialRule> getRulesForBiomes(List<Optional<ResourceKey<Biome>>> biomes) {
         if (WorldState.registryAccess() == null) {
             throw new IllegalStateException("Registry access is not available while collecting biome surface rules");
         }
@@ -74,17 +82,17 @@ public class SurfaceRuleUtil {
                        .collect(Collectors.toCollection(LinkedList::new));
     }
 
-    private static SurfaceRules.RuleSource mergeSurfaceRules(
+    private static MaterialRule mergeSurfaceRules(
             ResourceKey<LevelStem> dimensionKey,
-            SurfaceRules.RuleSource org,
+            MaterialRule org,
             BiomeSource source,
-            List<SurfaceRules.RuleSource> additionalRules
+            List<MaterialRule> additionalRules
     ) {
         if (additionalRules == null || additionalRules.isEmpty()) return null;
         Stopwatch sw = Stopwatch.createStarted();
         final int count = additionalRules.size();
-        if (org instanceof SurfaceRules.SequenceRuleSource sequenceRule) {
-            List<SurfaceRules.RuleSource> existingSequence = sequenceRule.sequence();
+        if (org instanceof SequenceRule sequenceRule) {
+            List<MaterialRule> existingSequence = sequenceRule.sequence();
             additionalRules = additionalRules
                     .stream()
                     .filter(r -> !existingSequence.contains(r))
@@ -94,9 +102,9 @@ public class SurfaceRuleUtil {
             // Minecraft 26.2 keeps bedrock and ceiling rules before the first biome-scoped Nether rule.
             // Insert at that exact structural boundary so custom rules cannot replace the roof or floor.
             if (dimensionKey.equals(LevelStem.NETHER)) {
-                final List<SurfaceRules.RuleSource> combined = new ArrayList<>(existingSequence.size() + additionalRules.size());
+                final List<MaterialRule> combined = new ArrayList<>(existingSequence.size() + additionalRules.size());
                 boolean inserted = false;
-                for (SurfaceRules.RuleSource rule : existingSequence) {
+                for (MaterialRule rule : existingSequence) {
                     if (!inserted && containsBiomeCondition(rule)) {
                         combined.addAll(additionalRules);
                         inserted = true;
@@ -127,19 +135,19 @@ public class SurfaceRuleUtil {
                 source
         );
 
-        return new SurfaceRules.SequenceRuleSource(additionalRules);
+        return new SequenceRule(additionalRules);
     }
 
-    private static boolean containsBiomeCondition(SurfaceRules.RuleSource rule) {
-        if (rule instanceof SurfaceRules.TestRuleSource testRule) {
-            if (testRule.ifTrue() instanceof SurfaceRules.BiomeConditionSource) {
+    private static boolean containsBiomeCondition(MaterialRule rule) {
+        if (rule instanceof ConditionRule testRule) {
+            if (testRule.ifTrue() instanceof BiomeCondition) {
                 return true;
             }
             return containsBiomeCondition(testRule.thenRun());
         }
 
-        if (rule instanceof SurfaceRules.SequenceRuleSource sequenceRule) {
-            for (SurfaceRules.RuleSource nestedRule : sequenceRule.sequence()) {
+        if (rule instanceof SequenceRule sequenceRule) {
+            for (MaterialRule nestedRule : sequenceRule.sequence()) {
                 if (containsBiomeCondition(nestedRule)) {
                     return true;
                 }
@@ -194,7 +202,7 @@ public class SurfaceRuleUtil {
         tryApplyTerraBlenderRuleCategory(noiseSettings, dimensionKey, loadedBiomeSource);
         Object o = noiseSettings.value();
         if (o instanceof SurfaceRuleProvider srp) {
-            SurfaceRules.RuleSource originalRules = srp.wover_getOriginalSurfaceRules();
+            MaterialRule originalRules = srp.wover_getOriginalSurfaceRules();
             srp.wover_overwriteSurfaceRules(mergeSurfaceRules(
                     dimensionKey,
                     originalRules,

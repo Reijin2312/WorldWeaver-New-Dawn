@@ -2,65 +2,65 @@ package org.betterx.wover.generator.impl.map.square;
 
 import org.betterx.wover.generator.api.biomesource.WoverBiomePicker;
 import org.betterx.wover.generator.api.map.BiomeChunk;
-
 import net.minecraft.world.level.levelgen.WorldgenRandom;
 
 public class SquareBiomeChunk implements BiomeChunk {
-    private static final int BIT_OFFSET = 4;
-    protected static final int WIDTH = 1 << BIT_OFFSET;
-    private static final int SM_WIDTH = WIDTH >> 1;
-    private static final int SM_BIT_OFFSET = BIT_OFFSET >> 1;
-    private static final int MASK_OFFSET = SM_WIDTH - 1;
-    protected static final int MASK_WIDTH = WIDTH - 1;
+   private static final int BIT_OFFSET = 4;
+   protected static final int WIDTH = 16;
+   private static final int SM_WIDTH = 8;
+   private static final int SM_BIT_OFFSET = 2;
+   private static final int MASK_OFFSET = 7;
+   protected static final int MASK_WIDTH = 15;
+   private static final int SM_CAPACITY = 64;
+   private static final int CAPACITY = 256;
+   private final WoverBiomePicker.PickableBiome[] biomes;
 
-    private static final int SM_CAPACITY = SM_WIDTH * SM_WIDTH;
-    private static final int CAPACITY = WIDTH * WIDTH;
+   public SquareBiomeChunk(WorldgenRandom random, WoverBiomePicker picker) {
+      WoverBiomePicker.PickableBiome[] PreBio = new WoverBiomePicker.PickableBiome[64];
+      this.biomes = new WoverBiomePicker.PickableBiome[256];
 
-    private final WoverBiomePicker.PickableBiome[] biomes;
+      for (int x = 0; x < 8; x++) {
+         int offset = x << 2;
 
-    public SquareBiomeChunk(WorldgenRandom random, WoverBiomePicker picker) {
-        WoverBiomePicker.PickableBiome[] PreBio = new WoverBiomePicker.PickableBiome[SM_CAPACITY];
-        biomes = new WoverBiomePicker.PickableBiome[CAPACITY];
+         for (int z = 0; z < 8; z++) {
+            PreBio[offset | z] = picker.getBiome(random);
+         }
+      }
 
-        for (int x = 0; x < SM_WIDTH; x++) {
-            int offset = x << SM_BIT_OFFSET;
-            for (int z = 0; z < SM_WIDTH; z++) {
-                PreBio[offset | z] = picker.getBiome(random);
-            }
-        }
+      for (int x = 0; x < 16; x++) {
+         int offset = x << 4;
 
-        for (int x = 0; x < WIDTH; x++) {
-            int offset = x << BIT_OFFSET;
-            for (int z = 0; z < WIDTH; z++) {
-                biomes[offset | z] = PreBio[getSmIndex(offsetXZ(x, random), offsetXZ(z, random))].getSubBiome(random);
-            }
-        }
-    }
+         for (int z = 0; z < 16; z++) {
+            this.biomes[offset | z] = PreBio[this.getSmIndex(this.offsetXZ(x, random), this.offsetXZ(z, random))].getSubBiome(random);
+         }
+      }
+   }
 
-    @Override
-    public WoverBiomePicker.PickableBiome getBiome(int x, int z) {
-        return biomes[getIndex(x & MASK_WIDTH, z & MASK_WIDTH)];
-    }
+   @Override
+   public WoverBiomePicker.PickableBiome getBiome(int x, int z) {
+      return this.biomes[this.getIndex(x & 15, z & 15)];
+   }
 
-    @Override
-    public void setBiome(int x, int z, WoverBiomePicker.PickableBiome biome) {
-        biomes[getIndex(x & MASK_WIDTH, z & MASK_WIDTH)] = biome;
-    }
+   @Override
+   public void setBiome(int x, int z, WoverBiomePicker.PickableBiome biome) {
+      this.biomes[this.getIndex(x & 15, z & 15)] = biome;
+   }
 
-    @Override
-    public int getSide() {
-        return WIDTH;
-    }
+   @Override
+   public int getSide() {
+      return 16;
+   }
 
-    private int offsetXZ(int x, WorldgenRandom random) {
-        return ((x + random.nextInt(2)) >> 1) & MASK_OFFSET;
-    }
+   private int offsetXZ(int x, WorldgenRandom random) {
+      return x + random.nextInt(2) >> 1 & 7;
+   }
 
-    private int getIndex(int x, int z) {
-        return x << BIT_OFFSET | z;
-    }
+   private int getIndex(int x, int z) {
+      return x << 4 | z;
+   }
 
-    private int getSmIndex(int x, int z) {
-        return x << SM_BIT_OFFSET | z;
-    }
+   private int getSmIndex(int x, int z) {
+      return x << 2 | z;
+   }
 }
+

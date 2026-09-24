@@ -1,34 +1,21 @@
 package org.betterx.wover.feature.api.features;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
-/**
- * Places a mark for postprocessing  (<b>{@code wover:mark_postprocessing}</b>).
- *
- * @see org.betterx.wover.feature.api.Features#MARK_POSTPROCESSING
- */
-public class MarkPostProcessingFeature extends Feature<NoneFeatureConfiguration> {
-    /**
-     * Creates a new instance.
-     */
-    public MarkPostProcessingFeature() {
-        super(NoneFeatureConfiguration.CODEC);
-    }
+public record MarkPostProcessingFeature() implements Feature {
+   public static final MapCodec<MarkPostProcessingFeature> CODEC = MapCodec.unit(MarkPostProcessingFeature::new);
 
-    /**
-     * Places a mark on the chunk for postprocessing.
-     *
-     * @param ctx The context
-     * @return {@code true}
-     */
-    @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> ctx) {
-        BlockPos pos = ctx.origin();
-        ctx.level().getChunk(pos.getX() >> 4, pos.getZ() >> 4)
-           .markPosForPostProcessing(new BlockPos(pos.getX() & 15, pos.getY(), pos.getZ() & 15));
-        return true;
-    }
+   public MapCodec<MarkPostProcessingFeature> codec() {
+      return CODEC;
+   }
+
+   public boolean place(WorldGenLevel level, ChunkGenerator generator, RandomSource random, BlockPos pos) {
+      level.getChunk(pos.getX() >> 4, pos.getZ() >> 4).markPosForPostProcessing(new BlockPos(pos.getX() & 15, pos.getY(), pos.getZ() & 15));
+      return true;
+   }
 }

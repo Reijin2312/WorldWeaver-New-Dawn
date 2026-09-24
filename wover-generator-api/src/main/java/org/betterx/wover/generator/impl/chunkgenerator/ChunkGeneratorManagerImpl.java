@@ -1,245 +1,199 @@
 package org.betterx.wover.generator.impl.chunkgenerator;
 
-import org.betterx.wover.biome.mixin.ChunkGeneratorAccessor;
-import org.betterx.wover.config.api.Configs;
-import org.betterx.wover.core.api.ModCore;
-import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
-import org.betterx.wover.events.api.WorldLifecycle;
-import org.betterx.wover.generator.api.chunkgenerator.ChunkGeneratorManager;
-import org.betterx.wover.legacy.api.LegacyHelper;
-import org.betterx.wover.state.api.WorldConfig;
-import org.betterx.wover.state.api.WorldState;
-
+import com.google.common.collect.ImmutableMap;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.types.templates.TypeTemplate;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
+import org.betterx.wover.biome.mixin.ChunkGeneratorAccessor;
+import org.betterx.wover.config.api.Configs;
+import org.betterx.wover.core.api.ModCore;
+import org.betterx.wover.core.api.registry.BuiltInRegistryManager;
+import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
+import org.betterx.wover.events.api.WorldLifecycle;
+import org.betterx.wover.state.api.WorldConfig;
+import org.betterx.wover.state.api.WorldState;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.Map.Entry;
+import java.util.function.Supplier;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.biome.FeatureSorter;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.biome.FeatureSorter.StepFeatureData;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
+import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
-import net.minecraft.world.level.storage.LevelStorageSource;
-
-import com.google.common.collect.ImmutableMap;
-
-import java.util.*;
-import java.util.function.Supplier;
-import org.jetbrains.annotations.ApiStatus;
+import net.minecraft.world.level.storage.LevelStorageSource.LevelStorageAccess;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.ApiStatus.Internal;
 
 public class ChunkGeneratorManagerImpl {
-    private static final Identifier LEGACY_ID = LegacyHelper.BCLIB_CORE.convertNamespace(WoverChunkGenerator.ID);
+   private static final List<String> GENERATOR_IDS = new ArrayList<>(1);
 
-    private static final List<String> GENERATOR_IDS = new ArrayList<>(1);
-    private static final Map<Identifier, MapCodec<? extends ChunkGenerator>> PENDING_GENERATORS = new LinkedHashMap<>();
+   @Internal
+   public static Map<String, Supplier<TypeTemplate>> addGeneratorDSL(Map<String, Supplier<TypeTemplate>> map) {
+      if (map.containsKey("minecraft:flat") && !ModCore.isDatagen()) {
+         Map<String, Supplier<TypeTemplate>> nMap = new HashMap<>(map);
+         GENERATOR_IDS.forEach(id -> nMap.put(id, DSL::remainder));
+         return ImmutableMap.copyOf(nMap);
+      } else {
+         return map;
+      }
+   }
 
-    /**
-     * We need this for mods that use the DSL system to actually fix the generator data.
-     * The DSL will check if the generator type is actually known, so we need to inject
-     * our own generator into the DSL system.
-     *
-     * @param map A DSL map, that could contain anything. The Method checks if it contains
-     *            the flat generator ("minecraft:flat") and if so, it will inject the
-     *            Wover generator into the map
-     * @return The altered map
-     */
-    @ApiStatus.Internal
-    public static Map<String, Supplier<TypeTemplate>> addGeneratorDSL(Map<String, Supplier<TypeTemplate>> map) {
-        if (map.containsKey("minecraft:flat") && !ModCore.isDatagen()) {
-            Map<String, Supplier<TypeTemplate>> nMap = new HashMap<>(map);
-            GENERATOR_IDS.forEach(id -> nMap.put(id, DSL::remainder));
-            return ImmutableMap.copyOf(nMap);
-        }
-        return map;
-    }
+   @Internal
+   public static void initialize() {
+      register(WoverChunkGenerator.ID, WoverChunkGenerator.CODEC);
+      WorldConfig.registerMod(LibWoverWorldGenerator.C);
+      WorldLifecycle.CREATED_NEW_WORLD_FOLDER.subscribe(ChunkGeneratorManagerImpl::onWorldCreation, 20000);
+   }
 
-    @ApiStatus.Internal
-    public static void initialize() {
-        register(WoverChunkGenerator.ID, WoverChunkGenerator.CODEC);
-        if (LegacyHelper.isLegacyEnabled()) {
-            register(LEGACY_ID, LegacyHelper.wrap(WoverChunkGenerator.CODEC));
-        }
-        WorldConfig.registerMod(LibWoverWorldGenerator.C);
+   private static void onWorldCreation(
+      LevelStorageAccess storage, Provider access, Holder<WorldPreset> currentPreset, WorldDimensions dimensions, boolean recreated
+   ) {
+      WorldGeneratorConfigImpl.createWorldConfig(access, currentPreset, dimensions);
+   }
 
-        WorldLifecycle.CREATED_NEW_WORLD_FOLDER.subscribe(ChunkGeneratorManagerImpl::onWorldCreation, ChunkGeneratorManager.CREATE_DIMENSION_CONFIG_PRIORITY);
-    }
+   public static void onWorldReCreate(LevelStorageAccess storage, WorldDimensions selectedDimensions) {
+      CompoundTag configuredPreset = WorldGeneratorConfigImpl.getPresetsNbtFromFolder(storage);
+      Map<ResourceKey<LevelStem>, ChunkGenerator> dimensions = WorldGeneratorConfigImpl.loadWorldDimensions(
+         WorldState.allStageRegistryAccess(), configuredPreset
+      );
 
-    private static void onWorldCreation(
-            LevelStorageSource.LevelStorageAccess storage,
-            RegistryAccess access,
-            Holder<WorldPreset> currentPreset,
-            WorldDimensions dimensions,
-            boolean recreated
-    ) {
-        WorldGeneratorConfigImpl.createWorldConfig(access, currentPreset, dimensions);
-    }
+      for (Entry<ResourceKey<LevelStem>, LevelStem> dimEntry : selectedDimensions.dimensions().entrySet()) {
+         ChunkGenerator refDim = dimensions.get(dimEntry.getKey());
+         if (refDim instanceof ConfiguredChunkGenerator refGen
+            && refGen.wover_getConfiguredWorldPreset() != null
+            && dimEntry.getValue().generator() instanceof ConfiguredChunkGenerator loadGen
+            && loadGen.wover_getConfiguredWorldPreset() == null) {
+            loadGen.wover_setConfiguredWorldPreset(refGen.wover_getConfiguredWorldPreset());
+         }
+      }
+   }
 
-    public static void onWorldReCreate(
-            LevelStorageSource.LevelStorageAccess storage,
-            WorldCreationContext context
-    ) {
-        final var configuredPreset = WorldGeneratorConfigImpl.getPresetsNbtFromFolder(storage);
-        final var dimensions = WorldGeneratorConfigImpl.loadWorldDimensions(
-                WorldState.allStageRegistryAccess(),
-                configuredPreset
-        );
+   public static void register(Identifier location, MapCodec<? extends ChunkGenerator> codec) {
+      String idString = location.toString();
+      if (GENERATOR_IDS.contains(idString)) {
+         throw new IllegalStateException("Duplicate generator id: " + idString);
+      } else {
+         GENERATOR_IDS.add(idString);
+         BuiltInRegistryManager.register(BuiltInRegistries.CHUNK_GENERATOR, location, codec);
+      }
+   }
 
-        for (var dimEntry : context.selectedDimensions().dimensions().entrySet()) {
-            final var refDim = dimensions.get(dimEntry.getKey());
-            if (refDim instanceof ConfiguredChunkGenerator refGen
-                    && refGen.wover_getConfiguredWorldPreset() != null
-                    && dimEntry.getValue().generator() instanceof ConfiguredChunkGenerator loadGen
-                    && loadGen.wover_getConfiguredWorldPreset() == null) {
-                loadGen.wover_setConfiguredWorldPreset(refGen.wover_getConfiguredWorldPreset());
+   public static String enumerateFeatureNamespaces(@NotNull ChunkGenerator chunkGenerator) {
+      if (chunkGenerator instanceof ChunkGeneratorAccessor acc) {
+         Supplier<List<StepFeatureData>> supplier = acc.wover_getFeaturesPerStep();
+         if (supplier != null) {
+            HashMap<String, Integer> namespaces = new HashMap<>();
+
+            try {
+               List<StepFeatureData> list = supplier.get();
+               if (list != null) {
+                  for (StepFeatureData features : list) {
+                     if (features != null) {
+                        for (PlacedFeature feature : features.features()) {
+                           if (feature != null) {
+                              String namespace = null;
+                              if (WorldState.registryAccess() != null) {
+                                 Identifier location = WorldState.registryAccess().lookupOrThrow(Registries.PLACED_FEATURE).getKey(feature);
+                                 if (location != null) {
+                                    namespace = location.getNamespace();
+                                 }
+                              }
+
+                              if (namespace == null && feature.feature() != null && feature.feature().unwrapKey().isPresent()) {
+                                 namespace = ((ResourceKey)feature.feature().unwrapKey().get()).identifier().getNamespace();
+                              }
+
+                              if (namespace == null) {
+                                 namespace = "none";
+                              }
+
+                              namespaces.put(namespace, namespaces.getOrDefault(namespace, 0) + 1);
+                           }
+                        }
+                     }
+                  }
+               }
+            } catch (Throwable var11) {
+               LibWoverWorldGenerator.C.log.warn("Failed to enumerate feature namespaces", new Object[]{var11});
             }
-        }
-    }
 
-    public static void register(Identifier location, MapCodec<? extends ChunkGenerator> codec) {
-        final String idString = location.toString();
-        if (GENERATOR_IDS.contains(idString)) {
-            throw new IllegalStateException("Duplicate generator id: " + idString);
-        }
-        GENERATOR_IDS.add(idString);
-        PENDING_GENERATORS.put(location, codec);
-    }
+            return namespaces.entrySet().stream().map(entry -> entry.getKey() + "(" + entry.getValue() + ")").reduce((a, b) -> a + ", " + b).orElse("none");
+         }
+      }
 
-    public static void onRegister(net.neoforged.neoforge.registries.RegisterEvent event) {
-        if (!event.getRegistryKey().equals(Registries.CHUNK_GENERATOR)) return;
+      return "unknown";
+   }
 
-        event.register(Registries.CHUNK_GENERATOR, helper -> {
-            PENDING_GENERATORS.forEach((location, codec) -> {
-                @SuppressWarnings("unchecked")
-                MapCodec<ChunkGenerator> casted = (MapCodec<ChunkGenerator>) codec;
-                helper.register(location, casted);
-            });
-        });
-    }
+   public static String printGeneratorInfo(@Nullable String className, @NotNull ChunkGenerator generator) {
+      StringBuilder sb = new StringBuilder();
+      sb.append(className == null ? generator.getClass().getSimpleName() : className)
+         .append(" (")
+         .append(Integer.toHexString(generator.hashCode()))
+         .append(")");
+      if (generator instanceof ConfiguredChunkGenerator cfg) {
+         ResourceKey<WorldPreset> preset = cfg.wover_getConfiguredWorldPreset();
+         sb.append("\n    preset     = ").append(preset == null ? "none" : preset.identifier());
+      }
 
-    public static String enumerateFeatureNamespaces(@NotNull ChunkGenerator chunkGenerator) {
-        if (chunkGenerator instanceof ChunkGeneratorAccessor acc) {
-            var supplier = acc.wover_getFeaturesPerStep();
-            if (supplier != null) {
-                final HashMap<String, Integer> namespaces = new HashMap<>();
-                try {
-                    List<FeatureSorter.StepFeatureData> list = supplier.get();
-                    if (list != null) {
-                        for (var features : list)
-                            if (features != null) {
-                                for (PlacedFeature feature : features.features()) {
-                                    if (feature != null) {
-                                        String namespace = null;
-                                        if (WorldState.registryAccess() != null) {
-                                            final Identifier location = WorldState.registryAccess()
-                                                                                        .lookupOrThrow(Registries.PLACED_FEATURE)
-                                                                                        .getKey(feature);
-                                            if (location != null) {
-                                                namespace = location.getNamespace();
-                                            }
-                                        }
-                                        if (namespace == null
-                                                && feature.feature() != null
-                                                && feature.feature().unwrapKey().isPresent()) {
-                                            namespace = feature
-                                                    .feature()
-                                                    .unwrapKey()
-                                                    .get()
-                                                    .identifier()
-                                                    .getNamespace();
-                                        }
+      if (generator instanceof NoiseBasedChunkGenerator noise) {
+         Optional<ResourceKey<NoiseGeneratorSettings>> key = noise.generatorSettings().unwrapKey();
+         sb.append("\n    noise      = ").append(key.isEmpty() ? "custom" : key.get().identifier());
+      }
 
-                                        if (namespace == null) {
-                                            namespace = "none";
-                                        }
+      if (generator instanceof ChunkGeneratorAccessor) {
+         sb.append("\n    features   = ").append(enumerateFeatureNamespaces(generator));
+      }
 
-                                        namespaces.put(namespace, namespaces.getOrDefault(namespace, 0) + 1);
-                                    }
-                                }
-                            }
-                    }
-                } catch (Throwable e) {
-                    LibWoverWorldGenerator.C.log.warn("Failed to enumerate feature namespaces", e);
-                }
-                return namespaces.entrySet()
-                                 .stream()
-                                 .map(entry -> entry.getKey() + "(" + entry.getValue() + ")")
-                                 .reduce((a, b) -> a + ", " + b)
-                                 .orElse("none");
-            }
-        }
-        return "unknown";
-    }
+      return sb.toString();
+   }
 
-    public static String printGeneratorInfo(@Nullable String className, @NotNull ChunkGenerator generator) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(className == null ? generator.getClass().getSimpleName() : className)
-          .append(" (")
-          .append(Integer.toHexString(generator.hashCode()))
-          .append(")");
+   public static void printDimensionInfo(WorldDimensions dimensionRegistry) {
+      if ((Boolean)Configs.MAIN.verboseLogging.get()) {
+         printDimensionInfo("World Dimensions", dimensionRegistry.dimensions().entrySet());
+      }
+   }
 
-        if (generator instanceof ConfiguredChunkGenerator cfg) {
-            final var preset = cfg.wover_getConfiguredWorldPreset();
-            sb.append("\n    preset     = ").append(preset == null ? "none" : preset.identifier());
-        }
+   public static void printDimensionInfo(Registry<LevelStem> dimensionRegistry) {
+      if ((Boolean)Configs.MAIN.verboseLogging.get()) {
+         printDimensionInfo("World Dimensions", dimensionRegistry.entrySet());
+      }
+   }
 
-        if (generator instanceof NoiseBasedChunkGenerator noise) {
-            final var key = noise.generatorSettings().unwrapKey();
-            sb.append("\n    noise      = ").append(key.isEmpty() ? "custom" : key.get().identifier());
-        }
+   public static void printDimensionInfo(String title, WorldDimensions dimensionRegistry) {
+      printDimensionInfo(title, dimensionRegistry.dimensions().entrySet());
+   }
 
-        if (generator instanceof ChunkGeneratorAccessor) {
-            sb.append("\n    features   = ").append(enumerateFeatureNamespaces(generator));
-        }
+   public static void printDimensionInfo(String title, Set<Entry<ResourceKey<LevelStem>, LevelStem>> levels) {
+      StringBuilder output = new StringBuilder(title + ": ");
 
-        return sb.toString();
-    }
+      for (Entry<ResourceKey<LevelStem>, LevelStem> entry : levels) {
+         output.append("\n - ")
+            .append(entry.getKey().identifier())
+            .append(": ")
+            .append("\n     ")
+            .append(entry.getValue().generator().toString().replace("\n", "\n     "))
+            .append("\n     ")
+            .append(entry.getValue().generator().getBiomeSource().toString().replace("\n", "\n     "));
+      }
 
-    public static void printDimensionInfo(WorldDimensions dimensionRegistry) {
-        if (!Configs.MAIN.verboseLogging.get()) return;
-
-        printDimensionInfo("World Dimensions", dimensionRegistry.dimensions().entrySet());
-    }
-
-    public static void printDimensionInfo(Registry<LevelStem> dimensionRegistry) {
-        if (!Configs.MAIN.verboseLogging.get()) return;
-
-        printDimensionInfo("World Dimensions", dimensionRegistry.entrySet());
-    }
-
-    public static void printDimensionInfo(String title, WorldDimensions dimensionRegistry) {
-        printDimensionInfo(title, dimensionRegistry.dimensions().entrySet());
-    }
-
-    public static void printDimensionInfo(String title, Set<Map.Entry<ResourceKey<LevelStem>, LevelStem>> levels) {
-        StringBuilder output = new StringBuilder(title + ": ");
-        for (Map.Entry<ResourceKey<LevelStem>, LevelStem> entry : levels) {
-            output.append("\n - ").append(entry.getKey().identifier()).append(": ")
-                  .append("\n     ").append(
-                          entry.getValue()
-                               .generator()
-                               .toString()
-                               .replace("\n", "\n     ")
-                  )
-                  .append("\n     ")
-                  .append(
-                          entry.getValue()
-                               .generator()
-                               .getBiomeSource()
-                               .toString()
-                               .replace("\n", "\n     ")
-                  );
-        }
-
-        LibWoverWorldGenerator.C.log.info(output.toString());
-    }
+      LibWoverWorldGenerator.C.log.info(output.toString());
+   }
 }
+

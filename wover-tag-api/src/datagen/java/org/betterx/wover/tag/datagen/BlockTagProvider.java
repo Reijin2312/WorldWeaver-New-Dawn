@@ -165,19 +165,6 @@ public class BlockTagProvider extends WoverTagProvider.ForBlocks {
         ctx.add(CommonBlockTags.CHEST, Blocks.CHEST);
 
         ctx.add(
-                net.minecraft.tags.BlockTags.NETHER_CARVER_REPLACEABLES,
-                Blocks.BASALT,
-                Blocks.RED_SAND,
-                Blocks.MAGMA_BLOCK,
-                Blocks.SCULK
-        );
-        ctx.add(
-                net.minecraft.tags.BlockTags.NETHER_CARVER_REPLACEABLES,
-                CommonBlockTags.NETHER_STONES,
-                CommonBlockTags.NETHERRACK
-        );
-
-        ctx.add(
                 net.minecraft.tags.BlockTags.MINEABLE_WITH_AXE,
                 CommonBlockTags.WOODEN_BARREL,
                 CommonBlockTags.WOODEN_COMPOSTER,
