@@ -1,6 +1,5 @@
 package org.betterx.wover.biome.impl.modification;
 
-import com.google.common.base.Suppliers;
 import org.betterx.wover.biome.mixin.ChunkGeneratorAccessor;
 import org.betterx.wover.entrypoint.LibWoverBiome;
 import java.util.List;
@@ -14,12 +13,13 @@ import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.FeatureSorter;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
+import net.neoforged.neoforge.common.util.Lazy;
 
 public class ChunkGeneratorHelper {
    public static void rebuildFeaturesPerStep(ChunkGenerator generator, BiomeSource biomeSource) {
       if (generator instanceof ChunkGeneratorAccessor acc) {
          Function<Holder<Biome>, BiomeGenerationSettings> function = biomeHolder -> ((Biome)biomeHolder.value()).getGenerationSettings();
-         acc.wover_setFeaturesPerStep(Suppliers.memoize(() -> {
+         acc.wover_setFeaturesPerStep(Lazy.of(() -> {
             try {
                return FeatureSorter.buildFeaturesPerStep(List.copyOf(biomeSource.possibleBiomes()), hh -> function.apply(hh).features(), true);
             } catch (IllegalStateException var12) {

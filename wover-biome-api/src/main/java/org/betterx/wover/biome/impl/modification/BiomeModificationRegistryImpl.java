@@ -43,7 +43,10 @@ public class BiomeModificationRegistryImpl {
       if (!didInit) {
          didInit = true;
          DatapackRegistryBuilder.register(
-            BiomeModificationRegistry.BIOME_MODIFICATION_REGISTRY, BiomeModification.CODEC, BiomeModificationRegistryImpl::onBootstrap
+            BiomeModificationRegistry.BIOME_MODIFICATION_REGISTRY,
+            BiomeModification.CODEC,
+            null,
+            BiomeModificationRegistryImpl::onBootstrap
          );
          WorldLifecycle.BEFORE_CREATING_LEVELS.subscribe(BiomeModificationRegistryImpl::whenReady, 100000000);
       }

@@ -1,11 +1,7 @@
 package org.betterx.wover.surface.api.conditions;
 
-import net.minecraft.world.level.levelgen.material.MaterialRules;
 import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
-import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
 import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
-import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
-import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 
 /**
  * A {@link net.minecraft.world.level.levelgen.MaterialCondition} that

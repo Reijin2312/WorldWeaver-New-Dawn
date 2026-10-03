@@ -9,4 +9,3 @@ public interface BiomeChunk {
 
    int getSide();
 }
-

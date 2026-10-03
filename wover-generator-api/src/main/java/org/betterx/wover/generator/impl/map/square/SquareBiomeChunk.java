@@ -63,4 +63,3 @@ public class SquareBiomeChunk implements BiomeChunk {
       return x << 2 | z;
    }
 }
-

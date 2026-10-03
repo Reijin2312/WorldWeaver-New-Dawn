@@ -15,4 +15,3 @@ public class WrappedWoverBiomeKeyImpl extends BiomeKey<WoverBiomeBuilder.Wrapped
       return new WrappedWoverDataBuilderImpl(context, this);
    }
 }
-

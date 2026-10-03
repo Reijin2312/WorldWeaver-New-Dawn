@@ -36,12 +36,13 @@ public class BiomeDataRegistryImpl {
 
    @Nullable
    public static BiomeData getFromRegistryOrTemp(ResourceKey<Biome> key, Function<ResourceKey<Biome>, BiomeData> factory) {
-      if (WorldState.allStageRegistryAccess() == null) {
+      var access = WorldState.allStageRegistryAccess();
+      if (access == null) {
          return null;
-      } else {
-         Registry<BiomeData> registry = WorldState.allStageRegistryAccess().lookupOrThrow(BiomeDataRegistry.BIOME_DATA_REGISTRY);
-         return getFromRegistryOrTemp(registry, key, factory);
       }
+
+      Registry<BiomeData> registry = access.lookup(BiomeDataRegistry.BIOME_DATA_REGISTRY).orElse(null);
+      return getFromRegistryOrTemp(registry, key, factory);
    }
 
    public static BiomeData getFromRegistryOrTemp(Registry<BiomeData> registry, ResourceKey<Biome> key) {
@@ -72,7 +73,12 @@ public class BiomeDataRegistryImpl {
    public static void initialize() {
       if (!didInit) {
          didInit = true;
-         DatapackRegistryBuilder.register(BiomeDataRegistry.BIOME_DATA_REGISTRY, BiomeCodecRegistryImpl.CODEC, BiomeDataRegistryImpl::onBootstrap);
+         DatapackRegistryBuilder.register(
+            BiomeDataRegistry.BIOME_DATA_REGISTRY,
+            BiomeCodecRegistryImpl.CODEC,
+            null,
+            BiomeDataRegistryImpl::onBootstrap
+         );
       }
    }
 

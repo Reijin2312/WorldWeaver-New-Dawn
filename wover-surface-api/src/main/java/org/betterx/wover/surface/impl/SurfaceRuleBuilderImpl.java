@@ -14,11 +14,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.material.MaterialRules;
-import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
-import net.minecraft.world.level.levelgen.material.condition.ConditionEvaluator;
-import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
 import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
-import net.minecraft.world.level.levelgen.material.rule.RuleEvaluator;
 import net.minecraft.world.level.levelgen.placement.CaveSurface;
 
 import org.jetbrains.annotations.NotNull;

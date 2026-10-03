@@ -129,4 +129,3 @@ public class SquareBiomeMap implements BiomeMap {
       return chunk.getBiome(MathHelper.floor(x), MathHelper.floor(z));
    }
 }
-

@@ -22,4 +22,3 @@ public class ChunkGeneratorMixin implements ConfiguredChunkGenerator {
       this.wover_configuredWorldPreset = preset;
    }
 }
-

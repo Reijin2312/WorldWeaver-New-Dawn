@@ -15,4 +15,3 @@ public class WoverBiomeKeyImpl extends BiomeKey<WoverBiomeBuilder.WoverBiome> {
       return new WoverBiomeBuilderImpl(context, this);
    }
 }
-

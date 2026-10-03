@@ -7,14 +7,13 @@ import org.betterx.wover.util.PriorityLinkedList;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistrySetBuilder;
 import net.minecraft.core.WritableRegistry;
 import net.minecraft.core.registries.SingleRegistryBootstrap;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.registries.DataPackRegistryEvent;
+import net.neoforged.neoforge.registries.NewDatapackRegistryEvent;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -134,11 +133,15 @@ public class DatapackRegistryBuilderImpl {
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public static void registerDatapackRegistries(DataPackRegistryEvent.NewRegistry event) {
+    public static void registerDatapackRegistries(NewDatapackRegistryEvent event) {
         initEntrypoints();
         REGISTRIES.forEach(entry -> {
             if (entry.definesRegistry()) {
-                event.dataPackRegistry((ResourceKey) entry.key, (Codec) entry.elementCodec, (Codec) entry.networkCodec);
+                if (entry.networkCodec == null) {
+                    event.worldRegistry((ResourceKey) entry.key, (Codec) entry.elementCodec);
+                } else {
+                    event.worldRegistry((ResourceKey) entry.key, (Codec) entry.elementCodec, (Codec) entry.networkCodec);
+                }
             }
         });
     }

@@ -12,4 +12,3 @@ public interface BiomeMap {
 
    void clearCache();
 }
-

@@ -11,4 +11,3 @@ public class WoverBiomeBuilderImpl extends WoverBiomeBuilder.WoverBiome {
       super(context, key);
    }
 }
-

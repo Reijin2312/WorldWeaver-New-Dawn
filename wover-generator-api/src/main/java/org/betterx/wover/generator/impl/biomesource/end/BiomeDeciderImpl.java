@@ -20,4 +20,3 @@ public class BiomeDeciderImpl {
       DECIDERS.add(decider);
    }
 }
-

@@ -7,7 +7,6 @@ import com.mojang.serialization.MapCodec;
 import org.betterx.wover.biome.mixin.ChunkGeneratorAccessor;
 import org.betterx.wover.config.api.Configs;
 import org.betterx.wover.core.api.ModCore;
-import org.betterx.wover.core.api.registry.BuiltInRegistryManager;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.events.api.WorldLifecycle;
 import org.betterx.wover.state.api.WorldConfig;
@@ -15,6 +14,7 @@ import org.betterx.wover.state.api.WorldState;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -23,7 +23,6 @@ import java.util.function.Supplier;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
@@ -37,12 +36,14 @@ import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.storage.LevelStorageSource.LevelStorageAccess;
+import net.neoforged.neoforge.registries.RegisterEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
 public class ChunkGeneratorManagerImpl {
    private static final List<String> GENERATOR_IDS = new ArrayList<>(1);
+   private static final Map<Identifier, MapCodec<? extends ChunkGenerator>> GENERATOR_TYPES = new LinkedHashMap<>();
 
    @Internal
    public static Map<String, Supplier<TypeTemplate>> addGeneratorDSL(Map<String, Supplier<TypeTemplate>> map) {
@@ -91,7 +92,14 @@ public class ChunkGeneratorManagerImpl {
          throw new IllegalStateException("Duplicate generator id: " + idString);
       } else {
          GENERATOR_IDS.add(idString);
-         BuiltInRegistryManager.register(BuiltInRegistries.CHUNK_GENERATOR, location, codec);
+         GENERATOR_TYPES.put(location, codec);
+      }
+   }
+
+   @Internal
+   public static void register(RegisterEvent event) {
+      if (event.getRegistryKey().equals(Registries.CHUNK_GENERATOR)) {
+         event.register(Registries.CHUNK_GENERATOR, helper -> GENERATOR_TYPES.forEach(helper::register));
       }
    }
 
@@ -196,4 +204,3 @@ public class ChunkGeneratorManagerImpl {
       LibWoverWorldGenerator.C.log.info(output.toString());
    }
 }
-

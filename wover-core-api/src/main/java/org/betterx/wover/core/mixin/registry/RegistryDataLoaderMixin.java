@@ -10,23 +10,14 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.packs.resources.ResourceManager;
 
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Mutable;
-import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.List;
 import java.util.Map;
 
 @Mixin(RegistryDataLoader.class)
 public class RegistryDataLoaderMixin {
-    @Accessor("WORLDGEN_REGISTRIES")
-    @Mutable
-    static void wt_set_WORLDGEN_REGISTRIES(List<RegistryDataLoader.RegistryData<?>> list) {
-        //SHADOWED
-    }
-
     @Inject(method = "<clinit>", at = @At("TAIL"))
     private static void wover_init(CallbackInfo ci) {
         // Intentionally no-op: avoid referencing split module classes from injected MC code in datagen/dev.

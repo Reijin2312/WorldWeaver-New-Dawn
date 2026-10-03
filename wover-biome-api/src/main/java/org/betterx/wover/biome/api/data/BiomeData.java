@@ -284,6 +284,14 @@ public class BiomeData {
       return true;
    }
 
+   /**
+    * Used by biome pickers to exclude biome data disabled by an integration/configuration layer.
+    * Kept as a separate hook, as in the 26.2 API, instead of folding it into {@link #isPickable()}.
+    */
+   public boolean isEnabled() {
+      return true;
+   }
+
    public float genChance() {
       return 1.0F;
    }

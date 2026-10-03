@@ -12,6 +12,7 @@ public class WorldPresets {
    public static final ResourceKey<WorldPreset> WOVER_WORLD = PresetRegistryImpl.WOVER_WORLD;
    public static final ResourceKey<WorldPreset> WOVER_WORLD_LARGE = PresetRegistryImpl.WOVER_WORLD_LARGE;
    public static final ResourceKey<WorldPreset> WOVER_WORLD_AMPLIFIED = PresetRegistryImpl.WOVER_WORLD_AMPLIFIED;
+   public static final ResourceKey<WorldPreset> WOVER_WORLD_SUPERFLAT = PresetRegistryImpl.WOVER_WORLD_SUPERFLAT;
 
    public static LevelStem makeWoverNetherStem(StemContext context, WoverNetherConfig config) {
       return PresetRegistryImpl.makeWoverNetherStem(context, config);
@@ -21,4 +22,3 @@ public class WorldPresets {
       return PresetRegistryImpl.makeWoverEndStem(context, config);
    }
 }
-

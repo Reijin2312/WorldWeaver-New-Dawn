@@ -119,7 +119,13 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements BiomeSou
 
    @NotNull
    public BiomeResolver createResolver(Sampler sampler) {
-      return (biomeX, biomeY, biomeZ) -> this.getNoiseBiome(biomeX, biomeY, biomeZ);
+      return (biomeX, biomeY, biomeZ) -> this.applyFallbackBiomeSource(
+         this.getNoiseBiome(biomeX, biomeY, biomeZ),
+         biomeX,
+         biomeY,
+         biomeZ,
+         sampler
+      );
    }
 
    @NotNull
@@ -149,4 +155,3 @@ public class WoverNetherBiomeSource extends WoverBiomeSource implements BiomeSou
       this.initMap(this.currentSeed);
    }
 }
-

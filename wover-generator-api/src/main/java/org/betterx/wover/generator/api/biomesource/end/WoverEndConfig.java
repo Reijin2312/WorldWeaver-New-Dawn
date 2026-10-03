@@ -88,6 +88,31 @@ public class WoverEndConfig implements BiomeSourceConfig<WoverEndBiomeSource> {
       this.caveBiomesTopJitter = Mth.clamp(caveBiomesTopJitter, 0, 16);
    }
 
+   public WoverEndConfig(
+      @NotNull WoverEndConfig.EndBiomeMapType mapVersion,
+      @NotNull WoverEndConfig.EndBiomeGeneratorType generatorVersion,
+      boolean withVoidBiomes,
+      int innerVoidRadiusSquared,
+      int centerBiomesSize,
+      int voidBiomesSize,
+      int landBiomesSize,
+      int barrensBiomesSize
+   ) {
+      this(
+         mapVersion,
+         generatorVersion,
+         withVoidBiomes,
+         innerVoidRadiusSquared,
+         centerBiomesSize,
+         voidBiomesSize,
+         landBiomesSize,
+         barrensBiomesSize,
+         DEFAULT_CAVE_BIOMES_SIZE,
+         DEFAULT_CAVE_BIOMES_TOP_Y,
+         DEFAULT_CAVE_BIOMES_TOP_JITTER
+      );
+   }
+
    @Override
    public String toString() {
       return "EndConfig{mapVersion="
@@ -308,4 +333,3 @@ public class WoverEndConfig implements BiomeSourceConfig<WoverEndBiomeSource> {
       }
    }
 }
-

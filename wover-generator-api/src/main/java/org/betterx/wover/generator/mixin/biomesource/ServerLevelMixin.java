@@ -64,4 +64,3 @@ public abstract class ServerLevelMixin extends Level {
       }
    }
 }
-

@@ -11,6 +11,7 @@ import org.betterx.wover.events.api.types.OnBootstrapRegistry;
 import org.betterx.wover.events.impl.EventImpl;
 import org.betterx.wover.surface.api.AssignedSurfaceRule;
 import org.betterx.wover.surface.api.SurfaceRuleRegistry;
+import org.betterx.wover.state.api.WorldState;
 import org.betterx.wover.tag.api.TagManager;
 import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
 import java.util.Objects;
@@ -63,9 +64,12 @@ public class BiomeManagerImpl {
    }
 
    private static void onBootstrapTags(TagBootstrapContext<Biome> biomeTagBootstrapContext) {
-      BiomeBootstrapContextImpl context = Objects.requireNonNull(
-         initContext(null), "No biome bootstrap context: biome tags are loaded before the biome registry was bootstrapped"
-      );
+      BiomeBootstrapContextImpl context = initContext(null);
+      if (context == null && WorldState.allStageRegistryAccess() == null) {
+         // Client-side pack validation can load biome tags before a world registry exists.
+         return;
+      }
+      Objects.requireNonNull(context, "No biome bootstrap context while a world registry is active");
       context.prepareTags(biomeTagBootstrapContext);
    }
 

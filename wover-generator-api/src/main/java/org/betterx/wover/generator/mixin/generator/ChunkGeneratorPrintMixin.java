@@ -11,4 +11,3 @@ public class ChunkGeneratorPrintMixin {
       return ChunkGeneratorManagerImpl.printGeneratorInfo(null, (ChunkGenerator)(Object)this);
    }
 }
-

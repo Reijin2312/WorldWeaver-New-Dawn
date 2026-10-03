@@ -270,29 +270,43 @@ public class WoverBiomeData extends BiomeData {
       );
    }
 
-   @NotNull
-   public static Registry<BiomeData> getDataRegistry(String forWhat, ResourceKey<Biome> ofBiome) throws IllegalStateException {
+   static @Nullable Registry<BiomeData> tryGetDataRegistry(String forWhat, ResourceKey<Biome> ofBiome) {
       RegistryAccess acc = WorldState.registryAccess();
       if (acc == null) {
-         if (WorldState.allStageRegistryAccess() == null) {
-            throw new IllegalStateException("Accessing " + forWhat + " of " + ofBiome + " before any registry is ready!");
+         RegistryAccess allStage = WorldState.allStageRegistryAccess();
+         if (allStage == null) {
+            return null;
          }
 
          if (preFinalAccessWarning++ < 5) {
             LibWoverBiome.C.log.verboseWarning("Accessing " + forWhat + " of " + ofBiome + " before registry is ready!");
          }
 
-         acc = WorldState.allStageRegistryAccess();
+         acc = allStage;
       }
 
-      return acc != null ? (Registry)acc.lookup(BiomeDataRegistry.BIOME_DATA_REGISTRY).orElse(null) : null;
+      return acc.lookup(BiomeDataRegistry.BIOME_DATA_REGISTRY).orElse(null);
+   }
+
+   @NotNull
+   public static Registry<BiomeData> getDataRegistry(String forWhat, ResourceKey<Biome> ofBiome) throws IllegalStateException {
+      Registry<BiomeData> registry = tryGetDataRegistry(forWhat, ofBiome);
+      if (registry == null) {
+         throw new IllegalStateException("Accessing " + forWhat + " of " + ofBiome + " before biome data registry is ready!");
+      }
+
+      return registry;
    }
 
    public WoverBiomeData findEdgeParent() {
       if (this.edgeParent != null) {
          return this.edgeParent.orElse(null);
       } else {
-         Registry<BiomeData> reg = getDataRegistry("edge parent", this.biomeKey);
+         Registry<BiomeData> reg = tryGetDataRegistry("edge parent", this.biomeKey);
+         if (reg == null) {
+            return null;
+         }
+
          WoverBiomeData found = reg.entrySet()
             .stream()
             .map(Entry::getValue)
@@ -318,7 +332,11 @@ public class WoverBiomeData extends BiomeData {
       if (this.edgeData == null) {
          return null;
       } else {
-         Registry<BiomeData> reg = getDataRegistry("edge biome", this.biomeKey);
+         Registry<BiomeData> reg = tryGetDataRegistry("edge biome", this.biomeKey);
+         if (reg == null) {
+            return null;
+         }
+
          return reg.get(this.edgeData).<BiomeData>map(Reference::value).orElse(null);
       }
    }
@@ -328,7 +346,11 @@ public class WoverBiomeData extends BiomeData {
       if (this.parentData == null) {
          return null;
       } else {
-         Registry<BiomeData> reg = getDataRegistry("parent biome", this.biomeKey);
+         Registry<BiomeData> reg = tryGetDataRegistry("parent biome", this.biomeKey);
+         if (reg == null) {
+            return null;
+         }
+
          return reg.get(this.parentData).<BiomeData>map(Reference::value).orElse(null);
       }
    }
@@ -357,4 +379,3 @@ public class WoverBiomeData extends BiomeData {
       }
    }
 }
-

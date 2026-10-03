@@ -17,7 +17,11 @@ import org.betterx.wover.state.api.WorldState;
 import org.betterx.wover.tag.api.predefined.CommonBiomeTags;
 import java.awt.Point;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
 import net.minecraft.core.SectionPos;
@@ -58,6 +62,19 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements BiomeSource
    private WoverBiomePicker endBarrensBiomePicker;
    private List<BiomeDecider> deciders;
    private WoverEndConfig config;
+
+   @Override
+   protected @NotNull Stream<Holder<Biome>> collectPossibleBiomes() {
+      LinkedHashSet<Holder<Biome>> biomes = super.collectPossibleBiomes()
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+      TheEndBiomesHelper.addAllPossibleBiomes(biomes);
+      return biomes.stream();
+   }
+
+   @Override
+   protected void addRequiredPossibleBiomes(Set<Holder<Biome>> biomes) {
+      TheEndBiomesHelper.addAllPossibleBiomes(biomes);
+   }
 
    private WoverEndBiomeSource(long seed, WoverEndConfig config) {
       this(seed, config, true);
@@ -106,7 +123,8 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements BiomeSource
    @Override
    protected boolean addToPicker(BiomeData biomeData, TagKey<Biome> type, WoverBiomePicker picker) {
       picker.addBiome(biomeData);
-      return !type.equals(CommonBiomeTags.IS_END_BARRENS) || !biomeData.isIntendedFor(CommonBiomeTags.IS_SMALL_END_ISLAND);
+      return !type.equals(CommonBiomeTags.IS_END_BARRENS)
+            || !biomeData.isIntendedFor(CommonBiomeTags.IS_SMALL_END_ISLAND);
    }
 
    @Override
@@ -271,22 +289,24 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements BiomeSource
             if (decider.canProvideBiome(suggestedType)) {
                WoverBiomePicker.PickableBiome result = decider.provideBiome(suggestedType, posX, posY, posZ);
                if (result != null) {
-                  return result.biome;
+                  return this.applyFallbackBiomeSource(result.biome, biomeX, biomeY, biomeZ, sampler);
                }
             }
          }
 
          if (suggestedType == CommonBiomeTags.IS_END_CENTER) {
-            return this.mapCenter.getBiome(posX, posY, posZ).biome;
+            return this.applyFallbackBiomeSource(this.mapCenter.getBiome(posX, posY, posZ).biome, biomeX, biomeY, biomeZ, sampler);
          } else if (suggestedType == CommonBiomeTags.IS_SMALL_END_ISLAND) {
-            return this.mapVoid.getBiome(posX, posY, posZ).biome;
+            return this.applyFallbackBiomeSource(this.mapVoid.getBiome(posX, posY, posZ).biome, biomeX, biomeY, biomeZ, sampler);
          } else {
-            return suggestedType == CommonBiomeTags.IS_END_BARRENS
+            Holder<Biome> picked = suggestedType == CommonBiomeTags.IS_END_BARRENS
                ? this.mapBarrens.getBiome(posX, posY, posZ).biome
                : this.mapLand.getBiome(posX, posY, posZ).biome;
+            return this.applyFallbackBiomeSource(picked, biomeX, biomeY, biomeZ, sampler);
          }
       } else {
-         return (Holder<Biome>)this.possibleBiomes().stream().findFirst().orElseThrow();
+         Holder<Biome> picked = (Holder<Biome>)this.possibleBiomes().stream().findFirst().orElseThrow();
+         return this.applyFallbackBiomeSource(picked, biomeX, biomeY, biomeZ, sampler);
       }
    }
 
@@ -304,4 +324,3 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements BiomeSource
       this.initMap(this.currentSeed);
    }
 }
-

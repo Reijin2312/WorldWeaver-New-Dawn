@@ -11,4 +11,3 @@ public class BiomeSourcePrintMixin {
       return BiomeSourceManagerImpl.printBiomeSourceInfo((BiomeSource)(Object)this);
    }
 }
-

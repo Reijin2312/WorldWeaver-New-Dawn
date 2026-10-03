@@ -2,8 +2,11 @@ package org.betterx.wover.generator.impl.chunkgenerator;
 
 import com.mojang.serialization.Lifecycle;
 import org.betterx.wover.common.generator.api.chunkgenerator.RestorableBiomeSource;
+import org.betterx.wover.common.generator.api.chunkgenerator.RebuildableFeaturesPerStep;
+import org.betterx.wover.common.generator.impl.compat.LithostitchedBiomeSourceCompat;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.events.api.WorldLifecycle;
+import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 import org.betterx.wover.state.api.WorldState;
 import java.util.List;
 import java.util.Set;
@@ -35,7 +38,40 @@ public class WoverChunkGeneratorImpl {
    public static void initialize() {
       WorldLifecycle.MINECRAFT_SERVER_READY.subscribe(WoverChunkGeneratorImpl::restoreInitialBiomeSourceInAllDimensions);
       WorldLifecycle.ON_DIMENSION_LOAD.subscribe(WoverChunkGeneratorImpl::repairBiomeSourceInAllDimensions);
+      WorldLifecycle.BEFORE_CREATING_LEVELS.subscribe(WoverChunkGeneratorImpl::initializeExternalBiomeSources);
       WorldLifecycle.BEFORE_CREATING_LEVELS.subscribe(WoverChunkGeneratorImpl::printInfo, -1000);
+   }
+
+   private static void initializeExternalBiomeSources(
+      LevelStorageAccess ignoredStorageAccess,
+      PackRepository ignoredPackRepository,
+      LayeredRegistryAccess<RegistryLayer> registries,
+      WorldData ignoredWorldData,
+      WorldGenSettings worldGenSettings
+   ) {
+      long seed = worldGenSettings.options().seed();
+      RegistryAccess registryAccess = registries.compositeAccess();
+      Registry<LevelStem> dimensions = registryAccess.lookupOrThrow(Registries.LEVEL_STEM);
+      for (Entry<ResourceKey<LevelStem>, LevelStem> entry : dimensions.entrySet()) {
+         ChunkGenerator generator = entry.getValue().generator();
+         var loadedSource = generator.getBiomeSource();
+         var sourceForCompatibility = LithostitchedBiomeSourceCompat.unwrap(loadedSource);
+         if (sourceForCompatibility instanceof WoverBiomeSource source) {
+            // Biome sources are constructed while datapack registries are still being assembled. In
+            // 26.3 the feature sorter can be evaluated before the later picker rebuild, permanently
+            // caching only the biomes that happened to be visible at construction time. Rebuild the
+            // source from the final registries and always invalidate featuresPerStep here; this is also
+            // required when there is no external/TerraBlender source to initialise.
+            source.reloadBiomes();
+            source.initializeExternalBiomeSource(
+                  seed, registryAccess, entry.getValue().type(), entry.getKey(), generator
+            );
+            LithostitchedBiomeSourceCompat.refreshPossibleBiomes(loadedSource, source.possibleBiomes());
+            if (generator instanceof RebuildableFeaturesPerStep<?> rebuildable) {
+               rebuildable.wover_rebuildFeaturesPerStep();
+            }
+         }
+      }
    }
 
    private static void printInfo(
@@ -108,4 +144,3 @@ public class WoverChunkGeneratorImpl {
       LevelStem get(ResourceKey<LevelStem> var1);
    }
 }
-

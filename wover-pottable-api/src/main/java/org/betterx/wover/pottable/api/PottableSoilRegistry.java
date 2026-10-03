@@ -29,7 +29,7 @@ public class PottableSoilRegistry {
      * The Key of the Registry. ({@code wover/pottable_soil})
      */
     public static final ResourceKey<Registry<PottableSoil>> POTTABLE_SOIL_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverPottable.C.id("wover/pottable_soil"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverPottable.C.id("pottable_soil"));
 
     /**
      * Creates a ResourceKey for a PottableSoil.

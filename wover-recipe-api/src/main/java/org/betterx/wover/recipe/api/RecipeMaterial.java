@@ -266,6 +266,3 @@ class MSupplier implements RecipeMaterial {
         return this.mat.get().isValid();
     }
 }
-
-
-

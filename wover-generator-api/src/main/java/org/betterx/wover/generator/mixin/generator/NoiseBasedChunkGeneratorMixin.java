@@ -22,4 +22,3 @@ public abstract class NoiseBasedChunkGeneratorMixin implements NoiseGeneratorSet
       return this.settings;
    }
 }
-

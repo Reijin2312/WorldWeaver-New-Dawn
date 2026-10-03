@@ -82,4 +82,3 @@ public class WrappedWoverDataBuilderImpl extends WoverBiomeBuilder.Wrapped {
       return this;
    }
 }
-

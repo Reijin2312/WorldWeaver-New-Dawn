@@ -14,13 +14,6 @@ import net.minecraft.world.level.levelgen.placement.PlacementModifier;
 import org.jetbrains.annotations.NotNull;
 
 public class Stencil implements PlacementModifier {
-   public static final MapCodec<Stencil> CODEC = RecordCodecBuilder.mapCodec(
-      instance -> instance.group(
-            ExtraCodecs.nonEmptyList(Codec.BOOL.listOf()).fieldOf("structures").orElse(convert(Stencil.STENCIL)).forGetter(a -> a.stencil),
-            Codec.INT.fieldOf("one_in").orElse(1).forGetter(a -> a.selectOneIn)
-         )
-         .apply(instance, Stencil::new)
-   );
    private static final Boolean[] STENCIL = new Boolean[]{
       false,
       true,
@@ -279,6 +272,13 @@ public class Stencil implements PlacementModifier {
       false,
       false
    };
+   public static final MapCodec<Stencil> CODEC = RecordCodecBuilder.mapCodec(
+      instance -> instance.group(
+            ExtraCodecs.nonEmptyList(Codec.BOOL.listOf()).fieldOf("structures").orElse(convert(Stencil.STENCIL)).forGetter(a -> a.stencil),
+            Codec.INT.fieldOf("one_in").orElse(1).forGetter(a -> a.selectOneIn)
+         )
+         .apply(instance, Stencil::new)
+   );
    private static final Stencil DEFAULT = new Stencil(STENCIL, 1);
    private static final Stencil DEFAULT4 = new Stencil(STENCIL, 4);
    private final List<Boolean> stencil;

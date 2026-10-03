@@ -12,7 +12,7 @@ import net.minecraft.resources.ResourceKey;
 public class BiomeModificationRegistry {
    public static final Event<OnBootstrapRegistry<BiomeModification>> BOOTSTRAP_BIOME_MODIFICATION_REGISTRY = BiomeModificationRegistryImpl.BOOTSTRAP_BIOME_MODIFICATION_REGISTRY;
    public static final ResourceKey<Registry<BiomeModification>> BIOME_MODIFICATION_REGISTRY = DatapackRegistryBuilder.createRegistryKey(
-      LibWoverBiome.C.id("wover/worldgen/biome_modifications")
+      LibWoverBiome.C.id("worldgen/biome_modifications")
    );
 
    public static ResourceKey<BiomeModification> createKey(Identifier modificationID) {

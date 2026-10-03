@@ -17,13 +17,18 @@ import org.betterx.wover.feature.api.placed.modifiers.NoiseFilter;
 import org.betterx.wover.feature.api.placed.modifiers.Offset;
 import org.betterx.wover.feature.api.placed.modifiers.OffsetProvider;
 import org.betterx.wover.feature.api.placed.modifiers.Stencil;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.levelgen.placement.PlacementModifier;
+import net.neoforged.neoforge.registries.RegisterEvent;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 public class PlacementModifiersImpl {
+   private static final ConcurrentMap<Identifier, MapCodec<? extends PlacementModifier>> PENDING = new ConcurrentHashMap<>();
+
    public static final MapCodec<Stencil> STENCIL = register("stencil", Stencil.CODEC);
    public static final MapCodec<IsNextTo> IS_NEXT_TO = register("is_next_to", IsNextTo.CODEC);
    public static final MapCodec<NoiseFilter> NOISE_FILTER = register("noise_filter", NoiseFilter.CODEC);
@@ -45,8 +50,17 @@ public class PlacementModifiersImpl {
    }
 
    public static <P extends PlacementModifier> MapCodec<P> register(Identifier location, MapCodec<P> codec) {
-      Registry.register(BuiltInRegistries.PLACEMENT_MODIFIER_TYPE, location, codec);
+      MapCodec<? extends PlacementModifier> previous = PENDING.putIfAbsent(location, codec);
+      if (previous != null && previous != codec) {
+         throw new IllegalStateException("Placement modifier type already queued: " + location);
+      }
       return codec;
+   }
+
+   public static void onRegister(RegisterEvent event) {
+      if (event.getRegistryKey().equals(Registries.PLACEMENT_MODIFIER_TYPE)) {
+         event.register(Registries.PLACEMENT_MODIFIER_TYPE, helper -> PENDING.forEach(helper::register));
+      }
    }
 
    @Internal

@@ -1,7 +1,6 @@
 package org.betterx.wover.generator.impl.biomesource;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import org.betterx.wover.biome.api.data.BiomeCodecRegistry;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
@@ -32,4 +31,3 @@ public class WoverBiomeDataImpl {
 
    }
 }
-

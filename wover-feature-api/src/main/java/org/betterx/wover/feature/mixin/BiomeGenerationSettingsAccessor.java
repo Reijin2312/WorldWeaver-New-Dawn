@@ -22,9 +22,11 @@ public interface BiomeGenerationSettingsAccessor {
    void wover_setFeatures(List<HolderSet<PlacedFeature>> var1);
 
    @Accessor("featureSet")
+   @Mutable
    void wover_setFeatureSet(Supplier<Set<PlacedFeature>> var1);
 
    @Accessor("boneMealFeatures")
+   @Mutable
    void wover_setFlowerFeatures(Supplier<List<Feature>> var1);
 
    @Accessor("carvers")

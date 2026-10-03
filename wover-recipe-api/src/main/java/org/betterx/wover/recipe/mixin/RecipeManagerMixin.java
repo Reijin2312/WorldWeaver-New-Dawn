@@ -6,7 +6,6 @@ import org.betterx.wover.recipe.impl.RecipeRuntimeProviderImpl;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeMap;
 import net.minecraft.world.item.crafting.RecipeManager;
 
 import com.google.common.base.Stopwatch;

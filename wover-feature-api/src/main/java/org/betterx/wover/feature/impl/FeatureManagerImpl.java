@@ -9,15 +9,21 @@ import org.betterx.wover.feature.api.features.PlaceFacingBlockFeature;
 import org.betterx.wover.feature.api.features.SequenceFeature;
 import org.betterx.wover.feature.api.features.TemplateFeature;
 import org.betterx.wover.feature.impl.random.RandomPatchFeature;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.feature.Feature;
+import net.neoforged.neoforge.registries.RegisterEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 public class FeatureManagerImpl {
+   private static final ConcurrentMap<ResourceKey<MapCodec<? extends Feature>>, MapCodec<? extends Feature>> PENDING = new ConcurrentHashMap<>();
+
    public static final MapCodec<PlaceFacingBlockFeature> PLACE_BLOCK = register(LibWoverFeature.C.id("place_block"), PlaceFacingBlockFeature.CODEC);
    public static final MapCodec<MarkPostProcessingFeature> MARK_POSTPROCESSING = register(
       LibWoverFeature.C.id("mark_postprocessing"), MarkPostProcessingFeature.CODEC
@@ -33,8 +39,19 @@ public class FeatureManagerImpl {
    }
 
    public static <F extends Feature> MapCodec<F> register(@NotNull ResourceKey<MapCodec<? extends Feature>> key, @NotNull MapCodec<F> codec) {
-      Registry.register(BuiltInRegistries.FEATURE_TYPE, key, codec);
+      MapCodec<? extends Feature> previous = PENDING.putIfAbsent(key, codec);
+      if (previous != null && previous != codec) {
+         throw new IllegalStateException("Feature type already queued: " + key.identifier());
+      }
       return codec;
+   }
+
+   public static void onRegister(RegisterEvent event) {
+      if (event.getRegistryKey().equals(Registries.FEATURE_TYPE)) {
+         event.register(Registries.FEATURE_TYPE, helper ->
+            PENDING.forEach((key, codec) -> helper.register(key.identifier(), codec))
+         );
+      }
    }
 
    @NotNull

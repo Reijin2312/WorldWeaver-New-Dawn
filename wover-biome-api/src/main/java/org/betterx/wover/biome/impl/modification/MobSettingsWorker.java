@@ -1,5 +1,7 @@
 package org.betterx.wover.biome.impl.modification;
 
+import org.betterx.wover.biome.mixin.BiomeAccessor;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,10 +48,10 @@ public class MobSettingsWorker {
          Builder builder = new Builder();
          this.customSpawners.forEach(builder::addAllSpawns);
          builder.addAllCosts(this.mobSettings.allSpawnCosts());
-         this.biome.attributes = EnvironmentAttributeMap.builder()
+         ((BiomeAccessor) (Object) this.biome).wover_setAttributes(EnvironmentAttributeMap.builder()
             .putAll(this.biome.getAttributes())
             .set(EnvironmentAttributes.NATURAL_MOB_SPAWNS, builder.build())
-            .build();
+            .build());
          this.customSpawners = null;
       }
    }

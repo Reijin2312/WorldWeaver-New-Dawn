@@ -14,7 +14,7 @@ import net.minecraft.world.level.biome.Biome;
 public class BiomeDataRegistry {
    public static final Event<OnBootstrapRegistry<BiomeData>> BOOTSTRAP_BIOME_DATA_REGISTRY = BiomeDataRegistryImpl.BOOTSTRAP_BIOME_DATA_REGISTRY;
    public static final ResourceKey<Registry<BiomeData>> BIOME_DATA_REGISTRY = DatapackRegistryBuilder.createRegistryKey(
-      LibWoverSurface.C.id("wover/worldgen/biome_data")
+      LibWoverSurface.C.id("worldgen/biome_data")
    );
 
    private BiomeDataRegistry() {

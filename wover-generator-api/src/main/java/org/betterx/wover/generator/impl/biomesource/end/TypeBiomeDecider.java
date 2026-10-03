@@ -23,4 +23,3 @@ public abstract class TypeBiomeDecider extends BiomeDecider {
       return suggestedType.equals(this.assignedType);
    }
 }
-

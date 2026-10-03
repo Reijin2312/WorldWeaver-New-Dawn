@@ -12,4 +12,3 @@ public class ChunkGeneratorManager {
       ChunkGeneratorManagerImpl.register(location, codec);
    }
 }
-

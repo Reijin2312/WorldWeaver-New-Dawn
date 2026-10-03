@@ -26,7 +26,11 @@ public class BiomeTagModificationWorker {
    }
 
    public boolean addBiomeToTag(TagKey<Biome> tag, Registry<Biome> biomes, ResourceKey<Biome> biomeKey, Holder<Biome> biomeHolder) {
-      Object namedSet = biomes.getOrThrow(tag);
+      Object namedSet = biomes.get(tag).orElse(null);
+      if (namedSet == null) {
+         LibWoverBiome.C.log.warn("Failed to alter BiomeTag {}", tag.location());
+         return false;
+      }
       if (namedSet instanceof HolderSetNamedAccessor<?> rawBiomeTagHolder) {
          @SuppressWarnings("unchecked")
          HolderSetNamedAccessor<Biome> biomeTagHolder = (HolderSetNamedAccessor<Biome>)rawBiomeTagHolder;

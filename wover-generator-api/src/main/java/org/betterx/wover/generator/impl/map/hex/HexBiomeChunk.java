@@ -162,4 +162,3 @@ public class HexBiomeChunk implements BiomeChunk {
       NEIGHBOURS[1][5] = -33;
    }
 }
-

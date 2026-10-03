@@ -17,7 +17,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
 import net.minecraft.core.HolderGetter;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -39,18 +38,30 @@ public class WoverBiomePicker {
 
    public WoverBiomePicker(ResourceKey<Biome> fallbackBiome) {
       this(
-         WorldState.allStageRegistryAccess() == null ? null : (HolderLookup)WorldState.allStageRegistryAccess().lookup(Registries.BIOME).orElse(null),
+         WorldState.allStageRegistryAccess() == null ? null : WorldState.allStageRegistryAccess().lookup(Registries.BIOME).orElse(null),
          fallbackBiome
       );
    }
 
-   public WoverBiomePicker(HolderLookup<Biome> biomeRegistry, ResourceKey<Biome> fallbackBiome) {
+   public WoverBiomePicker(Registry<Biome> biomeRegistry, ResourceKey<Biome> fallbackBiome) {
+      this((HolderGetter<Biome>) biomeRegistry, fallbackBiome);
+   }
+
+   public WoverBiomePicker(HolderGetter<Biome> biomeRegistry, ResourceKey<Biome> fallbackBiome) {
       this.biomeRegistry = biomeRegistry;
       this.fallbackBiome = this.create(BiomeData.tempOf(fallbackBiome));
    }
 
    public static void consumeSubBiomesForSource(BiomeData sourceBiome, BiConsumer<BiomeData, Float> consumeChild) {
-      Registry<BiomeData> reg = WoverBiomeData.getDataRegistry("biome alternatives", sourceBiome.biomeKey);
+      Registry<BiomeData> reg;
+      try {
+         reg = WoverBiomeData.getDataRegistry("biome alternatives", sourceBiome.biomeKey);
+      } catch (IllegalStateException ex) {
+         return;
+      }
+      if (reg == null) {
+         return;
+      }
       reg.entrySet()
          .stream()
          .map(Entry::getValue)
@@ -63,7 +74,7 @@ public class WoverBiomePicker {
    }
 
    private boolean isAllowed(BiomeData biomeData) {
-      return biomeData != null;
+      return biomeData != null && biomeData.isEnabled();
    }
 
    private BiomeData nullIfNotAllowed(BiomeData biomeData) {
@@ -76,7 +87,7 @@ public class WoverBiomePicker {
       } else {
          WoverBiomePicker.PickableBiome e = this.registeredBiomes.get(biomeData);
          if (e != null && e.biomeData.isTemp() && !biomeData.isTemp()) {
-            this.registeredBiomes.remove(e);
+            this.registeredBiomes.remove(e.biomeData);
             e = null;
          }
 
@@ -114,7 +125,12 @@ public class WoverBiomePicker {
          ArrayList<WoverBiomePicker.PickableBiome> beforeList = new ArrayList<>(this.registeredBiomes.values());
 
          for (WoverBiomePicker.PickableBiome builtBiome : beforeList) {
-            consumeSubBiomesForSource(builtBiome.biomeData, (biomeData, weight) -> builtBiome.subbiomes.add(this.create(biomeData), weight.floatValue()));
+            consumeSubBiomesForSource(builtBiome.biomeData, (biomeData, weight) -> {
+               WoverBiomePicker.PickableBiome subBiome = this.create(this.nullIfNotAllowed(biomeData));
+               if (subBiome != null) {
+                  builtBiome.subbiomes.add(subBiome, weight.floatValue());
+               }
+            });
          }
 
          if (this.registeredBiomes.size() != beforeSize) {
@@ -176,7 +192,7 @@ public class WoverBiomePicker {
          if (biomeData instanceof WoverBiomeData wData) {
             this.subbiomes.add(this, wData.genChance);
             this.edge = WoverBiomePicker.this.create(WoverBiomePicker.this.nullIfNotAllowed(wData.getEdgeData()));
-            this.parent = WoverBiomePicker.this.create(wData.getParentData());
+            this.parent = WoverBiomePicker.this.create(WoverBiomePicker.this.nullIfNotAllowed(wData.getParentData()));
             this.edgeSize = wData.edgeSize;
             this.isVertical = wData.vertical;
          } else {
@@ -237,4 +253,3 @@ public class WoverBiomePicker {
       }
    }
 }
-

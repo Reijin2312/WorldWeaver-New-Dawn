@@ -31,7 +31,7 @@ public class PottablePlantRegistry {
      * The Key of the Registry. ({@code wover/pottable_plant})
      */
     public static final ResourceKey<Registry<PottablePlant>> POTTABLE_PLANT_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverPottable.C.id("wover/pottable_plant"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverPottable.C.id("pottable_plant"));
 
     /**
      * Creates a ResourceKey for a PottablePlant.

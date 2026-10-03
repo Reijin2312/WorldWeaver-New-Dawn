@@ -4,14 +4,12 @@ import org.betterx.wover.core.impl.registry.DatapackLoadElementImpl;
 import org.betterx.wover.core.impl.registry.DatapackRegistryBuilderImpl;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.Lifecycle;
 import net.minecraft.core.*;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;

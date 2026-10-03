@@ -6,6 +6,10 @@ import org.betterx.wover.biome.impl.data.BiomeDataRegistryImpl;
 import org.betterx.wover.core.api.ModCore;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
+import org.betterx.wover.generator.impl.compat.BlueprintBiomeSourceCompat;
+import org.betterx.wover.generator.impl.compat.CopiedEndBiomeRegistryCompat;
+import org.betterx.wover.generator.impl.compat.TerraBlenderEndBiomeCompat;
+import org.betterx.wover.generator.impl.compat.VanillaNetherBiomeCompat;
 import org.betterx.wover.state.api.WorldState;
 import org.betterx.wover.util.Pair;
 import java.util.Collection;
@@ -52,9 +56,9 @@ public class WoverBiomeSourceImpl {
       }
 
       Set<Holder<Biome>> allBiomes = new LinkedHashSet<>();
-      Set<ResourceKey<Biome>> addedBiomes = new HashSet<>();
+      Set<BiomePlacement> addedBiomePlacements = new HashSet<>();
       Registry<Biome> biomes = access.lookupOrThrow(Registries.BIOME);
-      Registry<BiomeData> biomeData = access.lookupOrThrow(BiomeDataRegistry.BIOME_DATA_REGISTRY);
+      Registry<BiomeData> biomeData = access.lookup(BiomeDataRegistry.BIOME_DATA_REGISTRY).orElse(null);
 
       for (WoverBiomeSource.TagToPicker mapper : pickers) {
          Optional<Named<Biome>> optionalTag = biomes.get(mapper.tag());
@@ -64,20 +68,34 @@ public class WoverBiomeSourceImpl {
             tag.stream()
                .filter(holder -> holder.unwrapKey().isPresent())
                .map(holder -> new Pair(holder, (ResourceKey)holder.unwrapKey().get()))
-               .filter(pair -> !addedBiomes.contains(pair.second))
+               .filter(pair -> !addedBiomePlacements.contains(new BiomePlacement(mapper.tag(), (ResourceKey<Biome>) pair.second)))
                .filter(pair -> !excluded.contains(((ResourceKey)pair.second).identifier()))
                .sorted(Comparator.comparing(pair -> ((ResourceKey)pair.second).identifier().toString()))
                .forEach(pair -> {
-                  BiomeData data = BiomeDataRegistryImpl.getFromRegistryOrTemp(biomeData, (ResourceKey)pair.second);
-                  boolean isPossible;
-                  if (data != null && data.isPickable()) {
-                     isPossible = pickerAdder.add(data, mapper.tag(), mapper.picker());
+                  ResourceKey<Biome> biomeKey = (ResourceKey<Biome>)pair.second;
+                  BiomeData data = BiomeDataRegistryImpl.getFromRegistryOrTemp(biomeData, biomeKey);
+                  final boolean isPossible;
+                  if (data != null && !data.isTemp()) {
+                     isPossible = data.isPickable()
+                        ? pickerAdder.add(data, mapper.tag(), mapper.picker())
+                        : true;
                   } else {
-                     isPossible = true;
+                     data = BlueprintBiomeSourceCompat.getImportedBiomeData(biomeKey);
+                     if (data == null || data.isTemp()) {
+                        data = TerraBlenderEndBiomeCompat.getImportedBiomeData(biomeKey);
+                     }
+                     if (data == null || data.isTemp()) {
+                        data = CopiedEndBiomeRegistryCompat.getImportedBiomeData(biomeKey);
+                     }
+                     if (data == null || data.isTemp()) {
+                        data = VanillaNetherBiomeCompat.getImportedBiomeData(biomeKey);
+                     }
+                     isPossible = data != null && !data.isTemp() && data.isPickable()
+                        && pickerAdder.add(data, mapper.tag(), mapper.picker());
                   }
 
                   if (isPossible) {
-                     addedBiomes.add((ResourceKey<Biome>)pair.second);
+                     addedBiomePlacements.add(new BiomePlacement(mapper.tag(), (ResourceKey<Biome>) pair.second));
                      allBiomes.add((Holder<Biome>)pair.first);
                   }
                });
@@ -89,5 +107,7 @@ public class WoverBiomeSourceImpl {
 
    public record PopulateResult(Set<Holder<Biome>> possibleBiomes, List<WoverBiomeSource.TagToPicker> pickers) {
    }
-}
 
+   private record BiomePlacement(net.minecraft.tags.TagKey<Biome> tag, ResourceKey<Biome> biome) {
+   }
+}

@@ -17,4 +17,3 @@ public class BiomeSourceManager {
       return BiomeSourceManagerImpl.getExcludedBiomes(tag);
    }
 }
-

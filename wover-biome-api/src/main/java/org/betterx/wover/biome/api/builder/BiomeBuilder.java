@@ -33,6 +33,8 @@ import net.minecraft.world.attribute.AmbientParticle;
 import net.minecraft.world.attribute.AmbientSounds;
 import net.minecraft.world.attribute.BackgroundMusic;
 import net.minecraft.world.attribute.EnvironmentAttributes;
+import net.minecraft.world.attribute.EnvironmentAttribute;
+import net.minecraft.world.attribute.EnvironmentAttributeMap;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Climate;
@@ -187,6 +189,7 @@ public abstract class BiomeBuilder<B extends BiomeBuilder<B>> {
       private final net.minecraft.world.level.biome.BiomeSpecialEffects.Builder fx = new net.minecraft.world.level.biome.BiomeSpecialEffects.Builder();
       private final Builder generationSettings;
       private final net.minecraft.world.level.biome.MobSpawnSettings.Builder mobSpawnSettings = new net.minecraft.world.level.biome.MobSpawnSettings.Builder();
+      private final EnvironmentAttributeMap.Builder environmentAttributes = EnvironmentAttributeMap.builder();
       private int fogColor;
       private int waterFogColor;
       private int skyColor;
@@ -242,6 +245,11 @@ public abstract class BiomeBuilder<B extends BiomeBuilder<B>> {
 
       public B temperatureRegular() {
          return (B)this.temperatureAdjustment(TemperatureModifier.NONE);
+      }
+
+      public <T> B environmentAttribute(EnvironmentAttribute<T> attribute, T value) {
+         this.environmentAttributes.set(attribute, value);
+         return (B)this;
       }
 
       public B feature(BasePlacedFeatureKey<?> feature) {
@@ -473,6 +481,7 @@ public abstract class BiomeBuilder<B extends BiomeBuilder<B>> {
          vanillaBuilder.generationSettings(this.generationSettings.build());
          vanillaBuilder.specialEffects(this.fx.build());
          vanillaBuilder.mobSpawnSettings(this.mobSpawnSettings.build());
+         vanillaBuilder.putAttributes(this.environmentAttributes);
          if (this.creatureGenerationProbability != null) {
             vanillaBuilder.setAttribute(EnvironmentAttributes.CREATURE_WORLD_GEN_SPAWN_PROBABILITY, this.creatureGenerationProbability);
          }

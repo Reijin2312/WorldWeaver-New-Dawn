@@ -5,7 +5,7 @@ import org.betterx.wover.generator.api.biomesource.WoverBiomePicker;
 import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 import org.betterx.wover.generator.api.map.BiomeMap;
 import org.betterx.wover.generator.impl.biomesource.end.BiomeDeciderImpl;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderGetter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
@@ -30,7 +30,7 @@ public abstract class BiomeDecider {
       this(null, null, predicate);
    }
 
-   protected BiomeDecider(HolderLookup<Biome> biomeRegistry, ResourceKey<Biome> fallbackBiome, BiomeDecider.BiomePredicate predicate) {
+   protected BiomeDecider(HolderGetter<Biome> biomeRegistry, ResourceKey<Biome> fallbackBiome, BiomeDecider.BiomePredicate predicate) {
       this.predicate = predicate;
       this.map = null;
       if (biomeRegistry == null) {
@@ -107,4 +107,3 @@ public abstract class BiomeDecider {
       boolean test(BiomeData var1);
    }
 }
-

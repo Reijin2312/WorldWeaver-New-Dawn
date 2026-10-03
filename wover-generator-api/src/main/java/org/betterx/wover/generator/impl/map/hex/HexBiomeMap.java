@@ -168,4 +168,3 @@ public class HexBiomeMap implements BiomeMap {
       }
    }
 }
-

@@ -40,7 +40,9 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
 public interface BiomePredicate {
-   Codec<BiomePredicate> CODEC = BiomePredicateRegistryImpl.BIOME_PREDICATES.byNameCodec().dispatch(BiomePredicate::codec, Function.identity());
+   Codec<BiomePredicate> CODEC = Codec.lazyInitialized(() ->
+      BiomePredicateRegistryImpl.BIOME_PREDICATES.byNameCodec().dispatch(BiomePredicate::codec, Function.identity())
+   );
 
    static BiomePredicate or(BiomePredicate... predicates) {
       return new Or(List.of(predicates));

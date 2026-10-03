@@ -6,4 +6,3 @@ import org.betterx.wover.generator.api.biomesource.WoverBiomePicker;
 public interface MapBuilderFunction {
    BiomeMap create(long var1, int var3, WoverBiomePicker var4);
 }
-
