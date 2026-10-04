@@ -28,8 +28,7 @@
     },
     "mixins": [
         "wover.recipe.mixins.common.json",
-        "wover.recipe.mixins.client.json",
-        "wover.potion.mixins.common.json"
+        "wover.recipe.mixins.client.json"
     ],
     "depends": {
         "fabricloader": ">=0.19.3",
