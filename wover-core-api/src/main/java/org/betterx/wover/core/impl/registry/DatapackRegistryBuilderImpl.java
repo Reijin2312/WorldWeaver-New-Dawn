@@ -184,24 +184,35 @@ public class DatapackRegistryBuilderImpl {
         });
     }
 
-    // I think we do not need to inject any data into the vanilla registries
-    // so we can just ignore this method.
-    // VanillaRegistries are apparently only used in the vanilla datagen, debug mode and in the validate command
+    @ApiStatus.Internal
+    public static <T> SingleRegistryBootstrap<T> augmentVanillaBootstrap(
+            ResourceKey<? extends Registry<T>> resourceKey,
+            SingleRegistryBootstrap<T> vanillaBootstrap
+    ) {
+        initEntrypoints();
+        return context -> {
+            vanillaBootstrap.run(context);
+            REGISTRIES.forEach(entry -> {
+                if (entry.key.equals(resourceKey)) {
+                    entry.bootstrap.accept((BootstrapContext) context);
+                }
+            });
+        };
+    }
+
     @ApiStatus.Internal
     public static void bootstrap(
             BiConsumer<ResourceKey<? extends Registry<?>>, SingleRegistryBootstrap<? extends Object>> consumer
     ) {
-        LibWoverCore.C.LOG.verboseWarning("DID NOT bootstrap VanillaRegistries.");
-//        initEntrypoints();
-//        LibWoverCore.C.LOG.debug("Bootstrapping vanilla registries");
-//        REGISTRIES.forEach(entry -> {
-//            LibWoverCore.C.LOG.debug("Calling custom vanilla Registry Bootstrap on {}", entry.key);
-//            consumer.accept(
-//                    entry.key,
-//                    (ctx) -> {
-//                        entry.bootstrap.accept((BootstrapContext) ctx);
-//                    }
-//            );
-//        });
+        initEntrypoints();
+        LibWoverCore.C.LOG.debug("Adding custom registries to vanilla world lookup");
+        REGISTRIES.forEach(entry -> {
+            if (entry.definesRegistry()) {
+                consumer.accept(
+                        entry.key,
+                        ctx -> entry.bootstrap.accept((BootstrapContext) ctx)
+                );
+            }
+        });
     }
 }

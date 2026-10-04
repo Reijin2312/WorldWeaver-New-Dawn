@@ -12,6 +12,7 @@
     "registry.RegistryDataLoaderMixin",
     "registry.RegistryDataLoaderMixinEarly",
     "registry.RegistryLoadTaskMixin",
-    "registry.ResourceManagerRegistryLoadTaskMixin"
+    "registry.ResourceManagerRegistryLoadTaskMixin",
+    "registry.VanillaRegistriesMixin"
   ]
 }
