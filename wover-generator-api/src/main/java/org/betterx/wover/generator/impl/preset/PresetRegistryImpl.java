@@ -14,8 +14,6 @@ import org.betterx.wover.preset.api.context.WorldPresetBootstrapContext;
 import org.betterx.wover.tag.api.event.context.TagBootstrapContext;
 
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderGetter;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
@@ -134,21 +132,10 @@ public class PresetRegistryImpl {
 
     private static WorldPreset createSuperflat(WorldPresetBootstrapContext ctx) {
         return buildPreset(
-                resolveFlatOverworld(ctx),
+                ctx.makeDefaultFlatOverworld(),
                 ctx.netherContext, WoverNetherConfig.DEFAULT,
                 ctx.endContext, WoverEndConfig.DEFAULT
         );
-    }
-
-    private static LevelStem resolveFlatOverworld(WorldPresetBootstrapContext ctx) {
-        HolderGetter<WorldPreset> presets = ctx.lookup(Registries.WORLD_PRESET);
-        if (presets != null) {
-            Holder<WorldPreset> flatPreset = presets.getOrThrow(
-                    net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT);
-            LevelStem stem = WorldPresetManager.getDimension(flatPreset, LevelStem.OVERWORLD);
-            if (stem != null) return stem;
-        }
-        return ctx.overworldStem;
     }
 
     private static WorldPreset buildPreset(
