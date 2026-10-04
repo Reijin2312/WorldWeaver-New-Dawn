@@ -7,7 +7,6 @@ import org.betterx.wover.util.PriorityLinkedList;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistrySetBuilder;
 import net.minecraft.core.WritableRegistry;
 import net.minecraft.core.registries.SingleRegistryBootstrap;
 import net.minecraft.data.worldgen.BootstrapContext;
@@ -184,23 +183,13 @@ public class DatapackRegistryBuilderImpl {
         });
     }
 
+    // VanillaRegistries are isolated code-only lookups used by vanilla datagen,
+    // debug/validation code and clients such as JEI. Modded registry contents are
+    // datapack-backed and are loaded by RegistryDataLoader/RegistryLoadTask.
     @ApiStatus.Internal
     public static void bootstrap(
             BiConsumer<ResourceKey<? extends Registry<?>>, SingleRegistryBootstrap<? extends Object>> consumer
     ) {
-        initEntrypoints();
-        LibWoverCore.C.LOG.debug("Adding custom registries to vanilla world lookup");
-        REGISTRIES.forEach(entry -> {
-            if (entry.definesRegistry()) {
-                consumer.accept(
-                        entry.key,
-                        ctx -> {
-                            // VanillaRegistries creates an isolated, code-only lookup used by
-                            // clients such as JEI. Modded registry contents are datapack-backed
-                            // and are bootstrapped by RegistryDataLoader/RegistryLoadTask instead.
-                        }
-                );
-            }
-        });
+        LibWoverCore.C.LOG.verboseWarning("DID NOT bootstrap VanillaRegistries.");
     }
 }

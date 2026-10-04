@@ -12,6 +12,7 @@ import org.betterx.wover.events.api.WorldLifecycle;
 import org.betterx.wover.generator.api.biomesource.WoverBiomeData;
 import org.betterx.wover.generator.impl.biomesource.end.TheEndBiomesHelper;
 import org.betterx.wover.generator.impl.biomesource.end.WoverEndBiomeSource;
+import org.betterx.wover.generator.impl.biomesource.nether.NetherBiomesHelper;
 import org.betterx.wover.generator.impl.biomesource.nether.WoverNetherBiomeSource;
 import org.betterx.wover.legacy.api.LegacyHelper;
 import org.betterx.wover.state.api.WorldState;
@@ -30,7 +31,6 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
 
-import net.fabricmc.fabric.api.biome.v1.NetherBiomes;
 import net.fabricmc.fabric.api.biome.v1.TheEndBiomes;
 
 import com.google.gson.JsonArray;
@@ -86,9 +86,9 @@ public class BiomeSourceManagerImpl {
         if (!FABRIC_EXCLUDES.contains(biomeKey.identifier())) {
             if (biomeData.isIntendedFor(BiomeTags.IS_NETHER)) {
                 for (var param : biomeData.generationData.parameterPoints()) {
-                    if (!NetherBiomes.canGenerateInNether(biomeKey)) {
-                        LibWoverWorldGenerator.C.log.verbose("Adding Nether Biome to Fabric: " + biomeKey.identifier() + " (" + param + ")");
-                        NetherBiomes.addNetherBiome(biomeKey, param);
+                    if (!NetherBiomesHelper.canGenerateInNether(biomeKey)) {
+                        LibWoverWorldGenerator.C.log.verbose("Adding Nether biome to vanilla list: " + biomeKey.identifier() + " (" + param + ")");
+                        NetherBiomesHelper.addNetherBiome(biomeKey, param);
                     }
                 }
             } else if (!TheEndBiomesHelper.canGenerateInEnd(biomeKey)) {
@@ -163,6 +163,8 @@ public class BiomeSourceManagerImpl {
         DatapackConfigs
                 .instance()
                 .runForResource(resourceManager, BIOME_CONFIG_FILE, BiomeSourceManagerImpl::processBiomeConfigs);
+
+        NetherBiomesHelper.syncParameterList(WorldState.allStageRegistryAccess());
 
         if (WorldState.registryAccess() != null && !EXCLUSIONS.isEmpty()) {
             WorldState.registryAccess()
