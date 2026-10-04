@@ -194,7 +194,11 @@ public class DatapackRegistryBuilderImpl {
             if (entry.definesRegistry()) {
                 consumer.accept(
                         entry.key,
-                        ctx -> entry.bootstrap.accept((BootstrapContext) ctx)
+                        ctx -> {
+                            // VanillaRegistries creates an isolated, code-only lookup used by
+                            // clients such as JEI. Modded registry contents are datapack-backed
+                            // and are bootstrapped by RegistryDataLoader/RegistryLoadTask instead.
+                        }
                 );
             }
         });
