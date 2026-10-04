@@ -185,22 +185,6 @@ public class DatapackRegistryBuilderImpl {
     }
 
     @ApiStatus.Internal
-    public static <T> SingleRegistryBootstrap<T> augmentVanillaBootstrap(
-            ResourceKey<? extends Registry<T>> resourceKey,
-            SingleRegistryBootstrap<T> vanillaBootstrap
-    ) {
-        initEntrypoints();
-        return context -> {
-            vanillaBootstrap.run(context);
-            REGISTRIES.forEach(entry -> {
-                if (entry.key.equals(resourceKey)) {
-                    entry.bootstrap.accept((BootstrapContext) context);
-                }
-            });
-        };
-    }
-
-    @ApiStatus.Internal
     public static void bootstrap(
             BiConsumer<ResourceKey<? extends Registry<?>>, SingleRegistryBootstrap<? extends Object>> consumer
     ) {
