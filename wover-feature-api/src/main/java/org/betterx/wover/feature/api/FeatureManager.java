@@ -1,59 +1,26 @@
 package org.betterx.wover.feature.api;
 
+import com.mojang.serialization.MapCodec;
 import org.betterx.wover.feature.impl.FeatureManagerImpl;
-
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfiguration;
-
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Helper class for registering custom features in
- * {@link net.minecraft.core.registries.BuiltInRegistries#FEATURE}.
- */
 public class FeatureManager {
-    /**
-     * Registers a new {@link Feature}.
-     *
-     * @param location the location of the feature
-     * @param feature  the feature
-     * @return the new key of the feature
-     */
-    public static <C extends FeatureConfiguration, F extends Feature<C>> F register(
-            Identifier location,
-            F feature
-    ) {
-        return FeatureManagerImpl.register(FeatureManagerImpl.createKey(location), feature);
-    }
+   public static <F extends Feature> MapCodec<F> register(Identifier location, MapCodec<F> codec) {
+      return FeatureManagerImpl.register(FeatureManagerImpl.createKey(location), codec);
+   }
 
+   public static <F extends Feature> MapCodec<F> register(ResourceKey<MapCodec<? extends Feature>> key, MapCodec<F> codec) {
+      return FeatureManagerImpl.register(key, codec);
+   }
 
-    /**
-     * Registers a new {@link Feature}.
-     *
-     * @param key     the key of the feature
-     * @param feature the feature
-     * @return the same key that was passed in
-     */
-    public static <C extends FeatureConfiguration, F extends Feature<C>> F register(
-            ResourceKey<Feature<?>> key,
-            F feature
-    ) {
-        return FeatureManagerImpl.register(key, feature);
-    }
+   @NotNull
+   public static ResourceKey<MapCodec<? extends Feature>> createKey(Identifier location) {
+      return FeatureManagerImpl.createKey(location);
+   }
 
-    /**
-     * Creates a {@link ResourceKey} for a feature.
-     *
-     * @param location the location of the feature
-     * @return the key
-     */
-    @NotNull
-    public static ResourceKey<Feature<?>> createKey(Identifier location) {
-        return FeatureManagerImpl.createKey(location);
-    }
-
-    private FeatureManager() {
-    }
+   private FeatureManager() {
+   }
 }

@@ -397,7 +397,7 @@ artifacts {
     archives javadocJar
 }
 
-def modrinthModsDir = file(findProperty("modrinth_mods_dir") ?: "C:/Users/Redmi/AppData/Roaming/ModrinthApp/profiles/Fabric 26.2/mods")
+def modrinthModsDir = file(findProperty("modrinth_mods_dir") ?: "C:/Users/Redmi/AppData/Roaming/ModrinthApp/profiles/Fabric 26.3/mods")
 def fabricRuntimeProjects = [project]
 if (local_wunderlib) fabricRuntimeProjects.add(project(":wunderlib"))
 

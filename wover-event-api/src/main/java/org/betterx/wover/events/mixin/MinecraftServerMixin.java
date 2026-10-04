@@ -15,6 +15,7 @@ import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.WorldData;
+import net.minecraft.world.level.levelgen.WorldGenSettings;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -47,6 +48,10 @@ public class MinecraftServerMixin {
     @Shadow
     @Final
     protected WorldData worldData;
+
+    @Shadow
+    @Final
+    private WorldGenSettings worldGenSettings;
 
     @Inject(at = @At("RETURN"), method = "<init>")
     private void wover_initMinecraftServerLate(
@@ -96,7 +101,8 @@ public class MinecraftServerMixin {
                 storageSource,
                 packRepository,
                 registries,
-                worldData
+                worldData,
+                worldGenSettings
         ));
     }
 }

@@ -26,18 +26,16 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 public class PresetRegistryImpl {
-    public final static ResourceKey<WorldPreset> WOVER_WORLD = WorldPresetManager.createKey(LibWoverWorldGenerator.C.id(
-            "normal"));
-    public final static ResourceKey<WorldPreset> WOVER_WORLD_LARGE = WorldPresetManager.createKey(LibWoverWorldGenerator.C.id(
-            "large"));
-    public final static ResourceKey<WorldPreset> WOVER_WORLD_AMPLIFIED = WorldPresetManager.createKey(
-            LibWoverWorldGenerator.C.id(
-                    "amplified"));
-    public final static ResourceKey<WorldPreset> WOVER_WORLD_SUPERFLAT = WorldPresetManager.createKey(
-            LibWoverWorldGenerator.C.id(
-                    "superflat"));
-    public final static ResourceKey<WorldPreset> BCL_WORLD_17
-            = WorldPresetManager.createKey(LegacyHelper.BCLIB_CORE.id("legacy_17"));
+    public static final ResourceKey<WorldPreset> WOVER_WORLD =
+            WorldPresetManager.createKey(LibWoverWorldGenerator.C.id("normal"));
+    public static final ResourceKey<WorldPreset> WOVER_WORLD_LARGE =
+            WorldPresetManager.createKey(LibWoverWorldGenerator.C.id("large"));
+    public static final ResourceKey<WorldPreset> WOVER_WORLD_AMPLIFIED =
+            WorldPresetManager.createKey(LibWoverWorldGenerator.C.id("amplified"));
+    public static final ResourceKey<WorldPreset> WOVER_WORLD_SUPERFLAT =
+            WorldPresetManager.createKey(LibWoverWorldGenerator.C.id("superflat"));
+    public static final ResourceKey<WorldPreset> BCL_WORLD_17 =
+            WorldPresetManager.createKey(LegacyHelper.BCLIB_CORE.id("legacy_17"));
 
     public static void bootstrapWorldPresets(WorldPresetBootstrapContext ctx) {
         ctx.register(WorldPresets.WOVER_WORLD, createNormal(ctx));
@@ -46,23 +44,21 @@ public class PresetRegistryImpl {
         ctx.register(WorldPresets.WOVER_WORLD_SUPERFLAT, createSuperflat(ctx));
 
         if (LegacyHelper.isLegacyEnabled()) {
-            final ResourceKey<WorldPreset> BCL_WORLD
-                    = WorldPresetManager.createKey(LegacyHelper.BCLIB_CORE.convertNamespace(WorldPresets.WOVER_WORLD));
-            final ResourceKey<WorldPreset> BCL_WORLD_LARGE
-                    = WorldPresetManager.createKey(LegacyHelper.BCLIB_CORE.convertNamespace(WorldPresets.WOVER_WORLD_LARGE));
-            final ResourceKey<WorldPreset> BCL_WORLD_AMPLIFIED
-                    = WorldPresetManager.createKey(LegacyHelper.BCLIB_CORE.convertNamespace(WorldPresets.WOVER_WORLD_AMPLIFIED));
+            final ResourceKey<WorldPreset> legacyNormal = WorldPresetManager.createKey(
+                    LegacyHelper.BCLIB_CORE.convertNamespace(WorldPresets.WOVER_WORLD));
+            final ResourceKey<WorldPreset> legacyLarge = WorldPresetManager.createKey(
+                    LegacyHelper.BCLIB_CORE.convertNamespace(WorldPresets.WOVER_WORLD_LARGE));
+            final ResourceKey<WorldPreset> legacyAmplified = WorldPresetManager.createKey(
+                    LegacyHelper.BCLIB_CORE.convertNamespace(WorldPresets.WOVER_WORLD_AMPLIFIED));
 
-            ctx.register(PresetRegistryImpl.BCL_WORLD_17, createLegacy(ctx));
-            ctx.register(BCL_WORLD, createNormal(ctx));
-            ctx.register(BCL_WORLD_LARGE, createLarge(ctx));
-            ctx.register(BCL_WORLD_AMPLIFIED, createAmplified(ctx));
+            ctx.register(BCL_WORLD_17, createLegacy(ctx));
+            ctx.register(legacyNormal, createNormal(ctx));
+            ctx.register(legacyLarge, createLarge(ctx));
+            ctx.register(legacyAmplified, createAmplified(ctx));
         }
     }
 
     public static void bootstrapWorldPresetTags(TagBootstrapContext<WorldPreset> context) {
-        // Optional tag entries avoid hard registry failures if a preset was not
-        // materialized by another bootstrap path in the current runtime.
         context.addOptional(
                 WorldPresetTags.NORMAL,
                 WorldPresets.WOVER_WORLD,
@@ -77,19 +73,19 @@ public class PresetRegistryImpl {
             WorldPresetBootstrapContext.StemContext context,
             WoverNetherConfig config
     ) {
-        WoverNetherBiomeSource netherSource = new WoverNetherBiomeSource(config);
-
         return new LevelStem(
                 context.dimension,
-                new WoverChunkGenerator(netherSource, context.generatorSettings)
+                new WoverChunkGenerator(new WoverNetherBiomeSource(config), context.generatorSettings)
         );
     }
 
-    public static LevelStem makeWoverEndStem(WorldPresetBootstrapContext.StemContext context, WoverEndConfig config) {
-        WoverEndBiomeSource endSource = new WoverEndBiomeSource(config);
+    public static LevelStem makeWoverEndStem(
+            WorldPresetBootstrapContext.StemContext context,
+            WoverEndConfig config
+    ) {
         return new LevelStem(
                 context.dimension,
-                new WoverChunkGenerator(endSource, context.generatorSettings)
+                new WoverChunkGenerator(new WoverEndBiomeSource(config), context.generatorSettings)
         );
     }
 
@@ -102,33 +98,27 @@ public class PresetRegistryImpl {
     }
 
     private static WorldPreset createAmplified(WorldPresetBootstrapContext ctx) {
-        Holder<NoiseGeneratorSettings> amplifiedBiomeGenerator = ctx.noiseSettings
-                .getOrThrow(NoiseGeneratorSettings.AMPLIFIED);
-
-        WorldPresetBootstrapContext.StemContext amplifiedNetherContext = WorldPresetBootstrapContext.StemContext.of(
-                ctx.netherContext.dimension,
-                ctx.netherContext.structureSets,
-                ctx.noiseSettings.getOrThrow(WoverChunkGenerator.AMPLIFIED_NETHER)
-        );
+        Holder<NoiseGeneratorSettings> amplifiedSettings =
+                ctx.noiseSettings.getOrThrow(NoiseGeneratorSettings.AMPLIFIED);
+        WorldPresetBootstrapContext.StemContext amplifiedNetherContext =
+                WorldPresetBootstrapContext.StemContext.of(
+                        ctx.netherContext.dimension,
+                        ctx.netherContext.structureSets,
+                        ctx.noiseSettings.getOrThrow(WoverChunkGenerator.AMPLIFIED_NETHER)
+                );
 
         return buildPreset(
-                ctx.makeNoiseBasedOverworld(
-                        ctx.overworldStem.generator().getBiomeSource(),
-                        amplifiedBiomeGenerator
-                ),
+                ctx.makeNoiseBasedOverworld(ctx.overworldStem.generator().getBiomeSource(), amplifiedSettings),
                 amplifiedNetherContext, WoverNetherConfig.MINECRAFT_18_AMPLIFIED,
                 ctx.endContext, WoverEndConfig.MINECRAFT_20_AMPLIFIED
         );
     }
 
     private static WorldPreset createLarge(WorldPresetBootstrapContext ctx) {
-        Holder<NoiseGeneratorSettings> largeBiomeGenerator = ctx.noiseSettings
-                .getOrThrow(NoiseGeneratorSettings.LARGE_BIOMES);
+        Holder<NoiseGeneratorSettings> largeSettings =
+                ctx.noiseSettings.getOrThrow(NoiseGeneratorSettings.LARGE_BIOMES);
         return buildPreset(
-                ctx.makeNoiseBasedOverworld(
-                        ctx.overworldStem.generator().getBiomeSource(),
-                        largeBiomeGenerator
-                ),
+                ctx.makeNoiseBasedOverworld(ctx.overworldStem.generator().getBiomeSource(), largeSettings),
                 ctx.netherContext, WoverNetherConfig.MINECRAFT_18_LARGE,
                 ctx.endContext, WoverEndConfig.MINECRAFT_20_LARGE
         );
@@ -151,13 +141,12 @@ public class PresetRegistryImpl {
     }
 
     private static LevelStem resolveFlatOverworld(WorldPresetBootstrapContext ctx) {
-        final HolderGetter<WorldPreset> presets = ctx.lookup(Registries.WORLD_PRESET);
+        HolderGetter<WorldPreset> presets = ctx.lookup(Registries.WORLD_PRESET);
         if (presets != null) {
-            final Holder<WorldPreset> flatPreset = presets.getOrThrow(net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT);
-            final LevelStem stem = WorldPresetManager.getDimension(flatPreset, LevelStem.OVERWORLD);
-            if (stem != null) {
-                return stem;
-            }
+            Holder<WorldPreset> flatPreset = presets.getOrThrow(
+                    net.minecraft.world.level.levelgen.presets.WorldPresets.FLAT);
+            LevelStem stem = WorldPresetManager.getDimension(flatPreset, LevelStem.OVERWORLD);
+            if (stem != null) return stem;
         }
         return ctx.overworldStem;
     }
@@ -169,30 +158,15 @@ public class PresetRegistryImpl {
             WorldPresetBootstrapContext.StemContext endContext,
             WoverEndConfig endConfig
     ) {
-        return WorldPresetManager.of(buildDimensionMap(
-                overworldStem, netherContext, netherConfig, endContext, endConfig
+        return WorldPresetManager.of(Map.of(
+                LevelStem.OVERWORLD, overworldStem,
+                LevelStem.NETHER, WorldPresets.makeWoverNetherStem(netherContext, netherConfig),
+                LevelStem.END, WorldPresets.makeWoverEndStem(endContext, endConfig)
         ));
-    }
-
-    private static Map<ResourceKey<LevelStem>, LevelStem> buildDimensionMap(
-            LevelStem overworldStem,
-            WorldPresetBootstrapContext.StemContext netherContext,
-            WoverNetherConfig netherConfig,
-            WorldPresetBootstrapContext.StemContext endContext,
-            WoverEndConfig endConfig
-    ) {
-        return Map.of(
-                LevelStem.OVERWORLD,
-                overworldStem,
-                LevelStem.NETHER,
-                WorldPresets.makeWoverNetherStem(netherContext, netherConfig),
-                LevelStem.END,
-                WorldPresets.makeWoverEndStem(endContext, endConfig)
-        );
     }
 
     @ApiStatus.Internal
     public static void ensureStaticallyLoaded() {
-        // no-op
+        // Forces static keys to initialize before datapack registry bootstrapping.
     }
 }

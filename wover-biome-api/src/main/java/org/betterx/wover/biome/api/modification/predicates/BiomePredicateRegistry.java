@@ -1,44 +1,19 @@
 package org.betterx.wover.biome.api.modification.predicates;
 
-import org.betterx.wover.biome.impl.modification.predicates.BiomePredicateRegistryImpl;
-import org.betterx.wover.core.api.registry.DatapackRegistryBuilder;
-import org.betterx.wover.entrypoint.LibWoverBiome;
-
 import com.mojang.serialization.MapCodec;
+import org.betterx.wover.biome.impl.modification.predicates.BiomePredicateRegistryImpl;
 import net.minecraft.core.Registry;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.KeyDispatchDataCodec;
+import net.minecraft.resources.ResourceKey;
 
-/**
- * A BuiltinRegistry for {@link BiomePredicate}s.
- */
 public class BiomePredicateRegistry {
-    /**
-     * The Key of the Registry. ({@code wover/biome_predicates})
-     */
-    public static final ResourceKey<Registry<MapCodec<? extends BiomePredicate>>> BIOME_PREDICATE_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverBiome.C.id("wover/biome_predicates"));
+   public static final ResourceKey<Registry<MapCodec<? extends BiomePredicate>>> BIOME_PREDICATE_REGISTRY = BiomePredicateRegistryImpl.BIOME_PREDICATE_REGISTRY;
+   public static final Registry<MapCodec<? extends BiomePredicate>> BIOME_PREDICATES = BiomePredicateRegistryImpl.BIOME_PREDICATES;
 
-    /**
-     * The Registry itself.
-     */
-    public static final Registry<MapCodec<? extends BiomePredicate>> BIOME_PREDICATES = BiomePredicateRegistryImpl.BIOME_PREDICATES;
+   public static MapCodec<? extends BiomePredicate> register(Identifier location, MapCodec<? extends BiomePredicate> codec) {
+      return BiomePredicateRegistryImpl.register(BIOME_PREDICATES, location, codec);
+   }
 
-    /**
-     * Registers a new {@link BiomePredicate} with the given {@link Identifier} and {@link KeyDispatchDataCodec}.
-     *
-     * @param location             type of the {@link BiomePredicate}.
-     * @param keyDispatchDataCodec The {@link KeyDispatchDataCodec} of the {@link BiomePredicate}.
-     * @return The registered {@link BiomePredicate}.
-     */
-    public static MapCodec<? extends BiomePredicate> register(
-            Identifier location,
-            KeyDispatchDataCodec<? extends BiomePredicate> keyDispatchDataCodec
-    ) {
-        return BiomePredicateRegistryImpl.register(BIOME_PREDICATES, location, keyDispatchDataCodec);
-    }
-
-    private BiomePredicateRegistry() {
-    }
+   private BiomePredicateRegistry() {
+   }
 }

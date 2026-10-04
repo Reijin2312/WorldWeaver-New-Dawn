@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
+import net.minecraft.world.level.levelgen.synth.Noise;
 
 /**
  * Helper to create entries in the Noise Parameter Registry {@link Registries#NOISE}.
@@ -20,13 +21,13 @@ public class NoiseParameterManager {
     /**
      * Key for a WorldWeaver Noise function with custom Parameters
      */
-    public static final ResourceKey<NormalNoise.NoiseParameters> ROUGHNESS_NOISE =
+    public static final ResourceKey<NormalNoise> ROUGHNESS_NOISE =
             createKey(LibWoverMath.C.id("roughness_noise"));
 
     /**
      * Key for a Noise function with custom Parameters
      */
-    public static ResourceKey<NormalNoise.NoiseParameters> createKey(Identifier loc) {
+    public static ResourceKey<NormalNoise> createKey(Identifier loc) {
         return NoiseRegistryImpl.createKey(loc);
     }
 
@@ -38,10 +39,10 @@ public class NoiseParameterManager {
      * @param noise          The Key for the Noise Parameters
      * @return The Noise function
      */
-    public static NormalNoise getOrCreateNoise(
+    public static Noise getOrCreateNoise(
             RegistryAccess registryAccess,
             RandomSource randomSource,
-            ResourceKey<NormalNoise.NoiseParameters> noise
+            ResourceKey<NormalNoise> noise
     ) {
         return NoiseRegistryImpl.getOrCreateNoise(registryAccess, randomSource, noise);
     }

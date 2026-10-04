@@ -5,21 +5,20 @@ import org.betterx.wover.datagen.api.WoverDataProvider;
 import org.betterx.wover.datagen.api.WoverLootProvider;
 
 import net.minecraft.core.HolderLookup;
+import net.minecraft.data.CachedOutput;
+import net.minecraft.data.DataProvider;
 import net.minecraft.data.loot.LootTableProvider;
-import net.minecraft.data.loot.LootTableSubProvider;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.util.context.ContextKeySet;
 
 import net.fabricmc.fabric.api.datagen.v1.FabricPackOutput;
 
-import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class WoverLootTableProvider implements WoverDataProvider<LootTableProvider>, WoverLootProvider {
+public abstract class WoverLootTableProvider implements WoverDataProvider<DataProvider>, WoverLootProvider {
     /**
      * The title of the provider. Mainly used for logging.
      */
@@ -55,19 +54,21 @@ public abstract class WoverLootTableProvider implements WoverDataProvider<LootTa
     );
 
     @Override
-    public LootTableProvider getProvider(
+    public DataProvider getProvider(
             FabricPackOutput output,
             CompletableFuture<HolderLookup.Provider> registriesFuture
     ) {
-        return new LootTableProvider(
-                output,
-                Set.of(),
-                List.of(toSubProviderEntry()),
-                registriesFuture
-        ) {
+        return new DataProvider() {
             @Override
-            public @NotNull String getName() {
-                return title;
+            public CompletableFuture<?> run(CachedOutput cache) {
+                return CompletableFuture.failedFuture(new IllegalStateException(
+                        "WoverLootTableProvider must be registered through WoverDataGenEntryPoint"
+                ));
+            }
+
+            @Override
+            public String getName() {
+                return "Loot tables: " + title;
             }
         };
     }
@@ -75,8 +76,24 @@ public abstract class WoverLootTableProvider implements WoverDataProvider<LootTa
     @Override
     public LootTableProvider.SubProviderEntry toSubProviderEntry() {
         return new LootTableProvider.SubProviderEntry(
-                (lookup) -> (LootTableSubProvider) (biConsumer) -> boostrap(lookup, biConsumer),
+                context -> () -> boostrap(new ContextLookupProvider(context), context::accept),
                 lootContextType
         );
+    }
+
+    private record ContextLookupProvider(net.minecraft.data.worldgen.BootstrapContextAccess context)
+            implements HolderLookup.Provider {
+        @Override
+        public java.util.stream.Stream<ResourceKey<? extends net.minecraft.core.Registry<?>>> listRegistryKeys() {
+            return java.util.stream.Stream.empty();
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> java.util.Optional<? extends HolderLookup.RegistryLookup<T>> lookup(
+                ResourceKey<? extends net.minecraft.core.Registry<? extends T>> key
+        ) {
+            return java.util.Optional.of((HolderLookup.RegistryLookup<T>) context.lookup(key));
+        }
     }
 }

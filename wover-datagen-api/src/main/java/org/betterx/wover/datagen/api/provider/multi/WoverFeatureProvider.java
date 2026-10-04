@@ -9,7 +9,7 @@ import org.betterx.wover.datagen.api.provider.WoverPlacedFeatureProvider;
 
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
 import org.jetbrains.annotations.NotNull;
@@ -43,7 +43,7 @@ public abstract class WoverFeatureProvider extends AbstractMultiProvider {
      *
      * @param context The context to add the elements to.
      */
-    protected abstract void bootstrapConfigured(BootstrapContext<ConfiguredFeature<?, ?>> context);
+    protected abstract void bootstrapConfigured(BootstrapContext<Feature> context);
 
     /**
      * Called, when the Elements of the Registry need to be created and registered.
@@ -63,7 +63,7 @@ public abstract class WoverFeatureProvider extends AbstractMultiProvider {
                 new WoverConfiguredFeatureProvider(modCore, providerId) {
 
                     @Override
-                    protected void bootstrap(BootstrapContext<ConfiguredFeature<?, ?>> context) {
+                    protected void bootstrap(BootstrapContext<Feature> context) {
                         bootstrapConfigured(context);
                     }
                 }

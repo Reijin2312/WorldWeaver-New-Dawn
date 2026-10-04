@@ -1,23 +1,19 @@
 package org.betterx.wover.biome.impl.modification.predicates;
 
+import com.mojang.serialization.MapCodec;
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicate;
 
-import com.mojang.serialization.MapCodec;
-import net.minecraft.util.KeyDispatchDataCodec;
-
 public class Always implements BiomePredicate {
-    public static final Always INSTANCE = new Always();
-    public static final KeyDispatchDataCodec<Always> CODEC
-            = KeyDispatchDataCodec.of(MapCodec.unit(INSTANCE));
+   public static final Always INSTANCE = new Always();
+   public static final MapCodec<Always> CODEC = MapCodec.unit(INSTANCE);
 
+   @Override
+   public MapCodec<? extends BiomePredicate> codec() {
+      return CODEC;
+   }
 
-    @Override
-    public KeyDispatchDataCodec<? extends BiomePredicate> codec() {
-        return CODEC;
-    }
-
-    @Override
-    public boolean test(Context ctx) {
-        return true;
-    }
+   @Override
+   public boolean test(BiomePredicate.Context ctx) {
+      return true;
+   }
 }

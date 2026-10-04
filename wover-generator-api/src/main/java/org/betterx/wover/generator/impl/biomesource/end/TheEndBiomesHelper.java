@@ -11,7 +11,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.Climate;
-import net.minecraft.world.level.levelgen.DensityFunction;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -161,8 +160,7 @@ public class TheEndBiomesHelper {
     }
 
     private static double selector(Climate.Sampler sampler, int x, int y, int z) {
-        DensityFunction.SinglePointContext ctx = new DensityFunction.SinglePointContext(x, y, z);
-        double noise = sampler.temperature().compute(ctx);
+        double noise = sampler.temperature().sampleValue(x, y, z);
         return Mth.clamp((noise + 1.0) / 2.0, 0.0, 1.0);
     }
 

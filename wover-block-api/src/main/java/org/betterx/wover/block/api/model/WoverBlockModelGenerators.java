@@ -296,8 +296,8 @@ public class WoverBlockModelGenerators {
 
     public void createBarrel(Block barrelBlock) {
         Material openTop = TextureMapping.getBlockTexture(barrelBlock, "_top_open");
-        Identifier closedModel = TexturedModel.CUBE_TOP_BOTTOM.create(barrelBlock, this.vanillaGenerator.modelOutput());
-        Identifier openModel = TexturedModel.CUBE_TOP_BOTTOM
+        Identifier closedModel = TexturedModel.CUBE_BOTTOM_TOP.create(barrelBlock, this.vanillaGenerator.modelOutput());
+        Identifier openModel = TexturedModel.CUBE_BOTTOM_TOP
                 .get(barrelBlock)
                 .updateTextures((textureMapping) -> textureMapping.put(TextureSlot.TOP, openTop))
                 .createWithSuffix(barrelBlock, "_open", this.vanillaGenerator.modelOutput());

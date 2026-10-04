@@ -1,12 +1,12 @@
 package org.betterx.wover.surface.impl.numeric;
 
 import org.betterx.wover.math.api.MathHelper;
-import org.betterx.wover.surface.api.conditions.SurfaceRulesContext;
 import org.betterx.wover.surface.api.noise.NumericProvider;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
 
 import java.util.Objects;
 
@@ -28,8 +28,8 @@ public final class RandomIntProvider implements NumericProvider {
     }
 
     @Override
-    public int getNumber(SurfaceRulesContext context) {
-        return RandomSource.create(MathHelper.getSeed(seed, context.getBlockX(), context.getBlockY(), context.getBlockZ())).nextInt(range);
+    public int getNumber(MaterialRuleContext context) {
+        return RandomSource.create(MathHelper.getSeed(seed, context.blockX(), context.blockY(), context.blockZ())).nextInt(range);
     }
 
     @Override

@@ -61,6 +61,13 @@ public class EnchantmentUtils {
                 .orElse(null);
     }
 
+    public static Holder<Enchantment> getEnchantment(
+            net.minecraft.core.HolderGetter<Enchantment> lookup,
+            ResourceKey<Enchantment> enchantment
+    ) {
+        return lookup.get(enchantment).orElse(null);
+    }
+
     /**
      * Gets the level of an enchantment on an item. This method is safe to call from anywhere.
      *

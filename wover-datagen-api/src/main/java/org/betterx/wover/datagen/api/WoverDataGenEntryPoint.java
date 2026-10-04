@@ -5,7 +5,11 @@ import org.betterx.wover.datagen.impl.WoverDataGenEntryPointImpl;
 import org.betterx.wover.entrypoint.LibWoverDatagen;
 
 import net.minecraft.core.RegistrySetBuilder;
+import net.minecraft.core.registries.MultiRegistryBootstrap;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.data.DataProvider;
+import net.minecraft.data.loot.LootTableProvider;
+import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.metadata.PackMetadataGenerator;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.network.chat.Component;
@@ -18,6 +22,7 @@ import net.fabricmc.fabric.api.resource.ResourcePackActivationType;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
@@ -255,6 +260,8 @@ public abstract class WoverDataGenEntryPoint implements DataGeneratorEntrypoint 
             //run other providers
             builder.providerFactories()
                    .stream()
+                   .filter(provider -> !(provider instanceof WoverLootProvider))
+                   .filter(provider -> !(provider instanceof WoverRecipeGenerator))
                    .forEach(provider -> {
                        builder.pack.addProvider(provider::getProvider);
                        addMultiProviders(builder, provider);
@@ -307,6 +314,47 @@ public abstract class WoverDataGenEntryPoint implements DataGeneratorEntrypoint 
         for (PackBuilder builder : builders) {
             builder.registryProviders()
                    .forEach(provider -> provider.buildRegistry(registryBuilder));
+
+            final var lootProviders = builder.providerFactories()
+                                             .stream()
+                                             .filter(WoverLootProvider.class::isInstance)
+                                             .map(WoverLootProvider.class::cast)
+                                             .toList();
+            if (!lootProviders.isEmpty()) {
+                registryBuilder.add(
+                        Registries.LOOT_TABLE,
+                        new LootTableProvider(
+                                java.util.Set.of(),
+                                lootProviders.stream().map(WoverLootProvider::toSubProviderEntry).toList()
+                        )
+                );
+            }
+
+            final var recipeGenerators = builder.providerFactories()
+                                                .stream()
+                                                .filter(WoverRecipeGenerator.class::isInstance)
+                                                .map(WoverRecipeGenerator.class::cast)
+                                                .toList();
+            if (!recipeGenerators.isEmpty()) {
+                registryBuilder.add(new MultiRegistryBootstrap() {
+                    @Override
+                    public Set<net.minecraft.resources.ResourceKey<? extends net.minecraft.core.Registry<?>>> requestedRegistries() {
+                        return Set.of(Registries.RECIPE, Registries.ADVANCEMENT);
+                    }
+
+                    @Override
+                    public void run(BootstrapGetter contexts) {
+                        final var recipes = contexts.get(Registries.RECIPE);
+                        final var advancements = contexts.get(Registries.ADVANCEMENT);
+                        new RecipeProvider(recipes, advancements) {
+                            @Override
+                            public void buildRecipes() {
+                                recipeGenerators.forEach(generator -> generator.buildRecipes(recipes, output));
+                            }
+                        }.buildRecipes();
+                    }
+                });
+            }
         }
 
         onBuildRegistry(registryBuilder);

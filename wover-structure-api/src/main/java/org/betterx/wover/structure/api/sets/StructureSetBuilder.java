@@ -16,6 +16,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
 import net.minecraft.world.level.levelgen.structure.placement.ConcentricRingsStructurePlacement;
+import net.minecraft.world.level.levelgen.structure.placement.AbstractSpreadingStructurePlacement;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadType;
 import net.minecraft.world.level.levelgen.structure.placement.StructurePlacement;
@@ -133,10 +134,10 @@ public class StructureSetBuilder {
 
     public abstract class StructurePlacementBuilder<R extends StructurePlacementBuilder<R>> {
         protected Vec3i locateOffset;
-        protected StructurePlacement.FrequencyReductionMethod frequencyReductionMethod;
+        protected AbstractSpreadingStructurePlacement.FrequencyReductionMethod frequencyReductionMethod;
         protected float frequency;
         protected int salt;
-        protected Optional<StructurePlacement.ExclusionZone> exclusionZone;
+        protected Optional<AbstractSpreadingStructurePlacement.ExclusionZone> exclusionZone;
 
         public abstract StructureSetBuilder finishPlacement();
 
@@ -147,7 +148,7 @@ public class StructureSetBuilder {
         }
 
         @NotNull
-        public R frequencyReductionMethod(@NotNull StructurePlacement.FrequencyReductionMethod method) {
+        public R frequencyReductionMethod(@NotNull AbstractSpreadingStructurePlacement.FrequencyReductionMethod method) {
             this.frequencyReductionMethod = method;
             return (R) this;
         }
@@ -165,14 +166,14 @@ public class StructureSetBuilder {
         }
 
         @NotNull
-        public R exclusionZone(@Nullable StructurePlacement.ExclusionZone exclusionZone) {
+        public R exclusionZone(@Nullable AbstractSpreadingStructurePlacement.ExclusionZone exclusionZone) {
             this.exclusionZone = exclusionZone == null ? Optional.empty() : Optional.of(exclusionZone);
             return (R) this;
         }
 
         protected StructurePlacementBuilder(@NotNull ResourceKey<StructureSet> baseKey) {
             locateOffset = Vec3i.ZERO;
-            frequencyReductionMethod = StructurePlacement.FrequencyReductionMethod.DEFAULT;
+            frequencyReductionMethod = AbstractSpreadingStructurePlacement.FrequencyReductionMethod.DEFAULT;
             frequency = 1.0f;
             exclusionZone = Optional.empty();
 

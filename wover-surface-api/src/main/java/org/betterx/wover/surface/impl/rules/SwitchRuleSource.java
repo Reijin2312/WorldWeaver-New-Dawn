@@ -4,19 +4,19 @@ import org.betterx.wover.surface.api.noise.NumericProvider;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.level.levelgen.SurfaceRules.RuleSource;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
 
 import java.util.List;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
 //
-public final class SwitchRuleSource extends WoverSwitchRuleSource implements RuleSource {
+public final class SwitchRuleSource extends WoverSwitchRuleSource implements MaterialRule {
     public static final MapCodec<SwitchRuleSource> CODEC = RecordCodecBuilder
             .mapCodec(instance -> instance
                     .group(
                             NumericProvider.CODEC.fieldOf("selector").forGetter(SwitchRuleSource::selector),
-                            RuleSource.CODEC.listOf().fieldOf("collection").forGetter(SwitchRuleSource::collection)
+                            MaterialRule.CODEC.listOf().fieldOf("collection").forGetter(SwitchRuleSource::collection)
                     )
                     .apply(
                             instance,
@@ -24,9 +24,9 @@ public final class SwitchRuleSource extends WoverSwitchRuleSource implements Rul
                     ));
 
     private final NumericProvider selector;
-    private final List<RuleSource> collection;
+    private final List<MaterialRule> collection;
 
-    public SwitchRuleSource(NumericProvider selector, List<RuleSource> collection) {
+    public SwitchRuleSource(NumericProvider selector, List<MaterialRule> collection) {
         this.selector = selector;
         this.collection = collection;
     }
@@ -37,12 +37,12 @@ public final class SwitchRuleSource extends WoverSwitchRuleSource implements Rul
     }
 
     @Override
-    public List<RuleSource> collection() {
+    public List<MaterialRule> collection() {
         return collection;
     }
 
     @Override
-    public @NotNull MapCodec<? extends RuleSource> codec() {
+    public @NotNull MapCodec<? extends MaterialRule> codec() {
         return CODEC;
     }
 

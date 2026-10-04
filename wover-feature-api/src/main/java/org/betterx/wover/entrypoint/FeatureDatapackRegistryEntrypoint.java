@@ -5,9 +5,8 @@ import org.betterx.wover.feature.impl.configured.FeatureConfiguratorImpl;
 import org.betterx.wover.feature.impl.placed.PlacedFeatureManagerImpl;
 
 public class FeatureDatapackRegistryEntrypoint implements DatapackRegistryEntrypoint {
-    @Override
-    public void registerDatapackRegistries() {
-        FeatureConfiguratorImpl.initialize();
-        PlacedFeatureManagerImpl.initialize();
-    }
+   public void registerDatapackRegistries() {
+      FeatureConfiguratorImpl.initialize();
+      PlacedFeatureManagerImpl.initialize();
+   }
 }

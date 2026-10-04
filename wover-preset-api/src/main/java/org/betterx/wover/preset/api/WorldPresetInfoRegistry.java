@@ -26,7 +26,7 @@ public class WorldPresetInfoRegistry {
     }
 
     public static final ResourceKey<Registry<WorldPresetInfo>> WORLD_PRESET_INFO_REGISTRY =
-            DatapackRegistryBuilder.createRegistryKey(LibWoverWorldPreset.C.id("wover/world_preset_info"));
+            DatapackRegistryBuilder.createRegistryKey(LibWoverWorldPreset.C.id("world_preset_info"));
 
     public static ResourceKey<WorldPresetInfo> createKey(
             Identifier ruleID

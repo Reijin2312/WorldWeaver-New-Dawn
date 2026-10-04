@@ -2,13 +2,13 @@ package org.betterx.wover.surface.impl.numeric;
 
 import org.betterx.wover.math.api.random.RandomHelper;
 import org.betterx.wover.surface.api.Conditions;
-import org.betterx.wover.surface.api.conditions.SurfaceRulesContext;
 import org.betterx.wover.surface.api.conditions.VolumeThresholdCondition;
 import org.betterx.wover.surface.api.noise.NumericProvider;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
 
 public class NetherNoiseCondition implements NumericProvider {
     /**
@@ -33,10 +33,10 @@ public class NetherNoiseCondition implements NumericProvider {
     }
 
     @Override
-    public int getNumber(SurfaceRulesContext context) {
-        final int x = context.getBlockX();
-        final int y = context.getBlockY();
-        final int z = context.getBlockZ();
+    public int getNumber(MaterialRuleContext context) {
+        final int x = context.blockX();
+        final int y = context.blockY();
+        final int z = context.blockZ();
         final VolumeThresholdCondition noise = Conditions.NETHER_VOLUME_NOISE;
         double value = noise.getNoiseContext().getNoise().eval(x * noise.getScaleX(), y * noise.getScaleY(), z * noise.getScaleZ());
         final RandomSource random = noise.getNoiseContext().randomAt(x, y, z);

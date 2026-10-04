@@ -2,8 +2,9 @@ package org.betterx.wover.surface.mixin;
 
 import org.betterx.wover.common.surface.api.SurfaceRuleProvider;
 
+import net.minecraft.core.Holder;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,19 +16,19 @@ public abstract class NoiseGeneratorSettingsMixin implements SurfaceRuleProvider
     @Mutable
     @Final
     @Shadow
-    private SurfaceRules.RuleSource surfaceRule;
+    private Holder<MaterialRule> materialRule;
 
-    public void wover_overwriteSurfaceRules(SurfaceRules.RuleSource surfaceRule) {
-        if (surfaceRule == null || surfaceRule == this.surfaceRule) return;
+    public void wover_overwriteSurfaceRules(MaterialRule surfaceRule) {
+        if (surfaceRule == null || surfaceRule == this.materialRule.value()) return;
         if (this.wover_containsOverride) {
             // Avoid referencing split module entrypoint/loggers from injected MC code in datagen/dev.
         }
         this.wover_containsOverride = true;
-        this.surfaceRule = surfaceRule;
+        this.materialRule = Holder.direct(surfaceRule);
     }
 
-    public SurfaceRules.RuleSource wover_getOriginalSurfaceRules() {
-        return this.surfaceRule;
+    public MaterialRule wover_getOriginalSurfaceRules() {
+        return this.materialRule.value();
     }
 
     private boolean wover_containsOverride = false;

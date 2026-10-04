@@ -6,7 +6,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
-import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.blockpredicates.BlockPredicate;
 import net.minecraft.world.level.levelgen.blockpredicates.BlockPredicateType;
@@ -68,8 +68,8 @@ public class IsFullShape implements BlockPredicate {
      * @return {@code true} if the block at the given position has a full collision shape, {@code false} otherwise
      */
     @Override
-    public boolean test(WorldGenLevel worldGenLevel, BlockPos blockPos) {
-        BlockState state = worldGenLevel.getBlockState(blockPos.offset(this.offset));
-        return state.isCollisionShapeFullBlock(worldGenLevel, blockPos);
+    public boolean test(LevelAccessor levelAccessor, BlockPos blockPos) {
+        BlockState state = levelAccessor.getBlockState(blockPos.offset(this.offset));
+        return state.isCollisionShapeFullBlock(levelAccessor, blockPos);
     }
 }

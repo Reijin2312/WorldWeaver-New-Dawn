@@ -1,144 +1,41 @@
 package org.betterx.wover.feature.impl.placed.modifiers;
 
+import com.mojang.serialization.MapCodec;
 import org.betterx.wover.entrypoint.LibWoverFeature;
 import org.betterx.wover.feature.api.placed.modifiers.*;
-import org.betterx.wover.legacy.api.LegacyHelper;
-
-import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.levelgen.placement.PlacementModifier;
-import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
-
 import org.jetbrains.annotations.ApiStatus;
 
 public class PlacementModifiersImpl {
-    public static final PlacementModifierType<Stencil> STENCIL = registerLegacy(
-            "stencil",
-            Stencil.CODEC
-    );
-    public static final PlacementModifierType<IsNextTo> IS_NEXT_TO = registerLegacy(
-            "is_next_to",
-            IsNextTo.CODEC
-    );
-    public static final PlacementModifierType<NoiseFilter> NOISE_FILTER = registerLegacy(
-            "noise_filter",
-            NoiseFilter.CODEC
-    );
-    public static final PlacementModifierType<Debug> DEBUG = registerLegacy(
-            "debug",
-            Debug.CODEC
-    );
+    public static final MapCodec<Stencil> STENCIL = register("stencil", Stencil.CODEC);
+    public static final MapCodec<IsNextTo> IS_NEXT_TO = register("is_next_to", IsNextTo.CODEC);
+    public static final MapCodec<NoiseFilter> NOISE_FILTER = register("noise_filter", NoiseFilter.CODEC);
+    public static final MapCodec<Debug> DEBUG = register("debug", Debug.CODEC);
+    public static final MapCodec<Merge> FOR_ALL = register("for_all", Merge.CODEC);
+    public static final MapCodec<FindInDirection> SOLID_IN_DIR = register("solid_in_dir", FindInDirection.CODEC);
+    public static final MapCodec<All> ALL = register("all", All.CODEC);
+    public static final MapCodec<IsBasin> IS_BASIN = register("is_basin", IsBasin.CODEC);
+    public static final MapCodec<Is> IS = register("is", Is.CODEC);
+    public static final MapCodec<Offset> OFFSET = register("offset", Offset.CODEC);
+    public static final MapCodec<OffsetProvider> OFFSET_PROVIDER = register("offset_provider", OffsetProvider.CODEC);
+    public static final MapCodec<Extend> EXTEND = register("extend", Extend.CODEC);
+    public static final MapCodec<InBiome> IN_BIOME = register("in_biome", InBiome.CODEC);
+    public static final MapCodec<ExtendXYZ> EXTEND_XZ = register("extend_xyz", ExtendXYZ.CODEC);
+    public static final MapCodec<EveryLayer> EVERY_LAYER = register("every_layer", EveryLayer.CODEC);
 
-    public static final PlacementModifierType<Merge> FOR_ALL = registerLegacy(
-            "for_all",
-            Merge.CODEC
-    );
-
-    public static final PlacementModifierType<FindInDirection> SOLID_IN_DIR = registerLegacy(
-            "solid_in_dir",
-            FindInDirection.CODEC
-    );
-
-    public static final PlacementModifierType<All> ALL = registerLegacy(
-            "all",
-            All.CODEC
-    );
-
-    public static final PlacementModifierType<IsBasin> IS_BASIN = registerLegacy(
-            "is_basin",
-            IsBasin.CODEC
-    );
-
-    public static final PlacementModifierType<Is> IS = registerLegacy(
-            "is",
-            Is.CODEC
-    );
-
-    public static final PlacementModifierType<Offset> OFFSET = registerLegacy(
-            "offset",
-            Offset.CODEC
-    );
-
-    public static final PlacementModifierType<OffsetProvider> OFFSET_PROVIDER = register(
-            "offset_provider",
-            OffsetProvider.CODEC
-    );
-
-    public static final PlacementModifierType<Extend> EXTEND = registerLegacy(
-            "extend",
-            Extend.CODEC
-    );
-
-    public static final PlacementModifierType<InBiome> IN_BIOME = registerLegacy(
-            "in_biome",
-            InBiome.CODEC
-    );
-
-    public static final PlacementModifierType<ExtendXYZ> EXTEND_XZ = register(
-            "extend_xyz",
-            ExtendXYZ.CODEC
-    );
-
-    public static final PlacementModifierType<EveryLayer> EVERY_LAYER = register(
-            "every_layer",
-            EveryLayer.CODEC
-    );
-
-
-    private static <P extends PlacementModifier> PlacementModifierType<P> registerLegacy(
-            String path,
-            MapCodec<P> codec
-    ) {
-        var id = LibWoverFeature.C.id(path);
-        return register(id, codec, true);
+    private static <P extends PlacementModifier> MapCodec<P> register(String path, MapCodec<P> codec) {
+        return register(LibWoverFeature.C.id(path), codec);
     }
 
-    private static <P extends PlacementModifier> PlacementModifierType<P> register(String path, MapCodec<P> codec) {
-        var id = LibWoverFeature.C.id(path);
-        return register(id, codec, false);
-    }
-
-    public static <P extends PlacementModifier> PlacementModifierType<P> register(
-            Identifier location,
-            MapCodec<P> codec,
-            boolean withLegacyBCLib
-    ) {
-        PlacementModifierType<P> res = Registry.register(
-                BuiltInRegistries.PLACEMENT_MODIFIER_TYPE,
-                location,
-                () -> codec
-        );
-
-        if (withLegacyBCLib && LegacyHelper.isLegacyEnabled()) {
-            Registry.<PlacementModifierType<?>, PlacementModifierType<P>>register(
-                    BuiltInRegistries.PLACEMENT_MODIFIER_TYPE,
-                    LegacyHelper.BCLIB_CORE.convertNamespace(location),
-                    () -> codec
-            );
-        }
-        return res;
+    public static <P extends PlacementModifier> MapCodec<P> register(Identifier location, MapCodec<P> codec) {
+        Registry.register(BuiltInRegistries.PLACEMENT_MODIFIER_TYPE, location, codec);
+        return codec;
     }
 
     @ApiStatus.Internal
     public static void ensureStaticInitialization() {
-
-    }
-
-    static {
-        if (LegacyHelper.isLegacyEnabled()) {
-            final PlacementModifierType<EveryLayer> ON_EVERY_LAYER_LEGACY = register(
-                    LegacyHelper.BCLIB_CORE.id("on_every_layer"),
-                    EveryLayer.CODEC,
-                    false
-            );
-            final PlacementModifierType<EveryLayer> UNDER_EVERY_LAYER_LEGACY = register(
-                    LegacyHelper.BCLIB_CORE.id("under_every_layer"),
-                    EveryLayer.CODEC_LEGACY_UNDER,
-                    false
-            );
-        }
     }
 }
-

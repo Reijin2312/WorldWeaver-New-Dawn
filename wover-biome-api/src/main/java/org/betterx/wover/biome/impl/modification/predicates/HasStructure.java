@@ -1,31 +1,25 @@
 package org.betterx.wover.biome.impl.modification.predicates;
 
+import com.mojang.serialization.MapCodec;
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicate;
-
-import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.structure.Structure;
 
 public record HasStructure(ResourceKey<Structure> key) implements BiomePredicate {
-    public static final KeyDispatchDataCodec<HasStructure> CODEC = KeyDispatchDataCodec
-            .of(ResourceKey.codec(Registries.STRUCTURE)
-                           .xmap(HasStructure::new, HasStructure::key)
-                           .fieldOf("structure_key")
-            );
+   public static final MapCodec<HasStructure> CODEC = ResourceKey.codec(Registries.STRUCTURE)
+      .xmap(HasStructure::new, HasStructure::key)
+      .fieldOf("structure_key");
 
+   @Override
+   public MapCodec<? extends BiomePredicate> codec() {
+      return CODEC;
+   }
 
-    @Override
-    public KeyDispatchDataCodec<? extends BiomePredicate> codec() {
-        return CODEC;
-    }
-
-    @Override
-    public boolean test(Context ctx) {
-        final Structure instance = ctx.structures.get(key).map(Holder.Reference::value).orElse(null);
-        if (instance == null) return false;
-
-        return instance.biomes().contains(ctx.biomeHolder);
-    }
+   @Override
+   public boolean test(BiomePredicate.Context ctx) {
+      Structure instance = (Structure)((Reference)ctx.structures.get(this.key).orElse(null)).value();
+      return instance == null ? false : instance.biomes().contains(ctx.biomeHolder);
+   }
 }

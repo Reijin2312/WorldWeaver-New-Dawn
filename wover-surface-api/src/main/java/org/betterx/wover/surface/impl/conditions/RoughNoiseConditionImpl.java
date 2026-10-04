@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.valueproviders.FloatProvider;
 import net.minecraft.util.valueproviders.FloatProviders;
 import net.minecraft.util.valueproviders.UniformFloat;
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.condition.MaterialCondition;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
 public class RoughNoiseConditionImpl extends WoverRoughNoiseCondition {
@@ -29,13 +29,13 @@ public class RoughNoiseConditionImpl extends WoverRoughNoiseCondition {
                     )
             ));
 
-    private final ResourceKey<NormalNoise.NoiseParameters> noise;
+    private final ResourceKey<NormalNoise> noise;
     private final double minThreshold;
     private final double maxThreshold;
     private final FloatProvider roughness;
 
     public RoughNoiseConditionImpl(
-            ResourceKey<NormalNoise.NoiseParameters> noise,
+            ResourceKey<NormalNoise> noise,
             FloatProvider roughness,
             double minThreshold,
             double maxThreshold
@@ -48,7 +48,7 @@ public class RoughNoiseConditionImpl extends WoverRoughNoiseCondition {
     }
 
     public RoughNoiseConditionImpl(
-            ResourceKey<NormalNoise.NoiseParameters> noise,
+            ResourceKey<NormalNoise> noise,
             double minThreshold,
             double maxThreshold
     ) {
@@ -56,12 +56,12 @@ public class RoughNoiseConditionImpl extends WoverRoughNoiseCondition {
     }
 
     @Override
-    public MapCodec<? extends SurfaceRules.ConditionSource> codec() {
+    public MapCodec<? extends MaterialCondition> codec() {
         return CODEC;
     }
 
     @Override
-    protected ResourceKey<NormalNoise.NoiseParameters> noise() {
+    protected ResourceKey<NormalNoise> noise() {
         return noise;
     }
 

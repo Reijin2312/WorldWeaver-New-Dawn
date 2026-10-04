@@ -3,7 +3,7 @@ package org.betterx.wover.surface.api;
 import org.betterx.wover.surface.api.noise.NumericProvider;
 import org.betterx.wover.surface.impl.rules.SwitchRuleSource;
 
-import net.minecraft.world.level.levelgen.SurfaceRules;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
 
 import java.util.List;
 
@@ -37,9 +37,9 @@ public class Rules {
      * @param collection The collection of rules to switch between.
      * @return The rule source.
      */
-    public static SurfaceRules.RuleSource switchRules(
+    public static MaterialRule switchRules(
             NumericProvider provider,
-            List<SurfaceRules.RuleSource> collection
+            List<MaterialRule> collection
     ) {
         return new SwitchRuleSource(provider, collection);
     }

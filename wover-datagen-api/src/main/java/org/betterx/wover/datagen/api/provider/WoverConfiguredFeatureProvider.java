@@ -6,14 +6,14 @@ import org.betterx.wover.datagen.api.WoverRegistryContentProvider;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.Feature;
 
 import org.jetbrains.annotations.NotNull;
 
 /**
  * A {@link WoverRegistryContentProvider} for {@link ConfiguredFeature}s.
  */
-public abstract class WoverConfiguredFeatureProvider extends WoverRegistryContentProvider<ConfiguredFeature<?, ?>> {
+public abstract class WoverConfiguredFeatureProvider extends WoverRegistryContentProvider<Feature> {
 
     /**
      * Creates a new instance of {@link WoverRegistryContentProvider}.
@@ -37,7 +37,7 @@ public abstract class WoverConfiguredFeatureProvider extends WoverRegistryConten
             @NotNull ModCore modCore,
             @NotNull Identifier providerId
     ) {
-        super(modCore, providerId.toString() + " (Configured Features)", Registries.CONFIGURED_FEATURE);
+        super(modCore, providerId.toString() + " (Features)", Registries.FEATURE);
     }
 
     /**
@@ -46,5 +46,5 @@ public abstract class WoverConfiguredFeatureProvider extends WoverRegistryConten
      * @param context The context to add the elements to.
      */
     @Override
-    abstract protected void bootstrap(BootstrapContext<ConfiguredFeature<?, ?>> context);
+    abstract protected void bootstrap(BootstrapContext<Feature> context);
 }

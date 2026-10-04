@@ -1,9 +1,8 @@
 package org.betterx.wover.surface.api.noise;
 
-import org.betterx.wover.surface.api.conditions.SurfaceRulesContext;
-
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.world.level.levelgen.material.MaterialRuleContext;
 
 import java.util.function.Function;
 
@@ -29,7 +28,7 @@ public interface NumericProvider {
      * @param context The context.
      * @return The resulting value.
      */
-    int getNumber(SurfaceRulesContext context);
+    int getNumber(MaterialRuleContext context);
 
     /**
      * Get the codec for this type Numeric Provider.
