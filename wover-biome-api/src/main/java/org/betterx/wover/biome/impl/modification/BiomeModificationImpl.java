@@ -1,6 +1,7 @@
 package org.betterx.wover.biome.impl.modification;
 
 import org.betterx.wover.biome.api.modification.BiomeModification;
+import org.betterx.wover.biome.api.modification.FeaturePosition;
 import org.betterx.wover.biome.api.modification.predicates.BiomePredicate;
 import java.util.List;
 import net.minecraft.core.Holder;
@@ -17,6 +18,8 @@ public class BiomeModificationImpl implements BiomeModification {
    private final BiomePredicate predicate;
    @NotNull
    private final FeatureMap features;
+   @NotNull
+   private final FeaturePosition featurePosition;
    @Nullable
    private final List<TagKey<Biome>> biomeTags;
    @NotNull
@@ -28,8 +31,19 @@ public class BiomeModificationImpl implements BiomeModification {
       @Nullable List<TagKey<Biome>> biomeTags,
       @Nullable WeightedList<SpawnerData> spawns
    ) {
+      this(predicate, features, FeaturePosition.APPEND, biomeTags, spawns);
+   }
+
+   public BiomeModificationImpl(
+      @NotNull BiomePredicate predicate,
+      @NotNull List<List<Holder<PlacedFeature>>> features,
+      @NotNull FeaturePosition featurePosition,
+      @Nullable List<TagKey<Biome>> biomeTags,
+      @Nullable WeightedList<SpawnerData> spawns
+   ) {
       this.predicate = predicate;
       this.features = FeatureMap.of(features);
+      this.featurePosition = featurePosition;
       this.biomeTags = biomeTags;
       this.spawns = spawns;
    }
@@ -50,13 +64,18 @@ public class BiomeModificationImpl implements BiomeModification {
    }
 
    @Override
+   public FeaturePosition featurePosition() {
+      return this.featurePosition;
+   }
+
+   @Override
    public WeightedList<SpawnerData> spawns() {
       return this.spawns;
    }
 
    @Override
    public void apply(GenerationSettingsWorker worker, MobSettingsWorker mobWorker) {
-      worker.addFeatures(this.features);
+      worker.addFeatures(this.features, this.featurePosition);
       mobWorker.addSpawns(this.spawns);
    }
 }

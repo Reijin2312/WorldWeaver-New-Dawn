@@ -5,6 +5,7 @@
     "name": "WorldWeaver - Events API",
     "description": "Provides an API for registering events in the Lifecycle of a Minecraft World.",
     "authors": [
+    "Raijin2312",
         "Quiqueck"
     ],
     "contact": {

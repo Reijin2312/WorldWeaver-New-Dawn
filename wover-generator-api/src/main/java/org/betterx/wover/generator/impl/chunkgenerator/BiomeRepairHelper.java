@@ -7,6 +7,8 @@ import org.betterx.wover.common.generator.api.chunkgenerator.EnforceableChunkGen
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.generator.impl.biomesource.end.TheEndBiomesHelper;
 import org.betterx.wover.generator.impl.biomesource.nether.NetherBiomesHelper;
+import org.betterx.wover.generator.impl.compat.VanillaEndBiomeCompat;
+import org.betterx.wover.generator.impl.compat.VanillaNetherBiomeCompat;
 import org.betterx.wover.tag.api.predefined.CommonBiomeTags;
 
 import net.minecraft.core.Holder;
@@ -48,9 +50,10 @@ class BiomeRepairHelper {
 
         // ensure that biomes registered through the loader helpers have the proper tags
         registerAllBiomesFromRegistry(biomes);
+        registerVanillaEndBiomes(biomes);
+        registerVanillaNetherBiomes(biomes);
         var originalSet =  dimensionRegistry.entrySet();
         for (Map.Entry<ResourceKey<LevelStem>, LevelStem> entry :originalSet) {
-            boolean didRepair = false;
             ResourceKey<LevelStem> key = entry.getKey();
             LevelStem loadedStem = entry.getValue();
 
@@ -75,7 +78,6 @@ class BiomeRepairHelper {
                             loadedChunkGenerator,
                             dimensionRegistry
                     );
-                    didRepair = true;
                 } else if (loadedChunkGenerator.getBiomeSource() instanceof BiomeSourceWithConfig lodedSource) {
                     if (referenceGenerator.getBiomeSource() instanceof BiomeSourceWithConfig refSource) {
                         if (!refSource.getBiomeSourceConfig().sameConfig(lodedSource.getBiomeSourceConfig())) {
@@ -85,10 +87,12 @@ class BiomeRepairHelper {
                 }
             }
 
-            if (!didRepair) {
-                if (loadedStem.generator().getBiomeSource() instanceof ReloadableBiomeSource reload) {
-                    reload.reloadBiomes();
-                }
+            // The configured source is decoded before loader-provided biome tags are repaired.
+            // Rebuild the active source, including a source just installed by the repair above.
+            final LevelStem activeStem = dimensionRegistry.get(key).map(Holder.Reference::value).orElse(null);
+            if (activeStem != null
+                    && activeStem.generator().getBiomeSource() instanceof ReloadableBiomeSource reload) {
+                reload.reloadBiomes();
             }
         }
 
@@ -155,6 +159,22 @@ class BiomeRepairHelper {
             LibWoverWorldGenerator.C.log.info("Added tags for {} registered biomes in {}", biomesAdded, sw);
         }
 
+    }
+
+    private void registerVanillaNetherBiomes(Registry<Biome> biomes) {
+        final Stopwatch sw = Stopwatch.createStarted();
+        final int biomesAdded = VanillaNetherBiomeCompat.importBiomes(biomes);
+        if (biomesAdded > 0) {
+            LibWoverWorldGenerator.C.log.info("Registered {} vanilla Nether biome candidates in {}", biomesAdded, sw);
+        }
+    }
+
+    private void registerVanillaEndBiomes(Registry<Biome> biomes) {
+        final Stopwatch sw = Stopwatch.createStarted();
+        final int biomesAdded = VanillaEndBiomeCompat.importBiomes(biomes);
+        if (biomesAdded > 0) {
+            LibWoverWorldGenerator.C.log.info("Registered {} vanilla End biome candidates in {}", biomesAdded, sw);
+        }
     }
 
     private void registerAllBiomesFromVanillaDimension(

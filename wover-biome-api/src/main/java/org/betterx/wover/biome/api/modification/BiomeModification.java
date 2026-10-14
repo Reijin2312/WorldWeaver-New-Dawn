@@ -44,6 +44,7 @@ public interface BiomeModification {
       instance -> instance.group(
             BiomePredicate.CODEC.fieldOf("predicate").forGetter(BiomeModification::predicate),
             FeatureMap.CODEC.optionalFieldOf("features", List.of()).forGetter(BiomeModification::features),
+            FeaturePosition.CODEC.optionalFieldOf("feature_position", FeaturePosition.APPEND).forGetter(BiomeModification::featurePosition),
             TagKey.codec(Registries.BIOME).listOf().optionalFieldOf("biome_tags", List.of()).forGetter(BiomeModification::biomeTags),
             WeightedList.codec(SpawnerData.CODEC)
                .optionalFieldOf("spawns", WeightedList.<SpawnerData>builder().build())
@@ -55,6 +56,8 @@ public interface BiomeModification {
    BiomePredicate predicate();
 
    List<List<Holder<PlacedFeature>>> features();
+
+   FeaturePosition featurePosition();
 
    WeightedList<SpawnerData> spawns();
 
@@ -76,6 +79,7 @@ public interface BiomeModification {
       private final BootstrapContext<BiomeModification> bootstrapContext;
       private BiomePredicate predicate;
       private final FeatureMap features;
+      private FeaturePosition featurePosition = FeaturePosition.APPEND;
       private final net.minecraft.util.random.WeightedList.Builder<SpawnerData> spawns;
       private final Set<TagKey<Biome>> tags = new LinkedHashSet<>();
       private final ResourceKey<BiomeModification> key;
@@ -180,6 +184,15 @@ public interface BiomeModification {
          return this.predicate(BiomePredicate.hasConfig(value, targetValue));
       }
 
+      public BiomeModification.Builder featurePosition(FeaturePosition position) {
+         this.featurePosition = position;
+         return this;
+      }
+
+      public BiomeModification.Builder prependFeatures() {
+         return this.featurePosition(FeaturePosition.PREPEND);
+      }
+
       public BiomeModification.Builder addFeature(Decoration decoration, ResourceKey<PlacedFeature> featureKey) {
          if (this.bootstrapContext == null) {
             throw new IllegalStateException(
@@ -253,7 +266,7 @@ public interface BiomeModification {
 
       @NotNull
       private BiomeModificationImpl build() {
-         return new BiomeModificationImpl(this.predicate, this.features.generic(), this.tags != null ? this.tags.stream().toList() : null, this.spawns.build());
+         return new BiomeModificationImpl(this.predicate, this.features.generic(), this.featurePosition, this.tags != null ? this.tags.stream().toList() : null, this.spawns.build());
       }
    }
 }

@@ -3,6 +3,7 @@ package org.betterx.wover.biome.impl.modification;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import org.betterx.wover.entrypoint.LibWoverFeature;
+import org.betterx.wover.biome.api.modification.FeaturePosition;
 import org.betterx.wover.feature.mixin.BiomeGenerationSettingsAccessor;
 import org.betterx.wover.util.MutableHolderSet;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ public class GenerationSettingsWorker {
    private final Biome biome;
    MutableHolderSet<WorldCarver> customizedCarvers;
    List<HolderSet<PlacedFeature>> customizedFeatures;
+   private final int[] prependedPerStep = new int[Decoration.values().length];
 
    public GenerationSettingsWorker(RegistryAccess registries, Biome biome) {
       this.biome = biome;
@@ -104,6 +106,10 @@ public class GenerationSettingsWorker {
    }
 
    public void addFeatures(FeatureMap features) {
+      this.addFeatures(features, FeaturePosition.APPEND);
+   }
+
+   public void addFeatures(FeatureMap features, FeaturePosition position) {
       boolean hasNewFeatures = false;
 
       for (int index = 0; index < features.size(); index++) {
@@ -122,7 +128,12 @@ public class GenerationSettingsWorker {
                if (!newFeatures.isEmpty()) {
                   Decoration step = Decoration.values()[indexx];
                   List<Holder<PlacedFeature>> featuresInStep = new ArrayList<>(FeatureMap.getFeatures(this.customizedFeatures, step).stream().toList());
-                  featuresInStep.addAll(newFeatures);
+                  if (position == FeaturePosition.PREPEND) {
+                     featuresInStep.addAll(this.prependedPerStep[indexx], newFeatures);
+                     this.prependedPerStep[indexx] += newFeatures.size();
+                  } else {
+                     featuresInStep.addAll(newFeatures);
+                  }
                   this.customizedFeatures.set(indexx, HolderSet.direct(featuresInStep));
                }
             }
