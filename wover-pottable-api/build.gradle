@@ -1,4 +1,4 @@
-archivesBaseName = "wover-pottable-api"
+base { archivesName = "wover-pottable-api" }
 
 ext {
     baseNamespace = "pottable"

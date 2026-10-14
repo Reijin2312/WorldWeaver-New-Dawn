@@ -94,7 +94,7 @@ modrinth {
     def slurper = new groovy.json.JsonSlurper()
     token = modrinth_token
     //modrinth_id
-    projectId = project.archives_base_name
+    projectId = project.findProperty('modrinth_project_id') ?: project.findProperty('modrinth_id') ?: project.archives_base_name
     versionNumber = project.mod_version
     versionType = project.release_channel
     uploadFile = remapJar
@@ -176,7 +176,7 @@ task nextVersion() {
         def gameVersions = java.net.URLEncoder.encode(project.modrinth_versions, "UTF-8")
         def json = slurper.parseText('[{ "version_number" : "1.0.-1" }]')
         try {
-            new URL("https://api.modrinth.com/v2/project/${project.archives_base_name}/version?&game_versions=${gameVersions}").withInputStream { i -> inputFile.withOutputStream { it << i } }
+            new URL("https://api.modrinth.com/v2/project/${project.findProperty('modrinth_project_id') ?: project.findProperty('modrinth_id') ?: project.archives_base_name}/version?&game_versions=${gameVersions}").withInputStream { i -> inputFile.withOutputStream { it << i } }
             json = slurper.parseText(inputFile.text)
         } catch (FileNotFoundException) {
         }

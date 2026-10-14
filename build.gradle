@@ -24,7 +24,7 @@ tasks.withType(JavaCompile).configureEach {
     dependsOn(tasks.named("spotlessApply"))
 }
 
-archivesBaseName = project.archives_base_name
+base { archivesName = project.archives_base_name }
 sourceCompatibility = JavaVersion.VERSION_21
 targetCompatibility = JavaVersion.VERSION_21
 
