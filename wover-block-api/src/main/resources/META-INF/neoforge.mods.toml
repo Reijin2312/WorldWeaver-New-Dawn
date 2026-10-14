@@ -8,7 +8,7 @@ modId="wover-block"
 version="${version}"
 displayName="WorldWeaver - Block and Item API"
 description=""
-authors="Quiqueck"
+authors="Quiqueck, Raijin2312"
 displayURL="https://github.com/quiqueck/WorldWeaver"
 logoFile="assets/wover-block/icon.png"
 

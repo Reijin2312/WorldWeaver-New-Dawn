@@ -34,6 +34,8 @@ modrinth.json
 node_modules/
 generated/.cache/
 generated/
+!wover-generator-api/src/main/generated/
+!wover-generator-api/src/main/generated/**
 /public/img/header_clean.png
 /public/img/icon.png
 

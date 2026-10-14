@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -59,6 +60,8 @@ public class VersionChecker implements Runnable {
 
     public static final int WAIT_FOR_DAYS = 5;
     private static final String BASE_URL = "https://architech-mc.com/api/v1/mods/versions/";
+    private static final int CONNECT_TIMEOUT_MILLIS = 5_000;
+    private static final int READ_TIMEOUT_MILLIS = 10_000;
     private static Thread versionChecker;
 
     public static void startCheck(boolean isClient) {
@@ -84,7 +87,8 @@ public class VersionChecker implements Runnable {
                     CachedConfig.INSTANCE.save();
                     checker.processVersions(json);
                 } else if (checker.needRecheck()) {
-                    versionChecker = new Thread(checker);
+                    versionChecker = new Thread(checker, "WorldWeaver Version Checker");
+                    versionChecker.setDaemon(true);
                     versionChecker.start();
                 } else {
                     String str = CachedConfig.INSTANCE.lastVersionJson();
@@ -129,7 +133,13 @@ public class VersionChecker implements Runnable {
             ) + ".json";
 
             URL url = new URL(BASE_URL + fileName);
-            try (InputStreamReader reader = new InputStreamReader(url.openStream())) {
+            URLConnection connection = url.openConnection();
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MILLIS);
+            connection.setReadTimeout(READ_TIMEOUT_MILLIS);
+            try (InputStreamReader reader = new InputStreamReader(
+                    connection.getInputStream(),
+                    StandardCharsets.UTF_8
+            )) {
                 Versions json = gson.fromJson(reader, Versions.class);
                 String str = gson.getAdapter(Versions.class).toJson(json);
                 CachedConfig.INSTANCE.setLastVersionJson(str);

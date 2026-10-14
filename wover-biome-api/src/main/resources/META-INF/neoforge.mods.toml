@@ -8,7 +8,7 @@ modId="wover-biome"
 version="${version}"
 displayName="WorldWeaver - Biome API"
 description=""
-authors="Quiqueck"
+authors="Quiqueck, Raijin2312"
 displayURL="https://github.com/quiqueck/WorldWeaver"
 logoFile="assets/wover-biome/icon.png"
 
