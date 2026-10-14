@@ -8,7 +8,7 @@ modId="wover-events"
 version="${version}"
 displayName="WorldWeaver - Events API"
 description="Provides an API for registering events in the Lifecycle of a Minecraft World."
-authors="Quiqueck"
+authors="Quiqueck, Raijin2312"
 displayURL="https://github.com/quiqueck/WorldWeaver"
 logoFile="assets/wover-events/icon.png"
 

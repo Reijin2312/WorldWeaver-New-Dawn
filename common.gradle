@@ -11,8 +11,10 @@ buildscript {
 def local_wunderlib = findProject(':wunderlib') != null
 def rootModId = project.findProperty('root_mod_id') ?: 'wover'
 def woverRootProject = rootProject.findProject(":WorldWeaver") ?: rootProject
-version = woverRootProject.mod_version
-group = woverRootProject.maven_group
+def woverModVersion = woverRootProject.mod_version
+def woverMavenGroup = woverRootProject.maven_group
+version = woverModVersion
+group = woverMavenGroup
 
 
 allprojects { projIt ->
@@ -36,8 +38,8 @@ allprojects { projIt ->
         maven { url 'https://maven.ambertation.de/releases' }
     }
 
-    version = woverRootProject.mod_version
-    group = woverRootProject.maven_group
+    version = woverModVersion
+    group = woverMavenGroup
 
 
     java {
@@ -202,7 +204,7 @@ allprojects { projIt ->
     }
 
     tasks.withType(ProcessResources).configureEach {
-        inputs.property "version", project.mod_version
+        inputs.property "version", woverModVersion
 
         if (project != woverRootProject) {
             // Subprojects are libraries; omit mod metadata to avoid NeoForge mod scan errors.
@@ -211,7 +213,7 @@ allprojects { projIt ->
             filesMatching("META-INF/neoforge.mods.toml") {
                 expand(
                         "mod_id": modId,
-                        "version": project.mod_version,
+                        "version": woverModVersion,
                         "minecraft_version": project.minecraft_version,
                         "neoforge_version": project.neoforge_version
                 )
