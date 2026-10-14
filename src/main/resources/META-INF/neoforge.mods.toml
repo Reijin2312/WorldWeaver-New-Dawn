@@ -8,7 +8,7 @@ modId="wover"
 version="${version}"
 displayName="WorldWeaver"
 description="Unleash your world-building potential with WorldWeaver, a Minecraft utility mod for NeoForge, simplifying tasks and enhancing the possibilities of data-driven world generation."
-authors="Quiqueck"
+authors="Quiqueck, Raijin2312"
 displayURL="https://github.com/quiqueck/WorldWeaver"
 logoFile="assets/wover/icon.png"
 
