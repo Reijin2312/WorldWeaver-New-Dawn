@@ -48,7 +48,6 @@ class BiomeRepairHelper {
         registerAllBiomesFromRegistry(biomes);
         var originalSet =  dimensionRegistry.entrySet();
         for (Map.Entry<ResourceKey<LevelStem>, LevelStem> entry :originalSet) {
-            boolean didRepair = false;
             ResourceKey<LevelStem> key = entry.getKey();
             LevelStem loadedStem = entry.getValue();
 
@@ -73,7 +72,6 @@ class BiomeRepairHelper {
                             loadedChunkGenerator,
                             dimensionRegistry
                     );
-                    didRepair = true;
                 } else if (loadedChunkGenerator.getBiomeSource() instanceof BiomeSourceWithConfig lodedSource) {
                     if (referenceGenerator.getBiomeSource() instanceof BiomeSourceWithConfig refSource) {
                         if (!refSource.getBiomeSourceConfig().sameConfig(lodedSource.getBiomeSourceConfig())) {
@@ -83,10 +81,12 @@ class BiomeRepairHelper {
                 }
             }
 
-            if (!didRepair) {
-                if (loadedStem.generator().getBiomeSource() instanceof ReloadableBiomeSource reload) {
-                    reload.reloadBiomes();
-                }
+            // The configured source is decoded before loader-provided biome tags are repaired.
+            // Rebuild the active source, including a source just installed by the repair above.
+            final LevelStem activeStem = dimensionRegistry.get(key).map(Holder.Reference::value).orElse(null);
+            if (activeStem != null
+                    && activeStem.generator().getBiomeSource() instanceof ReloadableBiomeSource reload) {
+                reload.reloadBiomes();
             }
         }
 

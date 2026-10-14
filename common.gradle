@@ -8,12 +8,19 @@ buildscript {
     }
 }
 
-version = project.mod_version
-group = project.maven_group
+def woverRootProject = rootProject.findProject(":WorldWeaver") ?: rootProject
+def woverModVersion = woverRootProject.mod_version
+def woverMavenGroup = woverRootProject.maven_group
+def woverArchivesBaseName = woverRootProject.archives_base_name
+version = woverModVersion
+group = woverMavenGroup
 def local_wunderlib = findProject(':wunderlib') != null
 
 
 allprojects { projIt ->
+    if (projIt.name == "wunderlib") {
+        return
+    }
     apply plugin: 'java'
     apply plugin: 'idea'
     apply plugin: 'eclipse'
@@ -31,8 +38,8 @@ allprojects { projIt ->
         maven { url 'https://maven.ambertation.de/releases' }
     }
 
-    version = rootProject.mod_version
-    group = rootProject.maven_group
+    version = woverModVersion
+    group = woverMavenGroup
 
 
     java {
@@ -195,12 +202,12 @@ allprojects { projIt ->
     }
 
     processResources {
-        println "Version: ${project.mod_version}"
-        inputs.property "version", project.mod_version
+        println "Version: ${woverModVersion}"
+        inputs.property "version", woverModVersion
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
         filesMatching("fabric.mod.json") {
-            expand "version": project.mod_version
+            expand "version": woverModVersion
         }
     }
 
@@ -297,7 +304,7 @@ loom {
             name "Data Generation"
             vmArg "-Dfabric-api.datagen"
             vmArg "-Dfabric-api.datagen.output-dir=${file("src/main/generated")}"
-            vmArg "-Dfabric-api.datagen.modid=${project.archives_base_name}"
+            vmArg "-Dfabric-api.datagen.modid=${woverArchivesBaseName}"
 
             runDir "build/datagen"
         }
