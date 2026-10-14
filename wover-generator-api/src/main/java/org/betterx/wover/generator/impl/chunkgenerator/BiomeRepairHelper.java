@@ -71,7 +71,6 @@ class BiomeRepairHelper {
         BlueprintBiomeSourceCompat.importActiveEndOverlays(registryAccess, biomes);
         var originalSet =  dimensionRegistry.entrySet();
         for (Map.Entry<ResourceKey<LevelStem>, LevelStem> entry :originalSet) {
-            boolean didRepair = false;
             ResourceKey<LevelStem> key = entry.getKey();
             LevelStem loadedStem = entry.getValue();
             final ChunkGenerator loadedChunkGenerator = loadedStem.generator();
@@ -100,7 +99,6 @@ class BiomeRepairHelper {
                             loadedChunkGenerator,
                             dimensionRegistry
                     );
-                    didRepair = true;
                 } else if (loadedChunkGenerator.getBiomeSource() instanceof BiomeSourceWithConfig lodedSource) {
                     if (referenceGenerator.getBiomeSource() instanceof BiomeSourceWithConfig refSource) {
                         if (!refSource.getBiomeSourceConfig().sameConfig(lodedSource.getBiomeSourceConfig())) {
@@ -112,14 +110,15 @@ class BiomeRepairHelper {
 
             LevelStem activeStem = dimensionRegistry.getValue(key);
             if (activeStem != null) {
+                boolean biomeSourceReloaded = false;
                 if (LevelStem.END.equals(key) && activeStem.generator() instanceof WoverChunkGenerator generator) {
-                    generator.wover_removeBlueprintEndWrapper();
+                    biomeSourceReloaded = generator.wover_removeBlueprintEndWrapper();
                 }
                 attachExternalBiomeSource(key, activeStem.generator(), externalChunkGenerator);
-            }
-
-            if (!didRepair) {
-                if (loadedStem.generator().getBiomeSource() instanceof ReloadableBiomeSource reload) {
+                // Reference sources are decoded before loader-provided biome tags are repaired above.
+                // Always rebuild the active source, including a source newly installed by the repair.
+                if (!biomeSourceReloaded
+                        && activeStem.generator().getBiomeSource() instanceof ReloadableBiomeSource reload) {
                     reload.reloadBiomes();
                 }
             }

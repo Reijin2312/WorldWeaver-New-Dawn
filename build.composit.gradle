@@ -5,6 +5,17 @@ plugins {
     id 'eclipse'
     id 'net.neoforged.moddev' version "${moddev_version}"
 }
+def componentGradleProperties = new Properties()
+def componentGradlePropertiesFile = file('gradle.properties')
+if (!componentGradlePropertiesFile.exists()) {
+    throw new GradleException("Missing component gradle.properties: ${componentGradlePropertiesFile}")
+}
+componentGradlePropertiesFile.withInputStream { stream ->
+    componentGradleProperties.load(stream)
+}
+componentGradleProperties.each { key, value ->
+    project.extensions.extraProperties.set(key.toString(), value)
+}
 ext.archivesBaseName = project.archives_base_name
 base {
     archivesName = project.archives_base_name
