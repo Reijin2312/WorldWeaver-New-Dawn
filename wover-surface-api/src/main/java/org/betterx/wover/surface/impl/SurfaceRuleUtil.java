@@ -34,8 +34,33 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.lang.reflect.Method;
 import org.jetbrains.annotations.ApiStatus;
+import net.neoforged.fml.ModList;
 
 public class SurfaceRuleUtil {
+    private static SurfaceRules.RuleSource tryBuildNetherDescentSurfaceRules(BiomeSource source) {
+        if (ModList.get().isLoaded("netherdescent_wover")) return null;
+
+        boolean hasNetherDescentBiome = source.possibleBiomes()
+                                                .stream()
+                                                .map(Holder::unwrapKey)
+                                                .flatMap(Optional::stream)
+                                                .map(ResourceKey::identifier)
+                                                .anyMatch(id -> "netherdescent".equals(id.getNamespace()));
+        if (!hasNetherDescentBiome) return null;
+
+        try {
+            Class<?> rulesClass = Class.forName(
+                    "net.potionstudios.netherdescent.world.level.levelgen.biome.NetherDescentSurfaceRules"
+            );
+            HolderGetter<Biome> biomeLookup = WorldState.registryAccess().lookupOrThrow(Registries.BIOME);
+            Object result = rulesClass.getMethod("makeRules", HolderGetter.class).invoke(null, biomeLookup);
+            if (result instanceof SurfaceRules.RuleSource ruleSource) return ruleSource;
+        } catch (ReflectiveOperationException e) {
+            LibWoverSurface.C.LOG.warn("Unable to import Nether Descent surface rules", e);
+        }
+        return null;
+    }
+
     private static List<SurfaceRules.RuleSource> getRulesForBiome(HolderGetter<Biome> biomes, ResourceKey<Biome> biomeKey) {
         Registry<AssignedSurfaceRule> registry = null;
         if (WorldState.registryAccess() != null)
@@ -195,11 +220,16 @@ public class SurfaceRuleUtil {
         Object o = noiseSettings.value();
         if (o instanceof SurfaceRuleProvider srp) {
             SurfaceRules.RuleSource originalRules = srp.wover_getOriginalSurfaceRules();
+            List<SurfaceRules.RuleSource> additionalRules = new LinkedList<>(
+                    getRulesForBiomes(loadedBiomeSource.possibleBiomes().stream().map(Holder::unwrapKey).toList())
+            );
+            SurfaceRules.RuleSource netherDescentRules = tryBuildNetherDescentSurfaceRules(loadedBiomeSource);
+            if (netherDescentRules != null) additionalRules.add(0, netherDescentRules);
             srp.wover_overwriteSurfaceRules(mergeSurfaceRules(
                     dimensionKey,
                     originalRules,
                     loadedBiomeSource,
-                    getRulesForBiomes(loadedBiomeSource.possibleBiomes().stream().map(Holder::unwrapKey).toList())
+                    additionalRules
             ));
         }
     }
