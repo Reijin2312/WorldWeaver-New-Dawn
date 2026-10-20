@@ -7,6 +7,7 @@ import org.betterx.wover.generator.impl.biomesource.BiomeSourceManagerImpl;
 import org.betterx.wover.generator.impl.biomesource.WoverBiomeDataImpl;
 import org.betterx.wover.generator.impl.chunkgenerator.ChunkGeneratorManagerImpl;
 import org.betterx.wover.generator.impl.chunkgenerator.WoverChunkGeneratorImpl;
+import org.betterx.wover.generator.impl.compat.NetherDescentCompat;
 import org.betterx.wover.generator.impl.preset.PresetRegistryImpl;
 import org.betterx.wover.preset.api.WorldPresetInfo;
 import org.betterx.wover.preset.api.WorldPresetInfoBuilder;
@@ -40,6 +41,7 @@ public class LibWoverWorldGenerator {
 
         PresetRegistryImpl.ensureStaticallyLoaded();
         WoverBiomeDataImpl.initialize();
+        NetherDescentCompat.initialize();
         BiomeSourceManagerImpl.initialize();
         ChunkGeneratorManagerImpl.initialize();
         WoverChunkGeneratorImpl.initialize();
