@@ -27,6 +27,7 @@ import net.minecraft.world.level.levelgen.SurfaceRules;
 import net.minecraft.world.level.levelgen.placement.CaveSurface;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.WorldData;
+import net.fabricmc.loader.api.FabricLoader;
 
 import com.google.common.base.Stopwatch;
 
@@ -82,7 +83,11 @@ public class SurfaceRuleUtil {
     ) {
         if (LevelStem.NETHER.equals(dimensionKey)) {
             SurfaceRules.RuleSource incisionRule = tryBuildIncisionSurfaceRule(source);
-            return incisionRule == null ? List.of() : List.of(incisionRule);
+            SurfaceRules.RuleSource netherDescentRules = tryBuildNetherDescentSurfaceRules(source);
+            if (incisionRule == null && netherDescentRules == null) return List.of();
+            if (incisionRule == null) return List.of(netherDescentRules);
+            if (netherDescentRules == null) return List.of(incisionRule);
+            return List.of(incisionRule, netherDescentRules);
         } else if (!LevelStem.END.equals(dimensionKey)) {
             return List.of();
         }
@@ -111,6 +116,29 @@ public class SurfaceRuleUtil {
             }
         } catch (ReflectiveOperationException e) {
             LibWoverSurface.C.LOG.verbose("Unable to import Enderscape surface rules: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private static SurfaceRules.RuleSource tryBuildNetherDescentSurfaceRules(BiomeSource source) {
+        if (FabricLoader.getInstance().isModLoaded("netherdescent_wover")) return null;
+
+        boolean hasNetherDescentBiome = source.possibleBiomes()
+                                                .stream()
+                                                .map(Holder::unwrapKey)
+                                                .flatMap(Optional::stream)
+                                                .map(ResourceKey::location)
+                                                .anyMatch(id -> "netherdescent".equals(id.getNamespace()));
+        if (!hasNetherDescentBiome) return null;
+
+        try {
+            Class<?> rulesClass = Class.forName(
+                    "net.potionstudios.netherdescent.world.level.levelgen.biome.NetherDescentSurfaceRules"
+            );
+            Object result = rulesClass.getMethod("makeRules").invoke(null);
+            if (result instanceof SurfaceRules.RuleSource ruleSource) return ruleSource;
+        } catch (ReflectiveOperationException e) {
+            LibWoverSurface.C.LOG.warn("Unable to import Nether Descent surface rules", e);
         }
         return null;
     }
