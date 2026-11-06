@@ -1,7 +1,7 @@
 modLoader="javafml"
 loaderVersion="[1,)"
 license="MIT"
-issueTrackerURL="https://github.com/quiqueck/WorldWeaver/issues"
+issueTrackerURL="https://github.com/Reijin2312/WorldWeaver-New-Dawn/issues"
 
 [[mods]]
 modId="wover"
@@ -9,7 +9,7 @@ version="${version}"
 displayName="WorldWeaver"
 description="Unleash your world-building potential with WorldWeaver, a Minecraft utility mod for NeoForge, simplifying tasks and enhancing the possibilities of data-driven world generation."
 authors="Quiqueck, Raijin2312"
-displayURL="https://github.com/quiqueck/WorldWeaver"
+displayURL="https://github.com/Reijin2312/WorldWeaver-New-Dawn"
 logoFile="assets/wover/icon.png"
 
 [[dependencies.wover]]
@@ -106,5 +106,5 @@ config="wover.generator.mixins.client.json"
 updater_icon="icon_updater.png"
 
 [modproperties.wover.downloads]
-modrinth="https://modrinth.com/mod/worldweaver"
-curseforge="https://legacy.curseforge.com/minecraft/mc-mods/worldweaver"
+modrinth="https://modrinth.com/mod/worldweaver-neoforge"
+curseforge="https://www.curseforge.com/minecraft/mc-mods/worldweaver-neoforge"
