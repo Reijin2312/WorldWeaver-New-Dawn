@@ -1,0 +1,18 @@
+{
+  "description.config.wover.main.log.verbose": "Записує додаткову інформацію в лог-файл. Корисно для дебагу помилок",
+  "description.config.wover.main.server.force_default_world_preset": "Коли ви створюєте новий світ на сервері, тип світу BetterX буде обрано за замовчуванням. Це можна змінити у файлі server.properties.",
+  "description.config.wover.client.general.prefere_modrinth": "Іноді ми надаємо посилання на завантаження оновлень. Якщо ви віддаєте перевагу посиланням на Modrinth замість CurseForge, ви можете увімкнути цю опцію.",
+  "title.config.group.wover.general": "Загальні",
+  "title.config.group.wover.loading": "Завантаження та створення світу",
+  "title.config.group.wover.server": "Налаштування сервера",
+  "title.config.group.wover.structure": "Структури",
+  "title.config.group.wover.performance": "Продуктивність",
+  "title.config.group.wover.entity": "Моби та гравець",
+  "title.config.group.wover.ui": "Інтерфейс користувача",
+  "title.config.group.wover.rendering": "Рендеринг",
+  "title.config.group.wover.cosmetic": "Косметика",
+  "title.config.wover.main.log.verbose": "Детальне логування",
+  "title.config.wover.main.server.force_default_world_preset": "Тип світу BetterX за замовчуванням для нових світів сервера",
+  "title.config.wover.client.general.prefere_modrinth": "Посилання на Modrinth",
+  "wover.mainmenu.title": "Налаштування WorldWeaver"
+}
