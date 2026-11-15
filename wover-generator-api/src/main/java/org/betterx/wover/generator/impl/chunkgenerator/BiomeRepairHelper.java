@@ -2,11 +2,15 @@ package org.betterx.wover.generator.impl.chunkgenerator;
 
 import org.betterx.wover.biome.impl.modification.BiomeTagModificationWorker;
 import org.betterx.wover.common.generator.api.biomesource.BiomeSourceWithConfig;
+import org.betterx.wover.common.generator.api.biomesource.MergeableBiomeSource;
 import org.betterx.wover.common.generator.api.biomesource.ReloadableBiomeSource;
 import org.betterx.wover.common.generator.api.chunkgenerator.EnforceableChunkGenerator;
+import org.betterx.wover.common.generator.api.chunkgenerator.RebuildableFeaturesPerStep;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
+import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 import org.betterx.wover.generator.impl.biomesource.end.TheEndBiomesHelper;
 import org.betterx.wover.generator.impl.biomesource.nether.NetherBiomesHelper;
+import org.betterx.wover.generator.impl.compat.BiolithBiomeSourceCompat;
 import org.betterx.wover.tag.api.predefined.CommonBiomeTags;
 
 import net.minecraft.core.Holder;
@@ -17,8 +21,14 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.MultiNoiseBiomeSource;
+import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList;
+import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterLists;
 import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
+import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 
 import com.google.common.base.Stopwatch;
 
@@ -52,12 +62,16 @@ class BiomeRepairHelper {
         for (Map.Entry<ResourceKey<LevelStem>, LevelStem> entry :originalSet) {
             ResourceKey<LevelStem> key = entry.getKey();
             LevelStem loadedStem = entry.getValue();
+            final ChunkGenerator loadedChunkGenerator = loadedStem.generator();
+            final ChunkGenerator externalChunkGenerator = getExternalBaseGenerator(
+                    registryAccess,
+                    key,
+                    loadedChunkGenerator
+            );
 
             final ChunkGenerator referenceGenerator = configuredDimensions.get(key);
 
             if (referenceGenerator instanceof EnforceableChunkGenerator<?> enforcer) {
-                final ChunkGenerator loadedChunkGenerator = loadedStem.generator();
-
                 // if the loaded ChunkGenerator is not the one we expect from vanilla, we will load the vanilla
                 // ones and mark all modded biomes with the respective dimension
                 registerAllBiomesFromVanillaDimension(registryAccess, biomes, key);
@@ -86,9 +100,11 @@ class BiomeRepairHelper {
             // The configured source is decoded before loader-provided biome tags are repaired.
             // Rebuild the active source, including a source just installed by the repair above.
             final LevelStem activeStem = dimensionRegistry.get(key).map(Holder.Reference::value).orElse(null);
-            if (activeStem != null
-                    && activeStem.generator().getBiomeSource() instanceof ReloadableBiomeSource reload) {
-                reload.reloadBiomes();
+            if (activeStem != null) {
+                attachExternalBiomeSource(key, activeStem.generator(), externalChunkGenerator);
+                if (activeStem.generator().getBiomeSource() instanceof ReloadableBiomeSource reload) {
+                    reload.reloadBiomes();
+                }
             }
         }
 
@@ -96,6 +112,62 @@ class BiomeRepairHelper {
         copyWorldPresetReference(dimensionRegistry, configuredDimensions);
 
         return dimensionRegistry;
+    }
+
+    private ChunkGenerator getExternalBaseGenerator(
+            RegistryAccess registryAccess,
+            ResourceKey<LevelStem> dimensionKey,
+            ChunkGenerator loadedGenerator
+    ) {
+        if (!(loadedGenerator.getBiomeSource() instanceof WoverBiomeSource)) {
+            return loadedGenerator;
+        }
+        if (!LevelStem.NETHER.equals(dimensionKey)) return null;
+
+        Holder<NoiseGeneratorSettings> settings = registryAccess
+                .lookupOrThrow(Registries.NOISE_SETTINGS)
+                .getOrThrow(NoiseGeneratorSettings.NETHER);
+        Holder<MultiNoiseBiomeSourceParameterList> parameters = registryAccess
+                .lookupOrThrow(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST)
+                .getOrThrow(MultiNoiseBiomeSourceParameterLists.NETHER);
+        ChunkGenerator externalGenerator = new NoiseBasedChunkGenerator(
+                MultiNoiseBiomeSource.createFromPreset(parameters), settings
+        );
+        if (BiolithBiomeSourceCompat.setDimensionType(
+                externalGenerator.getBiomeSource(), BuiltinDimensionTypes.NETHER
+        )) {
+            LibWoverWorldGenerator.C.log.info(
+                    "Configured Biolith Nether fallback for {}", dimensionKey.identifier()
+            );
+            BiolithBiomeSourceCompat.protectCinderscapesClimatePoints(
+                    externalGenerator.getBiomeSource()
+            );
+        }
+        return externalGenerator;
+    }
+
+    private void attachExternalBiomeSource(
+            ResourceKey<LevelStem> dimensionKey,
+            ChunkGenerator targetGenerator,
+            ChunkGenerator externalGenerator
+    ) {
+        if (externalGenerator == null || targetGenerator == externalGenerator) return;
+        if (!(targetGenerator.getBiomeSource() instanceof MergeableBiomeSource<?> mergeableSource)) return;
+
+        try {
+            mergeableSource.mergeWithBiomeSource(externalGenerator.getBiomeSource());
+            if (targetGenerator instanceof RebuildableFeaturesPerStep<?> rebuildable) {
+                rebuildable.wover_rebuildFeaturesPerStep();
+            }
+            LibWoverWorldGenerator.C.log.info(
+                    "Attached Biolith-compatible external biome source for {}",
+                    dimensionKey.identifier()
+            );
+        } catch (RuntimeException e) {
+            LibWoverWorldGenerator.C.log.warn(
+                    "Unable to attach external biome source for {}", dimensionKey.identifier(), e
+            );
+        }
     }
 
     private static void copyWorldPresetReference(
