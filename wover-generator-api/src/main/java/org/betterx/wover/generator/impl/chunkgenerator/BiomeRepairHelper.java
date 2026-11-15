@@ -12,6 +12,7 @@ import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 import org.betterx.wover.generator.impl.biomesource.end.TheEndBiomesHelper;
 import org.betterx.wover.generator.impl.biomesource.nether.NetherBiomesHelper;
 import org.betterx.wover.generator.impl.compat.BlueprintBiomeSourceCompat;
+import org.betterx.wover.generator.impl.compat.BiolithBiomeSourceCompat;
 import org.betterx.wover.generator.impl.compat.CopiedEndBiomeRegistryCompat;
 import org.betterx.wover.generator.impl.compat.TerraBlenderEndBiomeCompat;
 import org.betterx.wover.generator.impl.compat.VanillaEndBiomeCompat;
@@ -31,6 +32,7 @@ import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterLists;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.dimension.LevelStem;
+import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 
@@ -160,6 +162,18 @@ class BiomeRepairHelper {
                 MultiNoiseBiomeSource.createFromPreset(parameters),
                 settings
         );
+        if (BiolithBiomeSourceCompat.setDimensionType(
+                externalGenerator.getBiomeSource(),
+                BuiltinDimensionTypes.NETHER
+        )) {
+            LibWoverWorldGenerator.C.log.info(
+                    "Configured Biolith Nether fallback for {}",
+                    dimensionKey.identifier()
+            );
+            BiolithBiomeSourceCompat.protectCinderscapesClimatePoints(
+                    externalGenerator.getBiomeSource()
+            );
+        }
         LibWoverWorldGenerator.C.log.info(
                 "Created vanilla Nether biome source for {}: source={}",
                 dimensionKey.identifier(),

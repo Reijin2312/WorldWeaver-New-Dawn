@@ -3,6 +3,7 @@ package org.betterx.wover.feature.api.placed.modifiers;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.Locale;
 import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
@@ -206,7 +207,7 @@ public class ExtendXYZ implements PlacementModifier {
 
       @NotNull
       public String getSerializedName() {
-         return this.name().toLowerCase();
+         return this.name().toLowerCase(Locale.ROOT);
       }
    }
 
