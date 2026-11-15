@@ -10,6 +10,7 @@ import org.betterx.wover.core.api.IntegrationCore;
 import org.betterx.wover.entrypoint.LibWoverWorldGenerator;
 import org.betterx.wover.generator.api.biomesource.WoverBiomeSource;
 import org.betterx.wover.generator.impl.biomesource.end.TheEndBiomesHelper;
+import org.betterx.wover.generator.impl.compat.VanillaEndBiomeCompat;
 import org.betterx.wover.generator.impl.compat.VanillaNetherBiomeCompat;
 import org.betterx.wover.generator.impl.compat.BlueprintBiomeSourceCompat;
 import org.betterx.wover.generator.impl.compat.CopiedEndBiomeRegistryCompat;
@@ -66,6 +67,7 @@ class BiomeRepairHelper {
 
         // we ensure that all biomes registered using fabric have the proper biome tags
         registerAllBiomesFromFabric(biomes);
+        registerVanillaEndBiomes(biomes);
         registerVanillaNetherBiomes(biomes);
         registerAllBiomesFromTerraBlender(biomes);
         registerCopiedEndBiomeRegistries(biomes);
@@ -298,6 +300,14 @@ class BiomeRepairHelper {
         final int biomesAdded = VanillaNetherBiomeCompat.importBiomes(biomes);
         if (biomesAdded > 0) {
             LibWoverWorldGenerator.C.log.info("Registered {} vanilla Nether biome candidates in {}", biomesAdded, sw);
+        }
+    }
+
+    private void registerVanillaEndBiomes(Registry<Biome> biomes) {
+        final Stopwatch sw = Stopwatch.createStarted();
+        final int biomesAdded = VanillaEndBiomeCompat.importBiomes(biomes);
+        if (biomesAdded > 0) {
+            LibWoverWorldGenerator.C.log.info("Registered {} vanilla End biome candidates in {}", biomesAdded, sw);
         }
     }
 
