@@ -65,7 +65,7 @@ public class WoverBiomePicker {
       reg.entrySet()
          .stream()
          .map(Entry::getValue)
-         .filter(data -> data instanceof WoverBiomeData b && sourceBiome.isSame(b.parent))
+         .filter(data -> data instanceof WoverBiomeData b && sourceBiome.isSame(b.parent) && b.genChance > 0)
          .sorted(BY_BIOME_ID)
          .forEach(data -> {
             WoverBiomeData b = (WoverBiomeData)data;
