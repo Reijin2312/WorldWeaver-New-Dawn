@@ -142,9 +142,11 @@ public class WoverEndBiomeSource extends WoverBiomeSource implements
                 new TagToPicker(CommonBiomeTags.IS_END_CENTER, endCenterBiomePicker),
                 new TagToPicker(CommonBiomeTags.IS_END_BARRENS, endBarrensBiomePicker),
                 new TagToPicker(CommonBiomeTags.IS_SMALL_END_ISLAND, endVoidBiomePicker),
+                // minecraft:is_end is an umbrella tag for discovery and compatibility, not a
+                // terrain-placement category. Mapping it here would also put center, barrens and
+                // small-island biomes into the land picker.
                 new TagToPicker(CommonBiomeTags.IS_END_HIGHLAND, endLandBiomePicker),
-                new TagToPicker(CommonBiomeTags.IS_END_MIDLAND, endLandBiomePicker),
-                new TagToPicker(BiomeTags.IS_END, endLandBiomePicker)
+                new TagToPicker(CommonBiomeTags.IS_END_MIDLAND, endLandBiomePicker)
         );
     }
 
