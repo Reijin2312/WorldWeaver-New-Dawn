@@ -57,7 +57,7 @@ public class WoverBiomePicker {
         if (reg == null) return;
 
         reg.entrySet().stream().map(Map.Entry::getValue)
-           .filter(data -> data instanceof WoverBiomeData b && sourceBiome.isSame(b.parent))
+           .filter(data -> data instanceof WoverBiomeData b && sourceBiome.isSame(b.parent) && b.genChance > 0)
            .sorted(BY_BIOME_ID)
            .forEach(data -> { final WoverBiomeData b = (WoverBiomeData) data; consumeChild.accept(b, b.genChance); });
     }
@@ -242,4 +242,3 @@ public class WoverBiomePicker {
         }
     }
 }
-
