@@ -25,6 +25,6 @@ public class CreateWorldScreenMixin {
             index = 3
     )
     private static Optional<ResourceKey<WorldPreset>> wover_newDefault(Optional<ResourceKey<WorldPreset>> preset) {
-        return Optional.of(WorldPresetsManagerImpl.getDefault());
+        return preset.isPresent() ? preset : Optional.of(WorldPresetsManagerImpl.getDefault());
     }
 }
