@@ -5,6 +5,7 @@ import org.betterx.wover.generator.impl.biomesource.nether.NetherBiomesHelper;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Climate;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Mixin(MultiNoiseBiomeSourceParameterList.class)
 public class MultiNoiseBiomeSourceParameterListMixin {
@@ -42,13 +44,16 @@ public class MultiNoiseBiomeSourceParameterListMixin {
         if (additions.isEmpty()) return;
 
         List<Pair<Climate.ParameterPoint, Holder<Biome>>> updated = new ArrayList<>(this.parameters.values());
+        if (!(biomes instanceof HolderLookup<?> lookup)) return;
+        @SuppressWarnings("unchecked")
+        Set<ResourceKey<Biome>> available = ((HolderLookup<Biome>) lookup).listElementIds().collect(Collectors.toSet());
         Set<ResourceKey<Biome>> existing = new HashSet<>();
         for (Pair<Climate.ParameterPoint, Holder<Biome>> entry : updated) {
             entry.getSecond().unwrapKey().ifPresent(existing::add);
         }
 
         for (Pair<Climate.ParameterPoint, ResourceKey<Biome>> entry : additions) {
-            if (!existing.contains(entry.getSecond())) {
+            if (available.contains(entry.getSecond()) && !existing.contains(entry.getSecond())) {
                 try {
                     Holder<Biome> holder = biomes.getOrThrow(entry.getSecond());
                     updated.add(Pair.of(entry.getFirst(), holder));
