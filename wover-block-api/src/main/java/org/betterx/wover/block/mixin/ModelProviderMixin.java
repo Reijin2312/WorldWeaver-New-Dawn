@@ -17,7 +17,7 @@ import java.util.Map;
  */
 @Mixin(net.minecraft.data.models.ModelProvider.class)
 public class ModelProviderMixin {
-    @WrapOperation(method = "method_25738", at = @At(value = "INVOKE", target = "Ljava/util/Map;containsKey(Ljava/lang/Object;)Z"))
+    @WrapOperation(method = "lambda$run$3", at = @At(value = "INVOKE", target = "Ljava/util/Map;containsKey(Ljava/lang/Object;)Z"))
     private static boolean wover_notExcluded(Map instance, Object o, Operation<Boolean> original) {
         boolean res = original.call(instance, o) || ModelProviderExclusions.isExcluded((Block) o);
         return res;
