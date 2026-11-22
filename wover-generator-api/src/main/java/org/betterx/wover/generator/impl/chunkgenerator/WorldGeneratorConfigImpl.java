@@ -247,13 +247,39 @@ public class WorldGeneratorConfigImpl {
             Optional<DimensionsWrapper> oLevelStem = DimensionsWrapper.CODEC
                .parse(new Dynamic(registryOps, presetNBT))
                .resultOrPartial(error -> LibWoverWorldGenerator.C.log.error(String.valueOf(error)));
-            return oLevelStem.orElse(DEFAULT_DIMENSIONS_WRAPPER).dimensions;
+            return enforceBetterXNetherAndEnd(registryAccess, oLevelStem.orElse(DEFAULT_DIMENSIONS_WRAPPER).dimensions);
          } else {
-            return DEFAULT_DIMENSIONS_WRAPPER.dimensions;
+            return enforceBetterXNetherAndEnd(registryAccess, DEFAULT_DIMENSIONS_WRAPPER.dimensions);
          }
       } catch (Exception var4) {
          LibWoverWorldGenerator.C.log.error("Failed to load Dimensions", var4);
-         return DEFAULT_DIMENSIONS_WRAPPER.dimensions;
+         Map<ResourceKey<LevelStem>, ChunkGenerator> fallback = DEFAULT_DIMENSIONS_WRAPPER != null
+                 ? DEFAULT_DIMENSIONS_WRAPPER.dimensions
+                 : DimensionsWrapper.getDimensionsMap(registryAccess, WorldPresets.WOVER_WORLD);
+         return enforceBetterXNetherAndEnd(registryAccess, fallback);
       }
+   }
+
+   /**
+    * Keeps the selected preset's Overworld while making BetterX generation the baseline for the
+    * Nether and End. The normal repair pass still merges loader and compatibility-adapter biomes
+    * into these generators, so custom Overworld presets do not disable BetterX or other integrations.
+    */
+   static Map<ResourceKey<LevelStem>, ChunkGenerator> enforceBetterXNetherAndEnd(
+      RegistryAccess registryAccess,
+      Map<ResourceKey<LevelStem>, ChunkGenerator> selectedDimensions
+   ) {
+      Map<ResourceKey<LevelStem>, ChunkGenerator> betterX = DimensionsWrapper.getDimensionsMap(
+         registryAccess,
+         WorldPresets.WOVER_WORLD
+      );
+      Map<ResourceKey<LevelStem>, ChunkGenerator> result = new HashMap<>(selectedDimensions);
+      for (ResourceKey<LevelStem> key : List.of(LevelStem.NETHER, LevelStem.END)) {
+         if (!(result.get(key) instanceof org.betterx.wover.common.generator.api.chunkgenerator.EnforceableChunkGenerator<?>)
+            && betterX.containsKey(key)) {
+            result.put(key, betterX.get(key));
+         }
+      }
+      return result;
    }
 }
