@@ -1,6 +1,7 @@
 package org.betterx.wover.generator.mixin.biomesource;
 
 import org.betterx.wover.generator.impl.biomesource.end.TheEndBiomesHelper;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
@@ -40,16 +41,11 @@ public class TheEndBiomeSourceMixin {
     @Final
     private Holder<Biome> barrens;
 
-    @Inject(method = "collectPossibleBiomes", at = @At("HEAD"), cancellable = true)
-    private void wover_collectPossibleBiomes(CallbackInfoReturnable<Stream<Holder<Biome>>> cir) {
-        Set<Holder<Biome>> holders = new LinkedHashSet<>();
-        holders.add(end);
-        holders.add(highlands);
-        holders.add(midlands);
-        holders.add(islands);
-        holders.add(barrens);
+    @ModifyReturnValue(method = "collectPossibleBiomes", at = @At("RETURN"))
+    private Stream<Holder<Biome>> wover_collectPossibleBiomes(Stream<Holder<Biome>> original) {
+        Set<Holder<Biome>> holders = new LinkedHashSet<>(original.toList());
         TheEndBiomesHelper.addAllPossibleBiomes(holders);
-        cir.setReturnValue(holders.stream());
+        return holders.stream();
     }
 
     @Inject(method = "getNoiseBiome", at = @At("HEAD"), cancellable = true)
